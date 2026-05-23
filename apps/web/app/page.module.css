@@ -1,0 +1,229 @@
+.page { padding-bottom: var(--space-10); }
+
+/* ---------------- Hero ---------------- */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: var(--space-8);
+  align-items: end;
+  padding-block: var(--space-9) var(--space-8);
+  border-bottom: 1px solid var(--color-rule);
+  position: relative;
+}
+
+.hero__lead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 18ch;
+}
+
+.hero__headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.75rem, 8vw, 5.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  margin: 0;
+}
+
+.hero__sub {
+  max-width: 36ch;
+}
+
+.hero__aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--color-rule);
+  align-self: stretch;
+  padding-top: var(--space-4);
+}
+
+.hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 880px) {
+  .hero { grid-template-columns: 1fr; gap: var(--space-5); padding-block: var(--space-7); }
+  .hero__aside { padding-left: 0; border-left: 0; border-top: 1px solid var(--color-rule); padding-top: var(--space-5); }
+}
+
+/* ---------------- Top strip — mono running ticker ---------------- */
+.strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-rule);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.strip span { color: var(--color-ink); }
+.strip__sep { color: var(--color-rule-strong); }
+
+/* ---------------- Sections ---------------- */
+.section {
+  padding-block: var(--space-8);
+  border-bottom: 1px solid var(--color-rule);
+}
+.section__head {
+  display: grid;
+  grid-template-columns: 240px 1fr auto;
+  gap: var(--space-7);
+  align-items: end;
+  margin-bottom: var(--space-6);
+}
+.section__head__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.section__head__title { margin: 0; }
+.section__head__action {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  color: var(--color-ink);
+  border-bottom: 1px solid var(--color-ink);
+  padding-bottom: 2px;
+  transition: color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+.section__head__action:hover { color: var(--color-accent); border-color: var(--color-accent); }
+
+@media (max-width: 880px) {
+  .section__head { grid-template-columns: 1fr; gap: var(--space-3); }
+}
+
+/* ---------------- Topics grid ---------------- */
+.topics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--color-rule);
+  border-left: 1px solid var(--color-rule);
+}
+.topic {
+  border-right: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 140px;
+  position: relative;
+  transition: background var(--dur-base) var(--ease-out);
+  cursor: pointer;
+}
+.topic:hover { background: var(--color-paper-2); }
+.topic:hover .topic__name { color: var(--color-accent); }
+.topic__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.topic__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.375rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+  margin: 0;
+  transition: color var(--dur-base) var(--ease-out);
+}
+.topic__hint {
+  margin-top: auto;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+}
+
+@media (max-width: 880px) { .topics { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .topics { grid-template-columns: 1fr; } }
+
+/* ---------------- Pull quote ---------------- */
+.pull {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-7);
+  align-items: center;
+  padding-block: var(--space-8);
+  border-bottom: 1px solid var(--color-rule);
+}
+.pull__quote {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: italic;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+  margin: 0;
+  text-wrap: balance;
+}
+.pull__quote::before {
+  content: "“";
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 1.15em;
+  color: var(--color-accent);
+  margin-right: 0.08em;
+  display: inline-block;
+  transform: translateY(0.1em);
+}
+.pull__attr {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-top: var(--space-4);
+}
+@media (max-width: 880px) {
+  .pull { grid-template-columns: 1fr; gap: var(--space-5); }
+}
+
+/* ---------------- Footer ---------------- */
+.footer {
+  padding-block: var(--space-7) var(--space-8);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-5);
+  align-items: end;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+}
+.footer__wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: -0.035em;
+  color: var(--color-ink);
+}
+.footer__wordmark em { font-style: italic; font-weight: 500; color: var(--color-accent); }
+.footer__cols {
+  display: flex;
+  gap: var(--space-6);
+}
+.footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.footer__col a { color: var(--color-ink-2); transition: color var(--dur-base) var(--ease-out); }
+.footer__col a:hover { color: var(--color-accent); }
+@media (max-width: 720px) {
+  .footer { grid-template-columns: 1fr; }
+}

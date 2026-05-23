@@ -1,0 +1,44 @@
+.rule {
+  border: 0;
+  height: 1px;
+  width: 100%;
+  background: var(--color-rule);
+  margin: 0;
+}
+
+.rule--strong { background: var(--color-rule-strong); }
+.rule--ink    { background: var(--color-ink); }
+
+.rule--dashed {
+  background: transparent;
+  border-top: 1px dashed var(--color-rule-strong);
+  height: 0;
+}
+
+.rule--dotted {
+  background: transparent;
+  border-top: 1px dotted var(--color-muted-2);
+  height: 0;
+}
+
+/* Ornament rule: hairline with a small mark — editorial section break */
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-muted-2);
+}
+.ornament::before, .ornament::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-rule);
+}
+.ornament__mark {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-accent);
+  line-height: 1;
+}

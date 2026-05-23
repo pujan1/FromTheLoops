@@ -1,0 +1,43 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tag--default {
+  background: transparent;
+  color: var(--color-muted);
+  border: 1px solid var(--color-rule-strong);
+}
+.tag--ink {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border: 1px solid var(--color-ink);
+}
+.tag--accent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+.tag--ghost {
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+  border: 1px solid transparent;
+}
+
+.tag__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
+}

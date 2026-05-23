@@ -1,0 +1,70 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--fs-small);
+  letter-spacing: -0.005em;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+              background var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out),
+              border-color var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+  white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.button:active { transform: translateY(1px); }
+.button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- sizes ---- */
+.size--sm { padding: 6px 12px; font-size: var(--fs-meta); }
+.size--md { padding: 10px 18px; }
+.size--lg { padding: 14px 24px; font-size: var(--fs-body); }
+
+/* ---- variants ---- */
+.variant--primary {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border: 1px solid var(--color-ink);
+}
+.variant--primary:hover { background: var(--color-accent-deep); border-color: var(--color-accent-deep); }
+
+.variant--accent {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: 1px solid var(--color-accent);
+}
+.variant--accent:hover { background: var(--color-accent-deep); border-color: var(--color-accent-deep); }
+
+.variant--ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-rule-strong);
+}
+.variant--ghost:hover { background: var(--color-paper-2); border-color: var(--color-ink); }
+
+.variant--link {
+  background: transparent;
+  border: 0;
+  padding-inline: 0;
+  color: var(--color-ink);
+  border-bottom: 1px solid currentColor;
+  border-radius: 0;
+}
+.variant--link:hover { color: var(--color-accent); }
+
+.button__arrow {
+  display: inline-block;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.button:hover .button__arrow { transform: translateX(3px); }
