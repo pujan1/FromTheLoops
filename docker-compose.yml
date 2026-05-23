@@ -1,0 +1,61 @@
+# Local dev infra: Postgres + Redis + Typesense.
+# Mirrors the Hetzner stack closely enough that worker code is portable.
+# Boot:  pnpm docker:up   (or `docker compose up -d`)
+# Tear:  pnpm docker:down
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: fromtheloop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fromtheloop
+      POSTGRES_PASSWORD: fromtheloop
+      POSTGRES_DB: fromtheloop
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fromtheloop"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: fromtheloop-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  typesense:
+    image: typesense/typesense:27.1
+    container_name: fromtheloop-typesense
+    restart: unless-stopped
+    command:
+      - --data-dir=/data
+      - --api-key=local-dev-key
+      - --listen-port=8108
+      - --enable-cors
+    ports:
+      - "8108:8108"
+    volumes:
+      - typesense_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8108/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
+  typesense_data:

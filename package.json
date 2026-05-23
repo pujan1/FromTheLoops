@@ -1,0 +1,26 @@
+{
+  "name": "fromtheloop",
+  "version": "0.0.0",
+  "private": false,
+  "description": "FromTheLoop — structured, taxonomy-aware interview reports.",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @fromtheloop/web dev",
+    "worker:dev": "pnpm --filter @fromtheloop/worker dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:migrate": "pnpm --filter @fromtheloop/db migrate",
+    "db:seed": "pnpm --filter @fromtheloop/db seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@fromtheloop/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Background worker: BullMQ consumer for aggregation, search indexing, email dispatch.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "echo 'TODO: tsx watch src/index.ts'",
+    "build": "echo 'TODO: tsc -p tsconfig.json'",
+    "start": "node dist/index.js",
+    "lint": "echo 'TODO: eslint .'",
+    "typecheck": "echo 'TODO: tsc --noEmit'",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "@fromtheloop/core": "workspace:*",
+    "@fromtheloop/db": "workspace:*",
+    "@fromtheloop/search": "workspace:*",
+    "@fromtheloop/shared": "workspace:*"
+  }
+}
