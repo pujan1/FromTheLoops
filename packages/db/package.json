@@ -11,13 +11,26 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "build": "echo 'TODO: tsc -p tsconfig.json'",
+    "build": "tsc --noEmit -p tsconfig.json",
     "lint": "echo 'TODO: eslint .'",
-    "typecheck": "echo 'TODO: tsc --noEmit'",
-    "test": "echo 'no tests yet'",
-    "generate": "echo 'TODO: drizzle-kit generate'",
-    "migrate": "echo 'TODO: drizzle-kit migrate'",
-    "studio": "echo 'TODO: drizzle-kit studio'",
-    "seed": "echo 'TODO: tsx src/seed/index.ts'"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/seed/index.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^12.0.0",
+    "@types/node": "^20.14.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "testcontainers": "^12.0.0",
+    "tsx": "^4.22.3",
+    "vitest": "^4.1.7"
   }
 }

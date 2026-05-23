@@ -48,7 +48,7 @@ This is the only sprint where infra setup doesn't block user-visible value. If a
 
 ## Exit criteria
 
-- [ ] Empty Next.js homepage deploys to Vercel from `main` automatically
+- [x] Empty Next.js homepage deploys to Vercel from `main` automatically
 - [ ] A new branch + PR triggers CI; CI runs typecheck + lint + tests
 - [ ] Local dev boots cold in <2 minutes from a fresh clone, following only `README.md`
 - [ ] Clerk login works on deployed Vercel preview, session round-trips to Postgres
@@ -88,3 +88,8 @@ This is the only sprint where infra setup doesn't block user-visible value. If a
 ## Notes & decisions
 
 _Append-only during the sprint._
+
+- 2026-05-23: Day 1 deploy verified at `https://from-the-loops-web.vercel.app/` (HTTP 200 from Vercel). Local `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` passed.
+- 2026-05-23: Day 2 — Drizzle wired in `packages/db/`. `drizzle.config.ts`, db client (`getDb` / `closeDb`), and a `tsx`-based migrate + seed runner all live. First migration `0000_bizarre_black_cat.sql` generated (10 tables: 5 top-level entities — `interview_reports`, `rounds`, `questions`, `user_verifications`, `mod_action_logs` — plus supporting `users`, `companies`, `roles`, `topics`, `question_topics`). Verified end-to-end against local docker-compose Postgres: `pnpm docker:up && pnpm db:migrate && pnpm db:seed` succeeds; repeat runs are idempotent. Neon project setup deferred — local-only today; runbook to follow.
+- 2026-05-23: Day 2 — **scope expansion**: full five top-level entities landed (instead of trivial placeholder), pulling forward what Sprint 2 had planned. Field set tracks PLAN.md §Data model. Level is text-on-report for now; Sprint 1 will introduce a per-company `levels` lookup and migrate to FK.
+- 2026-05-23: Day 2 — `packages/db/tests/` set up with **vitest 4 + testcontainers (Postgres 16)**. 20 tests across 4 files: migration shape (tables, indexes, journal), constraints (FK reject, cascade report→rounds→questions, RESTRICT on user delete, unique on `companies.slug` and `rounds (report_id, order_index)`, enum reject via raw SQL — all asserted by SQLSTATE code), type-level enum unions for every pgEnum (compile-time drift catches schema regressions), and EXPLAIN on the wedge-page lookup confirming `reports_company_role_level_idx` is hit. Suite runs in ~2s locally on a warm Docker daemon. CI (`pnpm test`) now does real work.

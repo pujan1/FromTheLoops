@@ -182,14 +182,15 @@ See [sprints/README.md](sprints/README.md) for cadence, ceremonies, and how to u
 ```bash
 # Prereqs: Node 20+, pnpm, Docker
 pnpm install
-docker compose up -d        # Postgres, Redis, Typesense locally
-pnpm db:migrate
-pnpm db:seed                # seeds dummy + curated data (source='seed_dummy')
+cp .env.example .env.local  # then fill in the values you have
+pnpm docker:up              # Postgres, Redis, Typesense locally
+pnpm db:migrate             # Drizzle: applies SQL in packages/db/src/migrations
+pnpm db:seed                # placeholder row (Sprint 1 swaps in seed_dummy + seed_curated)
 pnpm dev                    # Next.js on :3000
 pnpm worker:dev             # BullMQ worker
 ```
 
-Environment variables documented in `.env.example` (created Sprint 0).
+Environment variables documented in `.env.example` (created Sprint 0). `.env.local` is git-ignored and is what the dev stack reads.
 
 ---
 
