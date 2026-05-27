@@ -1,4 +1,5 @@
-import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import Link, { type LinkProps } from "next/link";
+import { type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from "react";
 import styles from "./button.module.css";
 
 const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ");
@@ -38,7 +39,8 @@ export function Button({
 }
 
 /* Anchor variant — same look, semantically a link */
-type LinkButtonProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+type LinkButtonProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
+  href: LinkProps["href"];
   variant?: Variant;
   size?: Size;
   trailingArrow?: boolean;
@@ -54,7 +56,7 @@ export function LinkButton({
   ...rest
 }: LinkButtonProps) {
   return (
-    <a
+    <Link
       className={cx(
         styles.button,
         styles[`variant--${variant}`],
@@ -65,6 +67,6 @@ export function LinkButton({
     >
       {children}
       {trailingArrow && <span className={styles.button__arrow} aria-hidden="true">→</span>}
-    </a>
+    </Link>
   );
 }

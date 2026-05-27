@@ -1,0 +1,87 @@
+.toggle {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 36px;
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-full);
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-paper-2) 72%, transparent);
+  transition:
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.toggle:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.toggle:active {
+  transform: translateY(1px);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.toggle__icon {
+  width: 18px;
+  height: 18px;
+  position: relative;
+  display: block;
+}
+
+.toggle__sun,
+.toggle__moon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.toggle__sun {
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-radius: var(--radius-full);
+  box-shadow:
+    0 -7px 0 -5px currentColor,
+    0 7px 0 -5px currentColor,
+    -7px 0 0 -5px currentColor,
+    7px 0 0 -5px currentColor,
+    5px 5px 0 -5px currentColor,
+    -5px 5px 0 -5px currentColor,
+    5px -5px 0 -5px currentColor,
+    -5px -5px 0 -5px currentColor;
+}
+
+.toggle__moon {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  box-shadow: inset -5px 0 0 currentColor;
+  transform: rotate(-18deg);
+}
+
+.toggle[data-theme-state="light"] .toggle__moon {
+  opacity: 0;
+  transform: rotate(-18deg) translateY(5px) scale(0.75);
+}
+
+.toggle[data-theme-state="dark"] .toggle__sun {
+  opacity: 0;
+  transform: rotate(45deg) translateY(-5px) scale(0.75);
+}
+
+.toggle[data-theme-state="dark"] .toggle__moon {
+  opacity: 1;
+  transform: rotate(-18deg) translateY(0) scale(1);
+}

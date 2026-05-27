@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Body,
   Button,
@@ -88,9 +89,9 @@ export default function HomePage() {
             <div className={styles.section__head}>
               <span className={styles.section__head__no}>§ 01 — The corpus</span>
               <div className={styles.section__head__title}>
-                <Heading level={2}>What's already in here.</Heading>
+                <Heading level={2}>What&apos;s already in here.</Heading>
               </div>
-              <a className={styles.section__head__action} href="/stats">all numbers →</a>
+              <Link className={styles.section__head__action} href="/stats">all numbers →</Link>
             </div>
             <StatGroup>
               <Stat label="reports" value="412" hint="across 38 companies" />
@@ -107,7 +108,7 @@ export default function HomePage() {
               <div className={styles.section__head__title}>
                 <Heading level={2}>Fresh from the loops.</Heading>
               </div>
-              <a className={styles.section__head__action} href="/reports">all reports →</a>
+              <Link className={styles.section__head__action} href="/reports">all reports →</Link>
             </div>
             <div>
               <ReportCard
@@ -153,14 +154,14 @@ export default function HomePage() {
           <section className={styles.pull}>
             <blockquote className={styles.pull__quote}>
               The interviews are out there. The reports are not. Most candidates
-              prep blind — and that's the gap we're closing.
+              prep blind — and that&apos;s the gap we&apos;re closing.
             </blockquote>
             <div>
               <Eyebrow tone="accent">why this exists</Eyebrow>
               <Body style={{ marginTop: 12, maxWidth: "44ch" }}>
                 Glassdoor optimizes for HR. LinkedIn optimizes for recruiters.
                 Levels optimizes for comp. No one is writing for the person
-                walking into the loop next Tuesday. That's the only reader we
+                walking into the loop next Tuesday. That&apos;s the only reader we
                 care about.
               </Body>
               <p className={styles.pull__attr}>— the founding note</p>
@@ -174,7 +175,7 @@ export default function HomePage() {
               <div className={styles.section__head__title}>
                 <Heading level={2}>Search by what you need to study.</Heading>
               </div>
-              <a className={styles.section__head__action} href="/topics">all topics →</a>
+              <Link className={styles.section__head__action} href="/topics">all topics →</Link>
             </div>
             <div className={styles.topics}>
               {topics.map((t) => (
@@ -216,14 +217,14 @@ export default function HomePage() {
             </div>
             <div className={styles.footer__cols}>
               <div className={styles.footer__col}>
-                <a href="/companies">Companies</a>
-                <a href="/topics">Topics</a>
-                <a href="/reports">Reports</a>
+                <Link href="/companies">Companies</Link>
+                <Link href="/topics">Topics</Link>
+                <Link href="/reports">Reports</Link>
               </div>
               <div className={styles.footer__col}>
-                <a href="/submit">Submit</a>
-                <a href="/about">About</a>
-                <a href="/styleguide">Design</a>
+                <Link href="/submit">Submit</Link>
+                <Link href="/about">About</Link>
+                <Link href="/styleguide">Design</Link>
               </div>
             </div>
           </footer>

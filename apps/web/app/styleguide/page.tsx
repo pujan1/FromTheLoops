@@ -20,20 +20,20 @@ import {
 import styles from "./page.module.css";
 
 const colors = [
-  { name: "paper",       hex: "#FAF7F2" },
-  { name: "paper-2",     hex: "#F2EDE5" },
-  { name: "paper-3",     hex: "#EBE5DB" },
-  { name: "ink",         hex: "#18171A" },
-  { name: "ink-2",       hex: "#3A3936" },
-  { name: "muted",       hex: "#8B8780" },
-  { name: "muted-2",     hex: "#B8B2A7" },
-  { name: "rule",        hex: "#DDD6C9" },
-  { name: "rule-strong", hex: "#C6BDAB" },
-  { name: "accent",      hex: "#167C8C" },
-  { name: "accent-deep", hex: "#0E5965" },
-  { name: "accent-soft", hex: "#DCEAEE" },
-  { name: "success",     hex: "#3F6F4A" },
-  { name: "warning",     hex: "#8A6A14" },
+  "paper",
+  "paper-2",
+  "paper-3",
+  "ink",
+  "ink-2",
+  "muted",
+  "muted-2",
+  "rule",
+  "rule-strong",
+  "accent",
+  "accent-deep",
+  "accent-soft",
+  "success",
+  "warning",
 ];
 
 export default function StyleguidePage() {
@@ -59,7 +59,7 @@ export default function StyleguidePage() {
               </Body>
               <dl>
                 <dt>Version</dt><dd>0.1 · pre-build</dd>
-                <dt>Surface</dt><dd>Light only · paper canvas</dd>
+                <dt>Surface</dt><dd>Light + dark · paper and pressroom</dd>
                 <dt>Stack</dt><dd>Next.js 15 · CSS Modules · next/font</dd>
                 <dt>Updated</dt><dd>2026-05-23</dd>
               </dl>
@@ -71,20 +71,20 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 01 — Color</div>
               <div>
-                <Heading level={2}>A warm paper, a deep ink, one accent.</Heading>
+                <Heading level={2}>Warm paper by day, pressroom ink by night.</Heading>
                 <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  The palette commits to dominant warm neutrals with a single
-                  confident accent. No gradients. No greys-on-greys.
+                  The palette commits to warm neutrals, a dense night mode, and
+                  one confident accent that survives both surfaces.
                 </Body>
               </div>
             </header>
             <div className={styles.swatches}>
-              {colors.map((c) => (
-                <div key={c.name} className={styles.swatch}>
-                  <div className={styles.swatch__chip} style={{ background: c.hex }} />
+              {colors.map((name) => (
+                <div key={name} className={styles.swatch}>
+                  <div className={styles.swatch__chip} style={{ background: `var(--color-${name})` }} />
                   <div className={styles.swatch__body}>
-                    <span className={styles.swatch__name}>--color-{c.name}</span>
-                    <span className={styles.swatch__hex}>{c.hex}</span>
+                    <span className={styles.swatch__name}>--color-{name}</span>
+                    <span className={styles.swatch__hex}>active theme token</span>
                   </div>
                 </div>
               ))}
@@ -357,16 +357,17 @@ export default function StyleguidePage() {
                 </Body>
               </div>
             </header>
-            <pre className={styles.specBlock}>{`--color-paper        #FAF7F2     warm cream canvas
---color-ink          #18171A     primary type
---color-accent       #167C8C     peacock blue, single accent
+            <pre className={styles.specBlock}>{`--color-paper        light: #FAF7F2 · dark: #11100E
+--color-ink          light: #18171A · dark: #F4EFE4
+--color-accent       light: #167C8C · dark: #36B6BD
 --font-display       DM Sans
 --font-sans          Geist
 --font-mono          Geist Mono
 --space scale        4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 144
 --radius             0 · 2 · 4 · 8 · 999
 --container-max      1240
---container-prose    680`}</pre>
+--container-prose    680
+--theme-storage      fromtheloop-theme`}</pre>
           </section>
         </Container>
       </main>

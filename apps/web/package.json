@@ -12,6 +12,7 @@
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.4.1",
     "@fromtheloop/core": "workspace:*",
     "@fromtheloop/db": "workspace:*",
     "@fromtheloop/search": "workspace:*",

@@ -1,0 +1,18 @@
+.page {
+  min-height: calc(100vh - 88px);
+  padding-block: var(--space-9) var(--space-10);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-6);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}

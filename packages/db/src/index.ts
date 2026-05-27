@@ -51,6 +51,11 @@ export async function closeDb(): Promise<void> {
   cached = null;
 }
 
+// Re-export drizzle-orm helpers that callers need for query composition.
+// Hides the ORM choice behind one import path so apps don't take a direct
+// dep on `drizzle-orm`.
+export { sql } from "drizzle-orm";
+
 // Re-export the schema namespace under two shapes:
 //   `import { schema } from "@fromtheloop/db"` — for code that wants the
 //      whole bag (e.g., constructing dynamic queries).

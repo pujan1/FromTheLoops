@@ -1,3 +1,4 @@
+import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { DM_Sans, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -22,6 +23,18 @@ const mono = Geist_Mono({
   display: "swap",
 });
 
+const themeInitScript = `
+(function () {
+  try {
+    var stored = window.localStorage.getItem("fromtheloop-theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var theme = stored === "light" || stored === "dark" ? stored : (prefersDark ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch (_) {}
+})();
+`;
+
 export const metadata: Metadata = {
   title: "FromTheLoop — Interview reports, from the loop",
   description:
@@ -37,8 +50,21 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${display.variable} ${sans.variable} ${mono.variable}`}
+      suppressHydrationWarning
     >
-      <body>{children}</body>
+      <head>
+        {/* Inline so it runs before paint and sets data-theme before the
+            stylesheet applies, preventing FOUC on hard reloads. next/script
+            with beforeInteractive runs too late for this. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
+      </head>
+      <body>
+        <ClerkProvider>
+          {children}
+        </ClerkProvider>
+      </body>
     </html>
   );
 }
