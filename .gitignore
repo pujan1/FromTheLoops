@@ -9,13 +9,17 @@ build/
 .turbo/
 out/
 apps/web/tsconfig.tsbuildinfo
+apps/worker/tsconfig.tsbuildinfo
 packages/db/tsconfig.tsbuildinfo
 
 # Env / secrets
 .env
 .env.local
 .env.*.local
+.env.prod
+infra/hetzner/.env.prod
 !.env.example
+!.env.prod.example
 
 # Logs
 *.log
