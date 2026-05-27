@@ -6,17 +6,24 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "echo 'TODO: tsx watch src/index.ts'",
-    "build": "echo 'TODO: tsc -p tsconfig.json'",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "enqueue:hello": "tsx src/scripts/enqueue-hello.ts",
     "lint": "echo 'TODO: eslint .'",
-    "typecheck": "echo 'TODO: tsc --noEmit'",
+    "typecheck": "tsc --noEmit",
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
     "@fromtheloop/core": "workspace:*",
     "@fromtheloop/db": "workspace:*",
     "@fromtheloop/search": "workspace:*",
-    "@fromtheloop/shared": "workspace:*"
+    "@fromtheloop/shared": "workspace:*",
+    "bullmq": "^5.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.22.3",
+    "typescript": "^5.5.0"
   }
 }
