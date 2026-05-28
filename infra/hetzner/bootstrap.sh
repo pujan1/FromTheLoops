@@ -11,7 +11,8 @@ if [ ! -f .env.prod ]; then
   exit 1
 fi
 
-docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+# --ignore-pull-failures: the worker image is built locally, has no remote registry
+docker compose -f docker-compose.prod.yml --env-file .env.prod pull --ignore-pull-failures
 
 if ! cmp -s systemd/fromtheloop.service /etc/systemd/system/fromtheloop.service 2>/dev/null; then
   cp systemd/fromtheloop.service /etc/systemd/system/fromtheloop.service
