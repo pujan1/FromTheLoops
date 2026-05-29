@@ -11,7 +11,7 @@
     "start": "node dist/index.js",
     "enqueue:hello": "tsx src/scripts/enqueue-hello.ts",
     "sentry:test": "tsx src/scripts/throw-test.ts",
-    "lint": "echo 'TODO: eslint .'",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "echo 'no tests yet'"
   },

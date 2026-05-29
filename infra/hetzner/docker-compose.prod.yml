@@ -67,6 +67,10 @@ services:
     environment:
       - REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4}
+      - NODE_ENV=production
+      # Sentry: DSN no-ops when blank, so this is safe before the project is set up.
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     depends_on:
       redis:
         condition: service_healthy
