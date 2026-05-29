@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -21,4 +22,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// withSentryConfig handles source-map upload (needs SENTRY_AUTH_TOKEN at
+// build time) and tunneling. org/project come from env; without them the
+// build still succeeds (just no source-map upload). `silent` keeps local
+// builds quiet but logs in CI.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+});

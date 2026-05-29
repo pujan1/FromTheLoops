@@ -17,6 +17,7 @@
     "@fromtheloop/db": "workspace:*",
     "@fromtheloop/search": "workspace:*",
     "@fromtheloop/shared": "workspace:*",
+    "@sentry/nextjs": "^10.55.0",
     "bullmq": "^5.34.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
