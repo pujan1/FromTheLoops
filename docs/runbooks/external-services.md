@@ -39,11 +39,45 @@ Env to set:
 | `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | Vercel | same |
 
 **Verify (exit criterion — one test error from each app in Sentry):**
-- web: deploy, then `curl https://<deployment>/api/debug-sentry` → 500; the
-  error appears in `fromtheloop-web` within ~30s.
-- worker: on the box, `pnpm --filter @fromtheloop/worker sentry:test` (or run
-  the built `throw-test` script) → captures + flushes; appears in
-  `fromtheloop-worker`.
+
+*Web* — deploy with both DSN vars set, then:
+```bash
+curl -i https://from-the-loops-web.vercel.app/api/debug-sentry   # expect HTTP 500
+```
+The error appears in `fromtheloop-web` within ~30s. (Server-side capture
+needs `SENTRY_DSN`, not just `NEXT_PUBLIC_SENTRY_DSN`.)
+
+*Worker* — the deployed image is built with `pnpm deploy --prod`, so dev deps
+are stripped: **`tsx` and the `sentry:test` script don't exist in the
+container**. Instead, drive the compiled Sentry module inside the running
+container — it reads the `SENTRY_DSN` already injected by compose, so no env
+needs passing:
+```bash
+# on the box (box.pujan.tech)
+docker exec fromtheloop-worker node --input-type=module -e "\
+  const { Sentry } = await import('/app/dist/sentry.js'); \
+  Sentry.captureException(new Error('worker sentry test (box manual)')); \
+  const ok = await Sentry.flush(5000); \
+  console.log('[sentry:test] flush', ok ? 'ok' : 'timeout'); \
+  process.exit(ok ? 0 : 1);"
+```
+Expect `[sentry:test] flush ok`; the error appears in `fromtheloop-worker`
+within ~30s. Prereqs: `SENTRY_DSN` is set in `/opt/fromtheloop/.env.prod`
+(worker project DSN) and the container was recreated since
+(`bootstrap.sh` / `systemctl restart fromtheloop.service`) so it picked up
+the env. Confirm the var is live in the container first:
+```bash
+docker exec fromtheloop-worker printenv SENTRY_DSN
+```
+
+> Alternative (if you have a host checkout with dev deps installed):
+> `SENTRY_DSN=<worker DSN> pnpm --filter @fromtheloop/worker sentry:test`.
+> The box only has Docker by default, not a host Node toolchain, so the
+> `docker exec` path above is the reliable one.
+
+The *real* runtime path — a failed job triggering the `failed` →
+`captureException` handler in `src/index.ts` — won't fire until there are
+jobs that actually fail; no need to force it during Sprint 0.
 
 ---
 

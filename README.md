@@ -12,10 +12,10 @@ Interview reports straight **from the loop** — by candidates, for candidates. 
 
 | | |
 |---|---|
-| Phase | Pre-build (Sprint 0 not started) |
+| Phase | Sprint 0 (scaffolding & infra) — in progress, ~Day 8/10 |
 | Target alpha | ~16 weeks of solo dev (8 × 2-week sprints) |
 | Infra cost at alpha | ~$5/mo |
-| Repo state | Planning docs only |
+| Repo state | Monorepo scaffolded (web + worker + db/search/core/shared); CI green; Vercel + Hetzner + Neon + Clerk live |
 
 Active sprint plans live in [sprints/](sprints/).
 
@@ -177,12 +177,12 @@ See [sprints/README.md](sprints/README.md) for cadence, ceremonies, and how to u
 
 ---
 
-## Local development (target — Sprint 0 finalizes)
+## Local development
 
 ```bash
-# Prereqs: Node 20+, pnpm, Docker
+# Prereqs: Node 20+, pnpm 9, Docker
 pnpm install
-cp .env.example .env.local  # then fill in the values you have
+cp .env.example .env.local  # then fill in the values you have (see note below)
 pnpm docker:up              # Postgres, Redis, Typesense locally
 pnpm db:migrate             # Drizzle: applies SQL in packages/db/src/migrations
 pnpm db:seed                # placeholder row (Sprint 1 swaps in seed_dummy + seed_curated)
@@ -190,7 +190,17 @@ pnpm dev                    # Next.js on :3000
 pnpm worker:dev             # BullMQ worker
 ```
 
-Environment variables documented in `.env.example` (created Sprint 0). `.env.local` is git-ignored and is what the dev stack reads.
+Verified to cold-boot to a live `:3000` in well under 2 minutes from a fresh clone
+(seconds once the pnpm store and Docker images are warm; the first run on a new
+machine also pulls the `postgres`/`redis`/`typesense` images, which dominates).
+
+- **Clerk keys are optional to boot.** With `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+  empty, Clerk starts in **keyless mode** and the public pages render fine; it
+  prints a claim link in the dev log. You only need real keys (from
+  [dashboard.clerk.com](https://dashboard.clerk.com)) to exercise sign-in and
+  the gated `/dashboard`.
+- Environment variables are documented in `.env.example`. `.env.local` is
+  git-ignored and is what the dev stack reads.
 
 ---
 
