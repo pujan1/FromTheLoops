@@ -15,10 +15,14 @@
 
 import { describe, expectTypeOf, it } from "vitest";
 import type {
+  Company,
+  CompanyLevel,
+  Draft,
   InterviewReport,
   ModActionLog,
   NewInterviewReport,
   NewRound,
+  Role,
   Round,
   UserVerification,
 } from "../src/schema/index.js";
@@ -96,5 +100,41 @@ describe("schema types", () => {
       roundType: Round["roundType"];
       rating: Round["rating"];
     }>();
+  });
+
+  it("Company.status / Role.status / CompanyLevel.status share taxonomy_status", () => {
+    expectTypeOf<Company["status"]>().toEqualTypeOf<
+      "active" | "pending" | "merged"
+    >();
+    expectTypeOf<Role["status"]>().toEqualTypeOf<
+      "active" | "pending" | "merged"
+    >();
+    expectTypeOf<CompanyLevel["status"]>().toEqualTypeOf<
+      "active" | "pending" | "merged"
+    >();
+  });
+
+  it("Company.source is the exact taxonomy_source union", () => {
+    expectTypeOf<Company["source"]>().toEqualTypeOf<
+      "seed_curated" | "user_suggested"
+    >();
+  });
+
+  it("Company.aliases is a non-null string[]; domain + suggestedBy are nullable", () => {
+    expectTypeOf<Company["aliases"]>().toEqualTypeOf<string[]>();
+    expectTypeOf<Company["domain"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Company["suggestedByUserId"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("Role.mergedIntoId is a nullable self-FK", () => {
+    expectTypeOf<Role["mergedIntoId"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("InterviewReport.levelId is the nullable company_levels FK", () => {
+    expectTypeOf<InterviewReport["levelId"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("Draft.data is a non-null record", () => {
+    expectTypeOf<Draft["data"]>().toEqualTypeOf<Record<string, unknown>>();
   });
 });

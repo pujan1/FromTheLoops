@@ -46,16 +46,20 @@ describe("migrations", () => {
       "question_topics",
       "user_verifications",
       "mod_action_logs",
+      "company_levels",
+      "submission_drafts",
     ]) {
       expect(names, `table ${expected} missing`).toContain(expected);
     }
   });
 
-  it("records the migration in the drizzle journal", async () => {
+  it("records both migrations in the drizzle journal", async () => {
+    // 0000 (initial) + 0001 (taxonomy/drafts); guards a corrupted journal
+    // silently skipping a file.
     const rows = await db.execute<{ hash: string }>(sql`
       SELECT hash FROM drizzle.__drizzle_migrations
     `);
-    expect(rows.length).toBeGreaterThanOrEqual(1);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 
   it("creates the wedge-page composite index", async () => {
@@ -65,5 +69,21 @@ describe("migrations", () => {
     `);
     const names = rows.map((r) => r.indexname);
     expect(names).toContain("reports_company_role_level_idx");
+  });
+
+  it("creates the taxonomy/draft indexes", async () => {
+    const rows = await db.execute<{ indexname: string }>(sql`
+      SELECT indexname FROM pg_indexes WHERE schemaname = 'public'
+    `);
+    const names = new Set(rows.map((r) => r.indexname));
+    for (const expected of [
+      "company_levels_company_slug_uq",
+      "company_levels_company_idx",
+      "drafts_user_idx",
+      "companies_status_idx",
+      "roles_status_idx",
+    ]) {
+      expect(names, `index ${expected} missing`).toContain(expected);
+    }
   });
 });

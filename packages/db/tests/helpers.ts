@@ -42,6 +42,8 @@ const TRUNCATE_TABLES = [
   "mod_action_logs",
   "user_verifications",
   "interview_reports",
+  "submission_drafts",
+  "company_levels",
   "topics",
   "roles",
   "companies",

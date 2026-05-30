@@ -13,7 +13,7 @@ import {
   reportSource,
   reportStatus,
 } from "./enums.js";
-import { companies, roles } from "./taxonomy.js";
+import { companies, companyLevels, roles } from "./taxonomy.js";
 import { users } from "./users.js";
 
 // `interview_reports` — *the* top-level entity. One row = one submitted
@@ -39,11 +39,9 @@ import { users } from "./users.js";
 //     can be merged but never silently dropped while reports reference
 //     them. Merge ops have to update report FKs first.
 //
-// Deferred to Sprint 1:
-//   - `level` is currently text. PLAN.md describes levels as a
-//     per-company enum (Amazon SDE2, Google L4, Meta E4). That needs a
-//     `company_levels` lookup table; once that exists, we migrate
-//     `level` to `level_id uuid REFERENCES company_levels(id)`.
+// Deferred:
+//   - `level_id` FK now exists, but the text `level` column stays until
+//     the Sprint 2 cutover (the wedge index is built on it).
 //   - `evidence_verified` is a denormalized boolean that mirrors
 //     "does this user have a user_verifications row for this company?"
 //     Will be maintained by a worker job (BullMQ) when verifications
@@ -62,9 +60,15 @@ export const interviewReports = pgTable(
     canonicalRoleId: uuid("canonical_role_id")
       .notNull()
       .references(() => roles.id, { onDelete: "restrict" }),
-    // `level` is per-company. Stored as text now; Sprint 1 introduces a
-    // companies_levels lookup and migrates this to an FK.
+    // Per-company level name. Kept as text (NOT NULL) because the wedge
+    // index is built on it (query-plan.test.ts); the text→FK cutover to
+    // level_id below finishes in Sprint 2.
     level: text("level").notNull(),
+    // Optional FK to the per-company level. Nullable — a company with no
+    // levels uses the "N/A" sentinel. RESTRICT mirrors company_id/role_id.
+    levelId: uuid("level_id").references(() => companyLevels.id, {
+      onDelete: "restrict",
+    }),
     outcome: reportOutcome("outcome"),
     displayAttribution: displayAttribution("display_attribution")
       .notNull()

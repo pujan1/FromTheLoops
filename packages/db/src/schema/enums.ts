@@ -42,6 +42,22 @@ export const displayAttribution = pgEnum("display_attribution", [
   "anonymous",
 ]);
 
+// Lifecycle of a taxonomy row. active = shown in autocomplete; pending =
+// user-suggested, mod-queue only; merged = superseded, redirects via
+// merged_into_id. See PLAN.md §Taxonomy curation.
+export const taxonomyStatus = pgEnum("taxonomy_status", [
+  "active",
+  "pending",
+  "merged",
+]);
+
+// Provenance of a taxonomy row. Separate from report_source (different
+// value set: user_suggested vs user_submitted).
+export const taxonomySource = pgEnum("taxonomy_source", [
+  "seed_curated",
+  "user_suggested",
+]);
+
 export const roundType = pgEnum("round_type", [
   "recruiter-screen",
   "technical-phone",
