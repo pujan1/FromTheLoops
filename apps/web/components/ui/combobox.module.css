@@ -1,0 +1,157 @@
+.combobox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.required {
+  color: var(--color-accent);
+}
+
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--color-ink);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.input::placeholder {
+  color: var(--color-muted-2);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: var(--color-paper);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Minimal spinner — a hairline ring, no shadow. */
+.spinner {
+  position: absolute;
+  right: var(--space-4);
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-rule-strong);
+  border-top-color: var(--color-accent);
+  border-radius: var(--radius-full);
+  animation: combobox-spin 0.7s linear infinite;
+}
+
+@keyframes combobox-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.listbox {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-md);
+  /* Editorial: a crisp hairline lift, not a soft drop shadow. */
+  box-shadow: 0 1px 0 var(--color-rule) inset, 0 8px 24px -16px var(--color-ink);
+}
+
+.option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  scroll-margin: var(--space-1);
+}
+
+.optionActive {
+  background: var(--color-accent-soft);
+}
+
+.optionLabel {
+  font-size: var(--fs-small);
+  color: var(--color-ink);
+}
+
+.optionHint {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--color-muted);
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+
+/* "Suggest new" row — set apart with a top hairline and accent label. */
+.suggest {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--color-rule);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.suggestLabel {
+  font-size: var(--fs-small);
+  color: var(--color-accent-deep);
+}
+
+.suggestMeta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

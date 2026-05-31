@@ -17,6 +17,7 @@ import {
   StatGroup,
   Tag,
 } from "@/components/ui";
+import { ComboboxDemo } from "./_combobox-demo";
 import styles from "./page.module.css";
 
 const colors = [
@@ -237,6 +238,22 @@ export default function StyleguidePage() {
                 <Button variant="primary" disabled>disabled</Button>
               </div>
             </div>
+          </section>
+
+          {/* ----------------------- Combobox ----------------------- */}
+          <section className={styles.section}>
+            <header className={styles.section__head}>
+              <div className={styles.section__head__no}>§ 5b — Combobox</div>
+              <div>
+                <Heading level={2}>Autocomplete with a suggest-new escape hatch.</Heading>
+                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                  Debounced async lookup, full keyboard nav (↑/↓, Enter, Esc),
+                  and an optional &ldquo;suggest new&rdquo; row. Companies allow
+                  it; canonical roles are a closed set and do not.
+                </Body>
+              </div>
+            </header>
+            <ComboboxDemo />
           </section>
 
           {/* ----------------------- Cards ----------------------- */}

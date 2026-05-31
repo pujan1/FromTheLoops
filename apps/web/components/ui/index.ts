@@ -8,3 +8,4 @@ export { Stat, StatGroup } from "./stat";
 export { SiteHeader } from "./site-header";
 export { ThemeToggle } from "./theme-toggle";
 export { ReportCard, type ReportCardProps } from "./report-card";
+export { Combobox, type ComboboxOption, type ComboboxProps } from "./combobox";
