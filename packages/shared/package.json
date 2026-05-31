@@ -10,9 +10,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "echo 'TODO: tsc -p tsconfig.json'",
+    "build": "tsc --noEmit -p tsconfig.json",
     "lint": "echo 'TODO: eslint .'",
-    "typecheck": "echo 'TODO: tsc --noEmit'",
+    "typecheck": "tsc --noEmit",
     "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
   }
 }

@@ -11,6 +11,7 @@ out/
 apps/web/tsconfig.tsbuildinfo
 apps/worker/tsconfig.tsbuildinfo
 packages/db/tsconfig.tsbuildinfo
+packages/shared/tsconfig.tsbuildinfo
 
 # Env / secrets
 .env

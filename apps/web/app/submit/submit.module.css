@@ -1,0 +1,146 @@
+.page {
+  padding: var(--space-8) 0 var(--space-10);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.required {
+  color: var(--color-accent);
+}
+
+.hint {
+  font-size: var(--fs-small);
+  color: var(--color-muted);
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--color-ink);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.select {
+  cursor: pointer;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: var(--color-paper);
+}
+
+/* Outcome + attribution chips — segmented radio look. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-small);
+  color: var(--color-ink-2);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.chip:hover {
+  border-color: var(--color-accent);
+}
+
+.chipActive {
+  background: var(--color-accent-soft);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-accent-deep);
+}
+
+/* Focus ring for keyboard users (radio is visually hidden inside label). */
+.chip:has(:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.clear {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.clear:hover {
+  color: var(--color-ink);
+}
+
+.error {
+  font-size: var(--fs-small);
+  color: var(--color-warning);
+}
+
+.actions {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-3);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

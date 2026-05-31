@@ -1,12 +1,44 @@
-import { PlaceholderPage } from "../_components/placeholder-page";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import {
+  Body,
+  Container,
+  Display,
+  Eyebrow,
+  Rule,
+  SiteHeader,
+} from "@/components/ui";
+import styles from "./submit.module.css";
+import { SubmitForm } from "./submit-form";
 
-export default function SubmitPage() {
+// Submission entry point (Sprint 1 Day 5). RSC shell: auth gate + editorial
+// header; the interactive fields live in <SubmitForm> (client). Route
+// protection is also enforced in middleware — the redirect here is a
+// belt-and-suspenders for direct RSC hits.
+//
+// This sprint the form ends at "Continue → Rounds", which routes to the
+// /submit/rounds stub. Draft autosave + resume land Day 6.
+export default async function SubmitPage() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
   return (
-    <PlaceholderPage
-      eyebrow="submit"
-      title="Submission flow starts here."
-      body="The full report submission form will land on this route. The call-to-action links now resolve to a real surface."
-      tags={["report intake", "verification", "candidate notes"]}
-    />
+    <>
+      <SiteHeader />
+      <main className={styles.page}>
+        <Container width="prose">
+          <Eyebrow tone="accent">Submit a report</Eyebrow>
+          <Display as="h1" size="lg" style={{ marginTop: 24 }}>
+            Start with the <em>basics</em>.
+          </Display>
+          <Body size="lead" tone="muted" style={{ marginTop: 16 }}>
+            Company, role, level, and outcome. You’ll add rounds and questions
+            next. Nothing is published until you finish and it clears review.
+          </Body>
+          <Rule />
+          <SubmitForm />
+        </Container>
+      </main>
+    </>
   );
 }

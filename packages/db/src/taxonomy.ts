@@ -21,9 +21,14 @@
 // NOT — they're a closed canonical set; the search helper is the only role
 // surface and there is deliberately no role-suggest export here.
 
-import { eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { companies, type Company, roles } from "./schema/index.js";
+import {
+  companies,
+  type Company,
+  companyLevels,
+  roles,
+} from "./schema/index.js";
 import * as schema from "./schema/index.js";
 import { slugify } from "./slug.js";
 
@@ -123,6 +128,36 @@ export async function searchRoles(
     LIMIT ${limit}
   `);
   return rows.map((r) => ({ id: r.id, slug: r.slug, name: r.name }));
+}
+
+export type CompanyLevelOption = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+// The active level ladder for a company, low → high (order_index). Drives
+// the submission form's Level field; an empty result means the company has
+// no ladder yet and the form falls back to the "N/A" sentinel.
+export async function getCompanyLevels(
+  db: Db,
+  companyId: string,
+): Promise<CompanyLevelOption[]> {
+  const rows = await db
+    .select({
+      id: companyLevels.id,
+      slug: companyLevels.slug,
+      name: companyLevels.name,
+    })
+    .from(companyLevels)
+    .where(
+      and(
+        eq(companyLevels.companyId, companyId),
+        eq(companyLevels.status, "active"),
+      ),
+    )
+    .orderBy(asc(companyLevels.orderIndex));
+  return rows;
 }
 
 export interface SuggestCompanyInput {

@@ -18,6 +18,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companies, companyLevels, roles } from "../src/schema/index.js";
 import { seedCurated } from "../src/seed/curated.js";
 import {
+  getCompanyLevels,
   searchCompanies,
   searchRoles,
   suggestCompany,
@@ -133,6 +134,22 @@ describe("taxonomy lookup", () => {
 
     it("rejects an empty name", async () => {
       await expect(suggestCompany(db, { name: "   " })).rejects.toThrow();
+    });
+  });
+
+  describe("getCompanyLevels", () => {
+    it("returns the company ladder in order_index order", async () => {
+      const [stripe] = await searchCompanies(db, "stripe");
+      expect(stripe).toBeDefined();
+      const levels = await getCompanyLevels(db, stripe!.id);
+      // Curated Stripe ladder is L1..L5 in order.
+      expect(levels.map((l) => l.name)).toEqual(["L1", "L2", "L3", "L4", "L5"]);
+    });
+
+    it("returns [] for a company with no ladder (e.g. a suggested one)", async () => {
+      const { company } = await suggestCompany(db, { name: "MyTinyCo Inc" });
+      const levels = await getCompanyLevels(db, company.id);
+      expect(levels).toEqual([]);
     });
   });
 
