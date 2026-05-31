@@ -15,6 +15,7 @@ import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../schema/index.js";
 import { companies, companyLevels, roles } from "../schema/index.js";
+import { slugify } from "../slug.js";
 
 // Minimal DB type: a Drizzle postgres-js client bound to our schema. Both
 // getDb()'s client and the test client (helpers.ts `TestDb`) satisfy this —
@@ -39,14 +40,9 @@ export interface CuratedRole {
   aliases?: string[];
 }
 
-// Level slugs are derived from the display name (unique within a company,
-// which is all the (company_id, slug) constraint requires).
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+// Level slugs are derived from the display name via the shared slugify()
+// (unique within a company, which is all the (company_id, slug) constraint
+// requires).
 
 // 30 companies. Ladders are the public/known IC engineering tracks; where a
 // company is famously flat (Netflix) the ladder is short on purpose.

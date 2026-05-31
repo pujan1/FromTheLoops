@@ -53,13 +53,33 @@ describe("migrations", () => {
     }
   });
 
-  it("records both migrations in the drizzle journal", async () => {
-    // 0000 (initial) + 0001 (taxonomy/drafts); guards a corrupted journal
-    // silently skipping a file.
+  it("records every migration in the drizzle journal", async () => {
+    // 0000 (initial) + 0001 (taxonomy/drafts) + 0002 (trgm indexes); guards
+    // a corrupted journal silently skipping a file.
     const rows = await db.execute<{ hash: string }>(sql`
       SELECT hash FROM drizzle.__drizzle_migrations
     `);
-    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("enables pg_trgm and the taxonomy trigram indexes (migration 0002)", async () => {
+    const ext = await db.execute<{ extname: string }>(sql`
+      SELECT extname FROM pg_extension WHERE extname = 'pg_trgm'
+    `);
+    expect(ext.map((r) => r.extname)).toContain("pg_trgm");
+
+    const rows = await db.execute<{ indexname: string }>(sql`
+      SELECT indexname FROM pg_indexes WHERE schemaname = 'public'
+    `);
+    const names = new Set(rows.map((r) => r.indexname));
+    for (const expected of [
+      "companies_name_trgm_idx",
+      "companies_aliases_trgm_idx",
+      "roles_name_trgm_idx",
+      "roles_aliases_trgm_idx",
+    ]) {
+      expect(names, `index ${expected} missing`).toContain(expected);
+    }
   });
 
   it("creates the wedge-page composite index", async () => {

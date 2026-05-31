@@ -15,6 +15,13 @@
       "when": 1780105534279,
       "tag": "0001_giant_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780257176713,
+      "tag": "0002_trgm_taxonomy_indexes",
+      "breakpoints": true
     }
   ]
 }

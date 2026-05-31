@@ -63,3 +63,7 @@ export { sql } from "drizzle-orm";
 //      table-level imports.
 export { schema };
 export * from "./schema/index.js";
+
+// Taxonomy lookup + suggest-pending helpers (Sprint 1 Day 3). Apps import
+// these for autocomplete; they ride the pg_trgm indexes from migration 0002.
+export * from "./taxonomy.js";

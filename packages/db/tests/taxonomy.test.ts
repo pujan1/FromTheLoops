@@ -1,0 +1,156 @@
+// Sprint 1 Day 3: taxonomy lookup correctness + the p95 latency budget.
+//
+// Exit criteria exercised here:
+//   - "Typing 'stri' suggests 'Stripe' (curated) within 150ms p95"
+//   - "Typing 'MyTinyCo' with no match offers 'Suggest new'; submission
+//     creates companies.status = 'pending'"
+//   - "Role autocomplete has NO 'create new' affordance" (asserted by the
+//     module surface: there is no suggestRole export — see note below)
+//
+// Uses the shared testcontainer via makeTestClient (like seed.test). The
+// trigram indexes the benchmark leans on come from migration 0002, applied
+// by tests/global-setup.ts. No truncate in beforeAll (exclusive lock blocks
+// behind other suites' connections); isolation is by source-filtered
+// cleanup in afterAll, same as seed.test.
+
+import { eq, or } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { companies, companyLevels, roles } from "../src/schema/index.js";
+import { seedCurated } from "../src/seed/curated.js";
+import {
+  searchCompanies,
+  searchRoles,
+  suggestCompany,
+} from "../src/taxonomy.js";
+import { makeTestClient, type TestDb } from "./helpers.js";
+
+// Slug a suggested-pending test row collides on nothing in the curated set.
+const SUGGESTED_SLUG = "mytinyco-inc";
+
+describe("taxonomy lookup", () => {
+  let db: TestDb;
+  let close: () => Promise<void>;
+
+  beforeAll(async () => {
+    const { db: d, client } = makeTestClient();
+    db = d;
+    close = () => client.end({ timeout: 5 });
+    await seedCurated(db);
+  });
+
+  afterAll(async () => {
+    // Drop our rows so they don't collide with other suites (DELETE by
+    // source, not TRUNCATE — avoids the exclusive lock). Also remove the
+    // pending company suggestCompany created.
+    await db
+      .delete(companyLevels)
+      .where(eq(companyLevels.source, "seed_curated"));
+    await db
+      .delete(companies)
+      .where(
+        or(eq(companies.source, "seed_curated"), eq(companies.slug, SUGGESTED_SLUG)),
+      );
+    await db.delete(roles).where(eq(roles.source, "seed_curated"));
+    await close();
+  });
+
+  describe("searchCompanies", () => {
+    it("suggests Stripe for the prefix 'stri'", async () => {
+      const matches = await searchCompanies(db, "stri");
+      expect(matches.length).toBeGreaterThan(0);
+      expect(matches[0]?.name).toBe("Stripe");
+      expect(matches[0]?.slug).toBe("stripe");
+      expect(matches[0]?.domain).toBe("stripe.com");
+    });
+
+    it("matches on aliases ('Facebook' → Meta)", async () => {
+      const matches = await searchCompanies(db, "Facebook");
+      expect(matches[0]?.name).toBe("Meta");
+    });
+
+    it("tolerates a typo ('googel' → Google)", async () => {
+      const matches = await searchCompanies(db, "googel");
+      expect(matches.some((m) => m.slug === "google")).toBe(true);
+    });
+
+    it("returns nothing for an empty/whitespace query", async () => {
+      expect(await searchCompanies(db, "")).toEqual([]);
+      expect(await searchCompanies(db, "   ")).toEqual([]);
+    });
+
+    it("respects the limit option", async () => {
+      // 'i' appears in many company names; cap the dropdown.
+      const matches = await searchCompanies(db, "i", { limit: 3 });
+      expect(matches.length).toBeLessThanOrEqual(3);
+    });
+
+    it("excludes pending companies from results", async () => {
+      await suggestCompany(db, { name: "MyTinyCo Inc" });
+      const matches = await searchCompanies(db, "MyTinyCo");
+      expect(matches).toEqual([]);
+    });
+  });
+
+  describe("searchRoles", () => {
+    it("matches canonical role names ('machine' → Machine Learning Engineer)", async () => {
+      const matches = await searchRoles(db, "machine");
+      expect(matches[0]?.slug).toBe("ml");
+    });
+
+    it("matches role aliases ('SDET' → QA Engineer)", async () => {
+      const matches = await searchRoles(db, "SDET");
+      expect(matches.some((m) => m.slug === "qa")).toBe(true);
+    });
+
+    it("returns nothing for an empty query", async () => {
+      expect(await searchRoles(db, "")).toEqual([]);
+    });
+  });
+
+  describe("suggestCompany", () => {
+    it("creates a pending, user_suggested company", async () => {
+      // Idempotent across the suite: the excludes-pending test may have
+      // created it already, so assert the resulting row, not `created`.
+      const { company } = await suggestCompany(db, { name: "MyTinyCo Inc" });
+      expect(company.slug).toBe(SUGGESTED_SLUG);
+      expect(company.name).toBe("MyTinyCo Inc");
+      expect(company.status).toBe("pending");
+      expect(company.source).toBe("user_suggested");
+    });
+
+    it("is idempotent on the slug (created=false on repeat)", async () => {
+      const again = await suggestCompany(db, { name: "MyTinyCo Inc" });
+      expect(again.created).toBe(false);
+      expect(again.company.slug).toBe(SUGGESTED_SLUG);
+    });
+
+    it("never flips an existing active company back to pending", async () => {
+      const { company, created } = await suggestCompany(db, { name: "Stripe" });
+      expect(created).toBe(false);
+      expect(company.slug).toBe("stripe");
+      expect(company.status).toBe("active");
+    });
+
+    it("rejects an empty name", async () => {
+      await expect(suggestCompany(db, { name: "   " })).rejects.toThrow();
+    });
+  });
+
+  it("meets the p95 < 150ms budget for 'stri' lookup", async () => {
+    const ITERATIONS = 50;
+    const durations: number[] = [];
+    // Warm-up: first query pays plan/connection cost we don't want in p95.
+    await searchCompanies(db, "stri");
+    for (let i = 0; i < ITERATIONS; i++) {
+      const start = performance.now();
+      await searchCompanies(db, "stri");
+      durations.push(performance.now() - start);
+    }
+    durations.sort((a, b) => a - b);
+    const p95 = durations[Math.ceil(0.95 * ITERATIONS) - 1];
+    // Generous headroom vs. the 150ms budget — at seed scale this is ~1ms;
+    // the index keeps it flat as the taxonomy grows. Asserting the budget
+    // (not the observed value) guards against an accidental seqscan regress.
+    expect(p95).toBeLessThan(150);
+  });
+});

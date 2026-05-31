@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"print\\(open\\('sprints/sprint-01-submission-form.md'\\).read\\(\\)\\)\")",
+      "Bash(awk 'NF' docs/data-model.md)"
+    ]
+  }
+}
