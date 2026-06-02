@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// Single-locale (en), no i18n routing/middleware. Request config lives at
+// ./i18n/request.ts; the URL contract (no /en prefix) is in ADR-0003.
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -26,7 +31,7 @@ const nextConfig: NextConfig = {
 // build time) and tunneling. org/project come from env; without them the
 // build still succeeds (just no source-map upload). `silent` keeps local
 // builds quiet but logs in CI.
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withNextIntl(nextConfig), {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,

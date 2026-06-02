@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import {
   Body,
@@ -22,18 +23,19 @@ export default async function SubmitPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
+  const t = await getTranslations("submit");
+
   return (
     <>
       <SiteHeader />
       <main className={styles.page}>
         <Container width="prose">
-          <Eyebrow tone="accent">Submit a report</Eyebrow>
+          <Eyebrow tone="accent">{t("eyebrow")}</Eyebrow>
           <Display as="h1" size="lg" style={{ marginTop: 24 }}>
-            Start with the <em>basics</em>.
+            {t.rich("title", { em: (chunks) => <em>{chunks}</em> })}
           </Display>
           <Body size="lead" tone="muted" style={{ marginTop: 16 }}>
-            Company, role, level, and outcome. You’ll add rounds and questions
-            next. Nothing is published until you finish and it clears review.
+            {t("lede")}
           </Body>
           <Rule />
           <SubmitForm />

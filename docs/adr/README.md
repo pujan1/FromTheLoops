@@ -15,11 +15,12 @@ Short, dated, append-only records of technical decisions. Format: [Michael Nygar
 |---|---|---|---|---|
 | [0001](0001-stack-choice.md) | Stack choice — Next.js, Neon, Typesense, Hetzner | accepted | 2026-05-23 | 0 |
 | [0002](0002-orm-drizzle.md) | ORM — Drizzle | accepted | 2026-05-23 | 0 |
-| 0003 | Validation rules and soft-delete semantics | _planned_ | — | 2 |
-| 0004 | Aggregation strategy — Postgres matviews + Typesense facets | _planned_ | — | 3 |
-| 0005 | URL contract and per-company level slugs | _planned_ | — | 4 |
-| 0006 | Karma design — earn rules, non-goals | _planned_ | — | 5 |
-| 0007 | RBAC, evidence storage, audit log | _planned_ | — | 6 |
+| [0003](0003-i18n-url-contract.md) | i18n URL contract — single locale, no prefix | accepted | 2026-06-01 | 1 |
+| 0004 | Validation rules and soft-delete semantics | _planned_ | — | 2 |
+| 0005 | Aggregation strategy — Postgres matviews + Typesense facets | _planned_ | — | 3 |
+| 0006 | URL contract and per-company level slugs | _planned_ | — | 4 |
+| 0007 | Karma design — earn rules, non-goals | _planned_ | — | 5 |
+| 0008 | RBAC, evidence storage, audit log | _planned_ | — | 6 |
 
 Add new ADRs as `NNNN-kebab-case-title.md` and link them above.
 

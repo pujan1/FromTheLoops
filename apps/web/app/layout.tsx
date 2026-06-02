@@ -1,5 +1,7 @@
 import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import { DM_Sans, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -41,14 +43,19 @@ export const metadata: Metadata = {
     "Structured, taxonomy-aware interview reports written by the people who took them.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // next-intl: locale is resolved by i18n/request.ts (fixed "en" for V1).
+  // NextIntlClientProvider streams the message catalog to client components;
+  // server components read it via getTranslations.
+  const locale = await getLocale();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${display.variable} ${sans.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
@@ -62,7 +69,7 @@ export default function RootLayout({
       </head>
       <body>
         <ClerkProvider>
-          {children}
+          <NextIntlClientProvider>{children}</NextIntlClientProvider>
         </ClerkProvider>
       </body>
     </html>

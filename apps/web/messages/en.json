@@ -1,0 +1,68 @@
+{
+  "submit": {
+    "eyebrow": "Submit a report",
+    "title": "Start with the <em>basics</em>.",
+    "lede": "Company, role, level, and outcome. You’ll add rounds and questions next. Nothing is published until you finish and it clears review.",
+    "company": {
+      "label": "Company",
+      "placeholder": "Search companies…",
+      "suggestHint": "new · pending review"
+    },
+    "role": {
+      "label": "Role",
+      "placeholder": "Search canonical roles…",
+      "empty": "No matching role — pick the closest canonical title."
+    },
+    "level": {
+      "label": "Level",
+      "chooseCompany": "Choose a company first.",
+      "loading": "Loading levels…",
+      "select": "Select a level…",
+      "na": "No level ladder on file for this company — recorded as <strong>N/A</strong>."
+    },
+    "outcome": {
+      "legend": "Outcome (optional)",
+      "offer": "Offer",
+      "reject": "Reject",
+      "withdrew": "Withdrew",
+      "ghosted": "Ghosted",
+      "pending": "Pending",
+      "clear": "clear"
+    },
+    "month": {
+      "label": "Interview month"
+    },
+    "attribution": {
+      "legend": "Attribution",
+      "display_name": "Show my display name",
+      "anonymous": "Anonymous",
+      "note": "Anonymous is the default. You can still verify a work email later without revealing your name."
+    },
+    "continue": "Continue → Rounds",
+    "save": {
+      "saving": "Saving…",
+      "saved": "Draft saved",
+      "error": "Couldn’t save draft"
+    },
+    "errors": {
+      "company": "Pick a company or suggest a new one.",
+      "role": "Pick the closest canonical role.",
+      "level": "Select a level.",
+      "month": "Choose the interview month."
+    }
+  },
+  "drafts": {
+    "eyebrow": "Resume draft",
+    "title": "Pick up where you <em>left off</em>.",
+    "lede": "This draft is saved to your account. Changes keep auto-saving as you edit."
+  },
+  "rounds": {
+    "eyebrow": "submit · rounds",
+    "title": "Rounds come next.",
+    "body": "You’ve captured the basics. Adding individual rounds, questions, and topics is the next step — landing in Sprint 2. Your selections aren’t lost; draft persistence arrives shortly.",
+    "tagRounds": "rounds",
+    "tagQuestions": "questions",
+    "tagTopics": "topics",
+    "tagSoon": "coming in sprint 2"
+  }
+}

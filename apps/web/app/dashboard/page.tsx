@@ -1,20 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { getDb, sql, users } from "@fromtheloop/db";
-
-// Upsert-on-visit user sync. Clerk owns identity; this guarantees a `users`
-// row exists for the signed-in Clerk principal so FKs in interview_reports,
-// mod_action_logs, etc. resolve. Webhook-based sync (user.created /
-// user.updated) is deferred — see TODO below.
-async function syncUser(clerkId: string, email: string | null) {
-  const db = getDb();
-  await db
-    .insert(users)
-    .values({ clerkId, email })
-    .onConflictDoUpdate({
-      target: users.clerkId,
-      set: { email: sql`excluded.email` },
-    });
-}
+import { getDb, getOrCreateUserByClerkId } from "@fromtheloop/db";
 
 export default async function DashboardPage() {
   // Middleware already gates this route, so currentUser() is non-null here.
@@ -26,7 +11,9 @@ export default async function DashboardPage() {
   }
 
   const email = user.primaryEmailAddress?.emailAddress ?? null;
-  await syncUser(user.id, email);
+  // Upsert-on-visit: guarantees a `users` row for the Clerk principal so FKs
+  // (reports, drafts, …) resolve. Webhook sync is deferred — see TODO below.
+  await getOrCreateUserByClerkId(getDb(), { clerkId: user.id, email });
 
   return (
     <main style={{ padding: "4rem 2rem", maxWidth: 720, margin: "0 auto" }}>

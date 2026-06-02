@@ -1,10 +1,15 @@
 "use client";
 
-// Top-level submission fields (Sprint 1 Day 5). Client component: holds
+// Top-level submission fields (Sprint 1 Day 5–6). Client component: holds
 // form state, drives the two taxonomy Comboboxes off the /api/taxonomy
 // lookups, validates with the shared Zod schema, and routes to the Rounds
-// stub on success. Draft autosave/resume is wired in Day 6 — for now state
-// is in-memory only.
+// stub on success.
+//
+// Day 6: debounced server-side autosave. Any change schedules a saveDraft
+// 2s after the last keystroke; the first save on a fresh form creates the
+// draft and shallow-rewrites the URL to /drafts/[id] (native History API, no
+// remount) so a refresh resumes via the RSC route. A draft loaded from
+// /drafts/[id] hydrates initial state below.
 
 import {
   attributionSchema,
@@ -13,14 +18,18 @@ import {
   type LevelSelection,
   REPORT_OUTCOMES,
   type ReportOutcome,
+  type SubmissionDraft,
   submissionReadySchema,
 } from "@fromtheloop/shared";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Body, Button, Combobox, type ComboboxOption } from "@/components/ui";
+import { saveDraft } from "./actions";
 import styles from "./submit.module.css";
 
 const PENDING_PREFIX = "pending:";
+const AUTOSAVE_DELAY_MS = 2000;
 
 // "YYYY-MM" for <input type="month">; defaults the interview month.
 function currentMonth(): string {
@@ -55,14 +64,29 @@ async function searchRoles(q: string): Promise<ComboboxOption[]> {
   return data.matches.map((m) => ({ id: m.id, label: m.name }));
 }
 
-// Combobox option → schema selection. A "pending:" id marks a suggest-new
-// company that has no row yet (the submit action creates it later).
-function toCompanySelection(option: ComboboxOption | null): CompanySelection | null {
+// --- selection <-> Combobox option mapping ---------------------------
+// A "pending:" id marks a suggest-new company with no row yet (the submit
+// action creates it later).
+function toCompanySelection(
+  option: ComboboxOption | null,
+): CompanySelection | null {
   if (!option) return null;
   if (option.id.startsWith(PENDING_PREFIX)) {
     return { kind: "suggested", name: option.label };
   }
   return { kind: "existing", id: option.id, name: option.label };
+}
+
+function companySelectionToOption(
+  c: CompanySelection | null | undefined,
+): ComboboxOption | null {
+  if (!c) return null;
+  // No hint here: a restored selection only renders its label in the input;
+  // the hint is dropdown-option chrome, set at suggest time below.
+  if (c.kind === "suggested") {
+    return { id: `${PENDING_PREFIX}${c.name}`, label: c.name };
+  }
+  return { id: c.id, label: c.name };
 }
 
 const NA_LEVEL: LevelSelection = { id: null, name: "N/A" };
@@ -71,31 +95,54 @@ type FieldErrors = Partial<
   Record<"company" | "role" | "level" | "month", string>
 >;
 
-export function SubmitForm() {
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+export interface SubmitFormProps {
+  initialDraftId?: string;
+  initialData?: SubmissionDraft | null;
+}
+
+export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
+  const t = useTranslations("submit");
   const router = useRouter();
   const baseId = useId();
 
-  const [company, setCompany] = useState<ComboboxOption | null>(null);
-  const [role, setRole] = useState<ComboboxOption | null>(null);
+  const [company, setCompany] = useState<ComboboxOption | null>(() =>
+    companySelectionToOption(initialData?.company),
+  );
+  const [role, setRole] = useState<ComboboxOption | null>(() =>
+    initialData?.role
+      ? { id: initialData.role.id, label: initialData.role.name }
+      : null,
+  );
   const [levels, setLevels] = useState<LevelOption[]>([]);
   const [levelsLoading, setLevelsLoading] = useState(false);
-  const [level, setLevel] = useState<LevelSelection | null>(null);
-  const [outcome, setOutcome] = useState<ReportOutcome | null>(null);
-  const [month, setMonth] = useState<string>(currentMonth);
+  const [level, setLevel] = useState<LevelSelection | null>(
+    initialData?.level ?? null,
+  );
+  const [outcome, setOutcome] = useState<ReportOutcome | null>(
+    initialData?.outcome ?? null,
+  );
+  const [month, setMonth] = useState<string>(
+    initialData?.month ?? currentMonth(),
+  );
   const [attribution, setAttribution] = useState<
     (typeof DISPLAY_ATTRIBUTIONS)[number]
-  >("anonymous");
+  >(initialData?.attribution ?? "anonymous");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [draftId, setDraftId] = useState<string | null>(initialDraftId ?? null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+
   const isSuggestedCompany = company?.id.startsWith(PENDING_PREFIX) ?? false;
 
-  // Load the per-company level ladder whenever the company changes. A
-  // suggested (not-yet-created) company has no levels → N/A.
+  // Load the per-company level ladder whenever the company changes. The
+  // *selected* level is reset by handleCompanyChange (user action), not here,
+  // so hydrating a saved draft keeps its restored level.
   useEffect(() => {
     if (!company) {
       setLevels([]);
-      setLevel(null);
       return;
     }
     if (isSuggestedCompany) {
@@ -103,16 +150,13 @@ export function SubmitForm() {
       setLevel(NA_LEVEL);
       return;
     }
-
     let cancelled = false;
     setLevelsLoading(true);
-    setLevel(null);
     fetch(`/api/taxonomy/companies/${company.id}/levels`)
       .then((res) => (res.ok ? res.json() : { levels: [] }))
       .then((data: { levels: LevelOption[] }) => {
         if (cancelled) return;
         setLevels(data.levels);
-        // No ladder on file → the company uses the N/A sentinel.
         if (data.levels.length === 0) setLevel(NA_LEVEL);
         setLevelsLoading(false);
       })
@@ -126,6 +170,50 @@ export function SubmitForm() {
       cancelled = true;
     };
   }, [company, isSuggestedCompany]);
+
+  // The draft payload + a stable serialization used as the autosave trigger.
+  const draftData = useMemo<Record<string, unknown>>(
+    () => ({
+      company: toCompanySelection(company),
+      role: role ? { id: role.id, name: role.label } : null,
+      level,
+      outcome,
+      month,
+      attribution,
+    }),
+    [company, role, level, outcome, month, attribution],
+  );
+  const serialized = JSON.stringify(draftData);
+
+  // Skip re-saving the exact state we last persisted (covers the pristine
+  // initial render and the post-save re-render when draftId is set).
+  const lastSavedRef = useRef(serialized);
+
+  useEffect(() => {
+    if (serialized === lastSavedRef.current) return;
+    const timer = setTimeout(async () => {
+      setSaveState("saving");
+      try {
+        const res = await saveDraft({ id: draftId, data: draftData });
+        lastSavedRef.current = serialized;
+        if (!draftId) {
+          setDraftId(res.id);
+          // Shallow URL update (no remount) so a refresh resumes the draft.
+          window.history.replaceState(null, "", `/drafts/${res.id}`);
+        }
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    }, AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [serialized, draftId, draftData]);
+
+  function handleCompanyChange(option: ComboboxOption | null) {
+    setCompany(option);
+    // New company → re-pick level (the effect sets N/A when there's no ladder).
+    setLevel(null);
+  }
 
   function handleLevelSelect(value: string) {
     if (value === "") {
@@ -156,7 +244,7 @@ export function SubmitForm() {
           key === "level" ||
           key === "month"
         ) {
-          next[key] ??= fieldMessage(key);
+          next[key] ??= t(`errors.${key}`);
         }
       }
       setErrors(next);
@@ -164,7 +252,6 @@ export function SubmitForm() {
     }
     setErrors({});
     setSubmitting(true);
-    // Day 6 persists the draft here; for now go straight to the stub.
     router.push("/submit/rounds");
   }
 
@@ -173,16 +260,16 @@ export function SubmitForm() {
   return (
     <div className={styles.form}>
       <Combobox
-        label="Company"
-        placeholder="Search companies…"
+        label={t("company.label")}
+        placeholder={t("company.placeholder")}
         value={company}
-        onChange={setCompany}
+        onChange={handleCompanyChange}
         search={searchCompanies}
         onSuggestNew={(name) =>
-          setCompany({
+          handleCompanyChange({
             id: `${PENDING_PREFIX}${name}`,
             label: name,
-            hint: "new · pending review",
+            hint: t("company.suggestHint"),
           })
         }
         required
@@ -190,12 +277,12 @@ export function SubmitForm() {
       {errors.company && <p className={styles.error}>{errors.company}</p>}
 
       <Combobox
-        label="Role"
-        placeholder="Search canonical roles…"
+        label={t("role.label")}
+        placeholder={t("role.placeholder")}
         value={role}
         onChange={setRole}
         search={searchRoles}
-        emptyMessage="No matching role — pick the closest canonical title."
+        emptyMessage={t("role.empty")}
         required
       />
       {errors.role && <p className={styles.error}>{errors.role}</p>}
@@ -203,16 +290,16 @@ export function SubmitForm() {
       {/* Level — per-company ladder, or N/A when the company has none. */}
       <div className={styles.field}>
         <label htmlFor={`${baseId}-level`} className={styles.label}>
-          Level
+          {t("level.label")}
           <span className={styles.required} aria-hidden="true">
             {" "}
             *
           </span>
         </label>
         {!company ? (
-          <p className={styles.hint}>Choose a company first.</p>
+          <p className={styles.hint}>{t("level.chooseCompany")}</p>
         ) : levelsLoading ? (
-          <p className={styles.hint}>Loading levels…</p>
+          <p className={styles.hint}>{t("level.loading")}</p>
         ) : hasLevelLadder ? (
           <select
             id={`${baseId}-level`}
@@ -220,7 +307,7 @@ export function SubmitForm() {
             value={level?.id ?? ""}
             onChange={(e) => handleLevelSelect(e.target.value)}
           >
-            <option value="">Select a level…</option>
+            <option value="">{t("level.select")}</option>
             {levels.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
@@ -229,8 +316,7 @@ export function SubmitForm() {
           </select>
         ) : (
           <p className={styles.hint}>
-            No level ladder on file for this company — recorded as{" "}
-            <strong>N/A</strong>.
+            {t.rich("level.na", { strong: (chunks) => <strong>{chunks}</strong> })}
           </p>
         )}
         {errors.level && <p className={styles.error}>{errors.level}</p>}
@@ -238,7 +324,7 @@ export function SubmitForm() {
 
       {/* Outcome — optional. */}
       <fieldset className={styles.fieldset}>
-        <legend className={styles.label}>Outcome (optional)</legend>
+        <legend className={styles.label}>{t("outcome.legend")}</legend>
         <div className={styles.chips}>
           {REPORT_OUTCOMES.map((o) => (
             <label
@@ -253,7 +339,7 @@ export function SubmitForm() {
                 onChange={() => setOutcome(o)}
                 className={styles.srOnly}
               />
-              {o}
+              {t(`outcome.${o}`)}
             </label>
           ))}
           {outcome && (
@@ -262,7 +348,7 @@ export function SubmitForm() {
               className={styles.clear}
               onClick={() => setOutcome(null)}
             >
-              clear
+              {t("outcome.clear")}
             </button>
           )}
         </div>
@@ -271,7 +357,7 @@ export function SubmitForm() {
       {/* Interview month. */}
       <div className={styles.field}>
         <label htmlFor={`${baseId}-month`} className={styles.label}>
-          Interview month
+          {t("month.label")}
           <span className={styles.required} aria-hidden="true">
             {" "}
             *
@@ -290,7 +376,7 @@ export function SubmitForm() {
 
       {/* Attribution toggle. */}
       <fieldset className={styles.fieldset}>
-        <legend className={styles.label}>Attribution</legend>
+        <legend className={styles.label}>{t("attribution.legend")}</legend>
         <div className={styles.chips}>
           {DISPLAY_ATTRIBUTIONS.map((a) => (
             <label
@@ -305,34 +391,30 @@ export function SubmitForm() {
                 onChange={() => setAttribution(attributionSchema.parse(a))}
                 className={styles.srOnly}
               />
-              {a === "display_name" ? "Show my display name" : "Anonymous"}
+              {t(`attribution.${a}`)}
             </label>
           ))}
         </div>
         <Body size="small" tone="muted" style={{ marginTop: 8 }}>
-          Anonymous is the default. You can still verify a work email later
-          without revealing your name.
+          {t("attribution.note")}
         </Body>
       </fieldset>
 
       <div className={styles.actions}>
-        <Button variant="primary" trailingArrow onClick={handleContinue} disabled={submitting}>
-          Continue → Rounds
+        <Button
+          variant="primary"
+          trailingArrow
+          onClick={handleContinue}
+          disabled={submitting}
+        >
+          {t("continue")}
         </Button>
+        <span className={styles.saveState} aria-live="polite">
+          {saveState === "saving" && t("save.saving")}
+          {saveState === "saved" && t("save.saved")}
+          {saveState === "error" && t("save.error")}
+        </span>
       </div>
     </div>
   );
-}
-
-function fieldMessage(key: "company" | "role" | "level" | "month"): string {
-  switch (key) {
-    case "company":
-      return "Pick a company or suggest a new one.";
-    case "role":
-      return "Pick the closest canonical role.";
-    case "level":
-      return "Select a level.";
-    case "month":
-      return "Choose the interview month.";
-  }
 }

@@ -2,7 +2,7 @@
 
 > Single canonical reference of every tool in the stack: what it does for us, where it runs, and which gotchas we've already hit. Living doc — edit when something changes.
 >
-> *For the **why** behind each choice see [ADR-0001](adr/0001-stack-choice.md). For the **how-to** of re-provisioning see [runbooks/hetzner-bootstrap.md](runbooks/hetzner-bootstrap.md).*
+> *For the **why** behind each choice see [ADR-0001](adr/0001-stack-choice.md). For the **how-to** of re-provisioning see [runbooks/hetzner-bootstrap.md](runbooks/hetzner-bootstrap.md). For **how this scales as traffic grows** see [scaling.md](scaling.md).*
 
 ## At a glance
 
