@@ -15,6 +15,7 @@ import {
   attributionSchema,
   type CompanySelection,
   DISPLAY_ATTRIBUTIONS,
+  HONEYPOT_FIELD,
   type LevelSelection,
   REPORT_OUTCOMES,
   type ReportOutcome,
@@ -135,6 +136,11 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
   const [draftId, setDraftId] = useState<string | null>(initialDraftId ?? null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
+  // Honeypot (Day 8): an off-screen decoy input. Uncontrolled + read by ref
+  // at save time so it never participates in render/autosave-trigger logic —
+  // a human leaves it blank, a bot fills it and the action drops the write.
+  const honeypotRef = useRef<HTMLInputElement>(null);
+
   const isSuggestedCompany = company?.id.startsWith(PENDING_PREFIX) ?? false;
 
   // Load the per-company level ladder whenever the company changes. The
@@ -194,9 +200,15 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     const timer = setTimeout(async () => {
       setSaveState("saving");
       try {
-        const res = await saveDraft({ id: draftId, data: draftData });
+        const res = await saveDraft({
+          id: draftId,
+          data: draftData,
+          honeypot: honeypotRef.current?.value ?? "",
+        });
         lastSavedRef.current = serialized;
-        if (!draftId) {
+        // res.id is empty when the action silently dropped a honeypot-tripped
+        // write; only adopt a real id (a human never trips it).
+        if (!draftId && res.id) {
           setDraftId(res.id);
           // Shallow URL update (no remount) so a refresh resumes the draft.
           window.history.replaceState(null, "", `/drafts/${res.id}`);
@@ -259,6 +271,23 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
 
   return (
     <div className={styles.form}>
+      {/* Honeypot — invisible to users, a trap for form-filling bots. The
+          label looks legitimate ("Website") so bots target it; aria-hidden +
+          tabIndex -1 + off-screen positioning keep it out of every human
+          path. saveDraft drops any write where this comes back non-empty. */}
+      <div className={styles.honeypot} aria-hidden="true">
+        <label htmlFor={`${baseId}-website`}>Website</label>
+        <input
+          ref={honeypotRef}
+          id={`${baseId}-website`}
+          type="text"
+          name={HONEYPOT_FIELD}
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
+      </div>
+
       <Combobox
         label={t("company.label")}
         placeholder={t("company.placeholder")}

@@ -13,14 +13,23 @@ import {
   getOrCreateUserByClerkId,
   updateDraft,
 } from "@fromtheloop/db";
-import { submissionDraftSchema } from "@fromtheloop/shared";
+import { isHoneypotTripped, submissionDraftSchema } from "@fromtheloop/shared";
 
 export async function saveDraft(input: {
   id: string | null;
   data: unknown;
+  honeypot?: string;
 }): Promise<{ id: string }> {
   const user = await currentUser();
   if (!user) throw new Error("saveDraft: unauthenticated");
+
+  // Anti-abuse (Day 8): a non-empty honeypot means a bot filled a field no
+  // real user can reach. Silently refuse to persist — return a benign-looking
+  // response without writing, so the trap stays invisible to the bot. A
+  // legitimate client always sends this empty, so this never fires for humans.
+  if (isHoneypotTripped(input.honeypot)) {
+    return { id: input.id ?? "" };
+  }
 
   // Reject malformed payloads (defends the jsonb column from arbitrary shapes).
   const parsed = submissionDraftSchema.parse(input.data) as Record<

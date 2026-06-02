@@ -153,3 +153,15 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Honeypot (Day 8): pushed far off-screen rather than display:none — some
+   bots skip hidden fields but still fill positioned ones. Not announced
+   (aria-hidden on the wrapper) and not tabbable, so no real user reaches it. */
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
