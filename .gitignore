@@ -49,3 +49,10 @@ docker-compose.override.yml
 
 # Drizzle artifacts (migrations are committed; meta journals are too)
 # Add overrides here if a generated file should be ignored.
+
+# Playwright (E2E) artifacts
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+playwright/.cache/
