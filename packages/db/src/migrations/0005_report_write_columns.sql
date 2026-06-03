@@ -1,0 +1,2 @@
+ALTER TABLE "interview_reports" ADD COLUMN "interview_month" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "interview_reports" ADD COLUMN "locked_at" timestamp with time zone DEFAULT now() + interval '24 hours' NOT NULL;

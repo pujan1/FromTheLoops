@@ -95,6 +95,7 @@ describe("constraints", () => {
           companyId: "00000000-0000-0000-0000-000000000000",
           canonicalRoleId: roleId,
           level: "L4",
+          interviewMonth: "2026-05",
         }),
         PG_FK_VIOLATION,
       );
@@ -109,6 +110,7 @@ describe("constraints", () => {
           companyId,
           canonicalRoleId: roleId,
           level: "L4",
+          interviewMonth: "2026-05",
         })
         .returning();
       const [round] = await db
@@ -150,6 +152,7 @@ describe("constraints", () => {
         companyId,
         canonicalRoleId: roleId,
         level: "L4",
+        interviewMonth: "2026-05",
       });
 
       await expectPgError(
@@ -193,6 +196,7 @@ describe("constraints", () => {
           companyId,
           canonicalRoleId: roleId,
           level: "L4",
+          interviewMonth: "2026-05",
         })
         .returning();
       await db.insert(rounds).values({
@@ -380,6 +384,7 @@ describe("constraints", () => {
           companyId,
           canonicalRoleId: roleId,
           level: "L4",
+          interviewMonth: "2026-05",
         })
         .returning();
       // Bypass TS via a raw insert so we can verify the *database* rejects

@@ -69,6 +69,12 @@ export const interviewReports = pgTable(
     levelId: uuid("level_id").references(() => companyLevels.id, {
       onDelete: "restrict",
     }),
+    // The month the interview took place, stored as the "YYYY-MM" the
+    // submission form collects (validated by shared's monthSchema). Required:
+    // every report carries a month. Kept as text rather than a date because
+    // the product only ever reasons at month granularity; Sprint 3 aggregation
+    // groups on this string directly.
+    interviewMonth: text("interview_month").notNull(),
     outcome: reportOutcome("outcome"),
     displayAttribution: displayAttribution("display_attribution")
       .notNull()
@@ -78,6 +84,17 @@ export const interviewReports = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // The 24h edit window's hard boundary. Defaulted to now() + 24h at insert:
+    // created_at also defaults to now(), and both now() calls resolve to the
+    // same transaction timestamp, so locked_at == created_at + 24h exactly. A
+    // generated column would be cleaner but `timestamptz + interval` isn't
+    // IMMUTABLE, which Postgres requires for generation expressions; a column
+    // default has no such constraint. The submission flow shows an "Edit" CTA
+    // while now < locked_at; editing in place never rewrites this column, so an
+    // edit can't slide the window forward.
+    lockedAt: timestamp("locked_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '24 hours'`),
   },
   (t) => [
     index("reports_company_role_level_idx").on(

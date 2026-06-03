@@ -36,6 +36,13 @@
       "when": 1780450072044,
       "tag": "0004_topics_trgm_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780504043579,
+      "tag": "0005_report_write_columns",
+      "breakpoints": true
     }
   ]
 }

@@ -60,6 +60,11 @@ export const RATE_LIMITS = {
   // the same tight budget applies. A question can carry several tags, so this
   // is a touch more generous than companies (one company per report).
   suggestTopic: { name: "suggest-topic", limit: 20, windowSeconds: 3600 },
+  // Finalizing a report is the heaviest write surface (a multi-row transaction)
+  // and the one whose output becomes user-visible content. 10/day per user
+  // matches the sprint's submission cap; this fixed-window check is the Day-5
+  // backstop, with the sliding-window + 1/company/user refinement landing Day 8.
+  submitReport: { name: "submit-report", limit: 10, windowSeconds: 86_400 },
 } satisfies Record<string, RateLimitPolicy>;
 
 export interface RateLimitResult {

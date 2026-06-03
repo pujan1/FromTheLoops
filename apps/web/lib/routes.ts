@@ -16,8 +16,14 @@ export const routes = {
   reports: "/reports",
   stats: "/stats",
   topic: (slug: string) => `/topics/${slug}`,
+  // A single submitted report's owner view (post-submit landing + edit entry).
+  report: (id: string) => `/reports/${id}`,
 
   submit: "/submit",
+  // The basics screen, optionally resuming a draft (used by "Back to basics"
+  // and by the edit flow, which rehydrates a report into a draft).
+  submitBasics: (draftId?: string) =>
+    draftId ? `/submit?draft=${draftId}` : "/submit",
   submitRounds: (draftId?: string) =>
     draftId ? `/submit/rounds?draft=${draftId}` : "/submit/rounds",
   draft: (id: string) => `/drafts/${id}`,

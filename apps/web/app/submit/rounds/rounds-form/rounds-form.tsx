@@ -12,11 +12,12 @@ import {
   validateFinalSubmission,
 } from "@fromtheloop/shared";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FtlBody, FtlButton, FtlHoneypot, FtlNotice } from "@/components/ui";
 import { routes } from "@/lib/routes";
 import { noticeToneForError, useActionStatus } from "@/lib/use-action-status";
-import { saveDraft } from "../../actions";
+import { finalizeSubmissionAction, saveDraft } from "../../actions";
 import styles from "../rounds.module.css";
 import {
   AUTOSAVE_DELAY_MS,
@@ -39,6 +40,7 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
   const t = useTranslations("rounds");
   const tq = useTranslations("questions");
   const tTags = useTranslations("tags");
+  const router = useRouter();
 
   const [rounds, setRounds] = useState<Round[]>(() =>
     fromDraftRounds(initialData.rounds),
@@ -47,6 +49,9 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
   // Autosave through the action hook: status drives the save indicator, error
   // drives the failure notice. Same pattern as the basics screen.
   const save = useActionStatus(saveDraft);
+  // The terminal Submit. Its own status/error so its notice + spinner are
+  // independent of the autosave indicator.
+  const finalize = useActionStatus(finalizeSubmissionAction);
 
   const honeypotRef = useRef<HTMLInputElement>(null);
   // A round key to focus after the next render (set when adding a round).
@@ -63,12 +68,16 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
 
   // Live finalize validation against the shared server-side gate (Day 4). We
   // only surface a round's per-field issues; the basics fields belong to the
-  // previous screen, so their issues are computed but not rendered here. When
-  // the whole submission validates, there are no issues to show.
-  const roundIssues = useMemo(() => {
-    const result = validateFinalSubmission({ ...initialData, rounds: draftRounds });
-    return result.ok ? null : result.issues.rounds;
-  }, [initialData, draftRounds]);
+  // previous screen, so their issues are computed but not rendered here.
+  // canSubmit drives the Submit button: the whole submission (basics + rounds)
+  // must pass, so a missing basics field also blocks Submit even though its
+  // error renders on the prior screen.
+  const validation = useMemo(
+    () => validateFinalSubmission({ ...initialData, rounds: draftRounds }),
+    [initialData, draftRounds],
+  );
+  const roundIssues = validation.ok ? null : validation.issues.rounds;
+  const canSubmit = validation.ok;
 
   const runSave = save.run;
   useEffect(() => {
@@ -174,6 +183,31 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
     );
   }
 
+  async function handleSubmit() {
+    if (!canSubmit) return;
+    const honeypot = honeypotRef.current?.value ?? "";
+    // Flush the current state synchronously first — the 2s autosave may not
+    // have fired, and finalize reads the persisted draft, not this component's
+    // state. Only finalize once the latest rounds are on the server.
+    const saved = await save.run({
+      id: draftId,
+      data: { ...initialData, rounds: draftRounds },
+      honeypot,
+    });
+    if (!saved.ok) return;
+    lastSavedRef.current = serialized;
+
+    const res = await finalize.run({ draftId, honeypot });
+    if (!res.ok || !res.data) return;
+    router.push(routes.report(res.data.reportId));
+  }
+
+  // Disable the submit controls while either the flush-save or the finalize is
+  // in flight (and keep them disabled after a successful finalize while the
+  // route transition happens).
+  const submitting = save.isPending || finalize.isPending || finalize.isSuccess;
+  const failure = save.error ?? finalize.error;
+
   return (
     <div className={styles.form}>
       <FtlHoneypot ref={honeypotRef} />
@@ -241,13 +275,27 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
         </a>
         <span className={styles.saveState} aria-live="polite">
           {save.isPending && t("save.saving")}
-          {save.isSuccess && t("save.saved")}
+          {save.isSuccess && !finalize.isPending && t("save.saved")}
         </span>
+        <FtlButton
+          variant="primary"
+          trailingArrow
+          onClick={() => void handleSubmit()}
+          disabled={!canSubmit || submitting}
+        >
+          {finalize.isPending ? t("submit.submitting") : t("submit.cta")}
+        </FtlButton>
       </div>
 
-      {save.error && (
-        <FtlNotice tone={noticeToneForError(save.error)} title={t("save.error")}>
-          {save.error.message}
+      {!canSubmit && rounds.length > 0 && (
+        <FtlBody size="small" tone="muted" className={styles.submitHint}>
+          {t("submit.blocked")}
+        </FtlBody>
+      )}
+
+      {failure && (
+        <FtlNotice tone={noticeToneForError(failure)} title={t("save.error")}>
+          {failure.message}
         </FtlNotice>
       )}
     </div>

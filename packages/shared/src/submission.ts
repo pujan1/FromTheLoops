@@ -146,6 +146,12 @@ export const submissionDraftSchema = z.object({
   // the rounds form defaults it to []. Capped at MAX_ROUNDS — a draft that
   // somehow exceeds the cap is rejected rather than silently truncated.
   rounds: z.array(roundDraftSchema).max(MAX_ROUNDS).nullish(),
+  // Set only when this draft is an in-flight *edit* of an already-submitted
+  // report (the report view rehydrates a report into a temp draft with this
+  // set). Finalization branches on it: present → update that report in place;
+  // absent → create a new report. Nullish so every ordinary new-submission
+  // draft (which never carries it) still parses.
+  editingReportId: z.string().uuid().nullish(),
 });
 
 // Ready-to-continue: the required top-level fields are present. outcome is

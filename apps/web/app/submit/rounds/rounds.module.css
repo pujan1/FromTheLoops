@@ -309,9 +309,18 @@
 }
 
 .saveState {
+  /* Pushes the save indicator + Submit button to the right, leaving the
+     "Back to basics" link on the left. */
+  margin-left: auto;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--color-muted);
+}
+
+/* Explains why Submit is disabled when rounds still have validation gaps. */
+.submitHint {
+  margin-top: var(--space-2);
+  text-align: right;
 }

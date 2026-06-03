@@ -125,8 +125,20 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       attribution,
       // Carry rounds owned by the rounds screen so a basics save never drops them.
       rounds: initialData?.rounds ?? undefined,
+      // Carry the edit target so a basics edit doesn't strip it (which would
+      // turn an in-place edit into a brand-new report at finalize).
+      editingReportId: initialData?.editingReportId ?? undefined,
     }),
-    [company, role, level, outcome, month, attribution, initialData?.rounds],
+    [
+      company,
+      role,
+      level,
+      outcome,
+      month,
+      attribution,
+      initialData?.rounds,
+      initialData?.editingReportId,
+    ],
   );
   const serialized = JSON.stringify(draftData);
   const lastSavedRef = useRef(serialized);
@@ -224,6 +236,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
         month,
         attribution,
         rounds: initialData?.rounds ?? undefined,
+        editingReportId: initialData?.editingReportId ?? undefined,
       },
       honeypot: honeypotRef.current?.value ?? "",
     });

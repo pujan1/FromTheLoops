@@ -98,6 +98,23 @@ export async function updateDraft(
   return rows[0] ?? null;
 }
 
+// Ownership-scoped delete of a single draft. Used after a draft is finalized
+// into a report (or its edit-temp draft is consumed): the draft has served its
+// purpose and shouldn't keep showing up in the resume list. Returns true if a
+// row was deleted, false if (id, userId) matched nothing — a no-op the caller
+// can ignore.
+export async function deleteDraft(
+  db: Db,
+  id: string,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .delete(drafts)
+    .where(and(eq(drafts.id, id), eq(drafts.userId, userId)))
+    .returning({ id: drafts.id });
+  return rows.length > 0;
+}
+
 // Used by the TTL cron; exported now so the policy lives with the rest of the
 // draft logic. Deletes drafts not updated since `before`.
 export async function pruneStaleDrafts(db: Db, before: Date): Promise<number> {

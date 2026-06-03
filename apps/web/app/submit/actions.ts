@@ -7,9 +7,11 @@
 // jsonb column.
 
 import { currentUser } from "@clerk/nextjs/server";
+import { finalizeSubmission } from "@fromtheloop/core";
 import {
   createDraft,
   getDb,
+  getDraft,
   getOrCreateUserByClerkId,
   suggestCompany,
   suggestTopic,
@@ -167,4 +169,82 @@ export async function suggestPendingTopic(input: {
     suggestedByUserId: internal.id,
   });
   return actionOk({ id: topic.id, slug: topic.slug, name: topic.name });
+}
+
+// Finalize a draft into a submitted report. The terminal action of the
+// submission flow (the "Submit" button on the rounds screen). Auth + ownership
+// + the submit budget are enforced here; the heavy lifting — re-validating the
+// payload server-side, resolving any suggested company/tags to pending rows,
+// and writing interview_report + rounds + questions + question_topics in one
+// transaction (or updating in place for an edit) — lives in core's
+// finalizeSubmission. Returns the new report id so the client can route to it;
+// null on a tripped honeypot (a benign success that writes nothing).
+export async function finalizeSubmissionAction(input: {
+  draftId: string;
+  honeypot?: string;
+}): Promise<ActionResult<{ reportId: string } | null>> {
+  const user = await currentUser();
+  if (!user) {
+    return actionError(ACTION_ERROR.unauthenticated, "You must be signed in.");
+  }
+
+  // Per-user submit budget before any DB work — the heaviest, most abusable
+  // write surface, so it's throttled first and cheaply.
+  const limited = await rateLimit(RATE_LIMITS.submitReport, user.id);
+  if (!limited.ok) {
+    return actionError(ACTION_ERROR.rateLimited, RATE_LIMIT_MESSAGE);
+  }
+
+  // Honeypot tripped: succeed with no report (data: null), keeping the trap
+  // invisible — same fail-closed-without-tipping-off shape as the other actions.
+  if (isHoneypotTripped(input.honeypot)) return actionOk(null);
+
+  const db = getDb();
+  const internal = await getOrCreateUserByClerkId(db, {
+    clerkId: user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? null,
+  });
+
+  // Ownership-scoped draft load: a guessed/foreign id resolves to null.
+  const draft = await getDraft(db, input.draftId, internal.id);
+  if (!draft) {
+    return actionError(ACTION_ERROR.invalid, "We couldn't find that draft.");
+  }
+
+  // A draft rehydrated from a report carries editingReportId; finalize edits it
+  // in place rather than creating a new report.
+  const parsed = submissionDraftSchema.safeParse(draft.data);
+  const editingReportId = parsed.success
+    ? (parsed.data.editingReportId ?? null)
+    : null;
+
+  const result = await finalizeSubmission(db, {
+    userId: internal.id,
+    draftId: draft.id,
+    data: draft.data,
+    editingReportId,
+  });
+
+  if (result.ok) {
+    return actionOk({ reportId: result.reportId });
+  }
+  if (result.reason === "locked") {
+    return actionError(
+      "locked",
+      "This report's 24-hour edit window has closed, so it can no longer be changed.",
+    );
+  }
+  if (result.reason === "not_found") {
+    return actionError(
+      ACTION_ERROR.invalid,
+      "We couldn't find that report to update.",
+    );
+  }
+  // reason === "invalid": the payload failed the finalize gate. The form's
+  // inline validation should have blocked Submit, so this is a belt-and-braces
+  // backstop, not the primary error channel.
+  return actionError(
+    ACTION_ERROR.invalid,
+    "Some details still need fixing before you can submit.",
+  );
 }

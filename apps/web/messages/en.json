@@ -101,6 +101,11 @@
       "saving": "Saving…",
       "saved": "Draft saved",
       "error": "Couldn’t save draft"
+    },
+    "submit": {
+      "cta": "Submit report",
+      "submitting": "Submitting…",
+      "blocked": "Finish the highlighted rounds and questions before submitting."
     }
   },
   "questions": {
@@ -126,5 +131,30 @@
     "pending": "pending",
     "remove": "Remove topic {name}",
     "hint": "Tag at least one topic per question."
+  },
+  "report": {
+    "eyebrow": "Your report",
+    "status": {
+      "pending_moderation": "In review — visible only to you until it clears moderation.",
+      "active": "Published.",
+      "deleted": "Deleted."
+    },
+    "summary": {
+      "level": "Level",
+      "month": "Interviewed",
+      "outcome": "Outcome",
+      "detail": "Detail",
+      "rounds": "{count, plural, =0 {No rounds} =1 {1 round} other {# rounds}}",
+      "questions": "{count, plural, =0 {no questions} =1 {1 question} other {# questions}}"
+    },
+    "outcome": {
+      "none": "Not specified"
+    },
+    "edit": {
+      "cta": "Edit report",
+      "window": "You can edit this report for {hours, plural, =1 {1 more hour} other {# more hours}}.",
+      "lockedTitle": "Editing closed",
+      "locked": "The 24-hour edit window has closed, so this report can no longer be changed."
+    }
   }
 }

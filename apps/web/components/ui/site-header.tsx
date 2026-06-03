@@ -11,7 +11,7 @@ export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string }) {
       <Container>
         <div className={styles.inner}>
           <div className={styles.issue}>
-            <span>{issue}</span> · for engineers, by engineers
+            <span>{issue}</span> 
           </div>
 
           <Link href={routes.home} className={styles.wordmark} aria-label="FromTheLoop">

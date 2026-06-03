@@ -71,3 +71,6 @@ export * from "./taxonomy.js";
 // User upsert-on-visit + submission-draft data-access.
 export * from "./users.js";
 export * from "./drafts.js";
+
+// Interview-report transactional writes + edit-flow reads.
+export * from "./reports.js";
