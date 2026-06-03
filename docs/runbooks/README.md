@@ -12,6 +12,7 @@ Created in the sprint that needs them:
 
 | Runbook | Created in sprint | Status |
 |---|---|---|
+| `dev-setup.md` — local dev environment (frontend + backend) | 0 | _live_ |
 | `hetzner-bootstrap.md` — provision a fresh Hetzner CX22 from zero | 0 | _planned_ |
 | `moderation.md` — daily 30-minute mod cycle | 6 | _planned_ |
 | `alerts.md` — Sentry alert rules + what to do on each | 7 | _planned_ |
