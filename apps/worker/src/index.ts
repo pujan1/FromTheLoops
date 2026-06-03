@@ -5,6 +5,7 @@ import "./env.js";
 import { Sentry } from "./sentry.js";
 import { Queue, Worker } from "bullmq";
 import { closeDb } from "@fromtheloop/db";
+import { NOTIFICATIONS_QUEUE } from "@fromtheloop/shared";
 import { redisConnection } from "./redis.js";
 import { HELLO_QUEUE, processHello } from "./jobs/hello.js";
 import {
@@ -14,6 +15,7 @@ import {
   PURGE_PII_SCHEDULER,
   processPurgeDeletedPii,
 } from "./jobs/purge-deleted-pii.js";
+import { processSendEmail } from "./jobs/send-email.js";
 
 const concurrency = Number(process.env.WORKER_CONCURRENCY ?? 4);
 
@@ -41,7 +43,14 @@ await purgeQueue.upsertJobScheduler(
   { name: PURGE_PII_JOB },
 );
 
-const workers = [helloWorker, purgeWorker];
+// Transactional email dispatch (submission-confirmed, etc). Web renders +
+// enqueues; this consumer sends via Resend.
+const notificationsWorker = new Worker(NOTIFICATIONS_QUEUE, processSendEmail, {
+  connection: redisConnection,
+  concurrency,
+});
+
+const workers = [helloWorker, purgeWorker, notificationsWorker];
 
 helloWorker.on("ready", () =>
   console.log(`[worker] ready — queue=${HELLO_QUEUE} concurrency=${concurrency}`),
@@ -50,6 +59,9 @@ purgeWorker.on("ready", () =>
   console.log(
     `[worker] ready — queue=${PURGE_PII_QUEUE} cron="${PURGE_PII_CRON}"`,
   ),
+);
+notificationsWorker.on("ready", () =>
+  console.log(`[worker] ready — queue=${NOTIFICATIONS_QUEUE}`),
 );
 for (const w of workers) {
   w.on("completed", (job) => console.log(`[worker] completed ${job.id}`));

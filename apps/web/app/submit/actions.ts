@@ -10,9 +10,11 @@ import { currentUser } from "@clerk/nextjs/server";
 import { finalizeSubmission } from "@fromtheloop/core";
 import {
   createDraft,
+  EDIT_WINDOW_MS,
   getDb,
   getDraft,
   getOrCreateUserByClerkId,
+  getReportForEdit,
   suggestCompany,
   suggestTopic,
   updateDraft,
@@ -23,16 +25,67 @@ import {
   actionError,
   actionOk,
   companySuggestionSchema,
+  EMAIL_JOB,
+  type EmailJobData,
   isHoneypotTripped,
   submissionDraftSchema,
   topicSuggestionSchema,
 } from "@fromtheloop/shared";
+import { renderSubmissionConfirmedEmail } from "@/emails/submission-confirmed";
+import { getNotificationsQueue } from "@/lib/queue";
 import {
   RATE_LIMITS,
   RATE_LIMIT_MESSAGE,
   rateLimit,
   slidingWindowRateLimit,
 } from "@/lib/rate-limit";
+import { routes } from "@/lib/routes";
+
+// Render + enqueue the submission-confirmed email. Best-effort and fully
+// self-contained (own try/catch): the report is already persisted, so nothing
+// here may throw into the submission's success path. No-ops without a
+// recipient address.
+async function enqueueSubmissionConfirmation(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  reportId: string,
+  toEmail: string | null,
+): Promise<void> {
+  if (!toEmail) return;
+  try {
+    // Ownership-scoped read for the company/role names + the edit window.
+    const detail = await getReportForEdit(db, reportId, userId);
+    if (!detail) return;
+
+    const msLeft = Math.min(
+      EDIT_WINDOW_MS,
+      detail.report.lockedAt.getTime() - Date.now(),
+    );
+    const editHoursLeft = Math.max(1, Math.ceil(msLeft / (60 * 60 * 1000)));
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+    const { subject, html, text } = renderSubmissionConfirmedEmail({
+      companyName: detail.company.name,
+      roleName: detail.role.name,
+      reportUrl: `${appUrl}${routes.report(reportId)}`,
+      editHoursLeft,
+    });
+
+    await getNotificationsQueue().add(
+      EMAIL_JOB,
+      { to: toEmail, subject, html, text } satisfies EmailJobData,
+      {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5_000 },
+        removeOnComplete: true,
+        removeOnFail: 100,
+      },
+    );
+  } catch (err) {
+    // Swallow — confirmation email is not worth failing a submission over.
+    console.error("enqueueSubmissionConfirmation failed:", err);
+  }
+}
 
 export async function saveDraft(input: {
   id: string | null;
@@ -232,6 +285,17 @@ export async function finalizeSubmissionAction(input: {
   });
 
   if (result.ok) {
+    // Confirmation email — only for a fresh submission, never an edit.
+    // Best-effort: a render/enqueue failure must not fail the submission, so
+    // it's awaited but swallowed (the report is already written).
+    if (!editingReportId) {
+      await enqueueSubmissionConfirmation(
+        db,
+        internal.id,
+        result.reportId,
+        user.primaryEmailAddress?.emailAddress ?? null,
+      );
+    }
     return actionOk({ reportId: result.reportId });
   }
   if (result.reason === "locked") {

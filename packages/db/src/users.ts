@@ -47,3 +47,10 @@ export async function getOrCreateUserByClerkId(
   }
   return row;
 }
+
+// Fetch by internal id. Used by the new-user moderation-hold decision, which
+// needs the account's created_at to measure age. null if no such row.
+export async function getUserById(db: Db, id: string): Promise<User | null> {
+  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return rows[0] ?? null;
+}

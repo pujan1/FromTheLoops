@@ -1,3 +1,4 @@
+import { NOTIFICATIONS_QUEUE } from "@fromtheloop/shared";
 import { Queue, type ConnectionOptions } from "bullmq";
 
 function buildConnection(): ConnectionOptions {
@@ -19,4 +20,12 @@ let helloQueue: Queue | null = null;
 export function getHelloQueue(): Queue {
   helloQueue ??= new Queue("hello", { connection: buildConnection() });
   return helloQueue;
+}
+
+let notificationsQueue: Queue | null = null;
+export function getNotificationsQueue(): Queue {
+  notificationsQueue ??= new Queue(NOTIFICATIONS_QUEUE, {
+    connection: buildConnection(),
+  });
+  return notificationsQueue;
 }

@@ -7,6 +7,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  countVerifiedReportsForUser,
   createReport,
   EDIT_WINDOW_MS,
   getReport,
@@ -354,5 +355,26 @@ describe("interview reports", () => {
     const report = (await getReport(db, id, ownerId))!;
     expect(report.piiPurgedAt).toBeNull();
     expect(report.deletedAt).toBeNull();
+  });
+
+  it("countVerifiedReportsForUser counts only verified, non-deleted reports", async () => {
+    // Unverified report (the default) doesn't count.
+    await createReport(db, fullInput());
+    expect(await countVerifiedReportsForUser(db, ownerId)).toBe(0);
+
+    // Flip one report to evidence_verified.
+    const verified = await createReport(db, fullInput());
+    await db
+      .update(interviewReports)
+      .set({ evidenceVerified: true })
+      .where(eq(interviewReports.id, verified.id));
+    expect(await countVerifiedReportsForUser(db, ownerId)).toBe(1);
+
+    // A soft-deleted verified report drops out of the count.
+    await softDeleteReport(db, verified.id, ownerId);
+    expect(await countVerifiedReportsForUser(db, ownerId)).toBe(0);
+
+    // Scoped to the user.
+    expect(await countVerifiedReportsForUser(db, otherId)).toBe(0);
   });
 });

@@ -66,11 +66,18 @@ services:
     restart: unless-stopped
     environment:
       - REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379
+      # Neon Postgres URL — required by the purge-deleted-pii cron (it calls
+      # getDb()). Fail fast at boot if it's missing rather than at first cron fire.
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4}
       - NODE_ENV=production
       # Sentry: DSN no-ops when blank, so this is safe before the project is set up.
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      # Resend (transactional email) — the notifications worker dispatches the
+      # submission-confirmed email. Blank disables send (job logs + no-ops).
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-no-reply@fromtheloop.com}
     depends_on:
       redis:
         condition: service_healthy

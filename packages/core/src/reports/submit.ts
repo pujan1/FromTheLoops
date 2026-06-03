@@ -20,10 +20,12 @@
 // otherwise we create a new report. Either way the source draft is consumed.
 
 import {
+  countVerifiedReportsForUser,
   createReport,
   type Database,
   deleteDraft,
   getReport,
+  getUserById,
   isReportEditable,
   type ReportWriteInput,
   suggestCompany,
@@ -38,6 +40,7 @@ import {
   validateFinalSubmission,
 } from "@fromtheloop/shared";
 import { type ContentCategory, firstBlockingMatch } from "../anti-abuse/regex.js";
+import { decideInitialReportStatus } from "./moderation.js";
 
 export interface FinalizeInput {
   // Internal users.id (already resolved from the Clerk principal by the caller).
@@ -200,7 +203,19 @@ export async function finalizeSubmission(
     if (!updated) return { ok: false, reason: "not_found" };
     reportId = updated.id;
   } else {
-    reportId = (await createReport(db, writeInput)).id;
+    // New-user moderation hold: decide the initial status from account age +
+    // prior verified submissions. Trusted users publish 'active'; everyone else
+    // is held 'pending_moderation'. Editing never re-runs this (status sticks).
+    const user = await getUserById(db, input.userId);
+    const verifiedReportCount = await countVerifiedReportsForUser(
+      db,
+      input.userId,
+    );
+    const status = decideInitialReportStatus({
+      accountAgeMs: user ? Date.now() - user.createdAt.getTime() : 0,
+      verifiedReportCount,
+    });
+    reportId = (await createReport(db, { ...writeInput, status })).id;
   }
 
   // The draft has served its purpose. Best-effort, ownership-scoped — a miss is

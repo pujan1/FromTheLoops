@@ -68,6 +68,9 @@ export interface ReportWriteInput {
   interviewMonth: string;
   outcome: NewInterviewReport["outcome"];
   displayAttribution: NonNullable<NewInterviewReport["displayAttribution"]>;
+  // Initial moderation status. Omit to take the column default
+  // ('pending_moderation'); the new-user-hold decision sets it explicitly.
+  status?: NewInterviewReport["status"];
   rounds: RoundWriteInput[];
 }
 
@@ -134,6 +137,8 @@ export async function createReport(
         interviewMonth: input.interviewMonth,
         outcome: input.outcome,
         displayAttribution: input.displayAttribution,
+        // Omitted → column default 'pending_moderation'.
+        ...(input.status ? { status: input.status } : {}),
       })
       .returning({ id: interviewReports.id });
     const reportId = inserted[0]!.id;
@@ -293,6 +298,29 @@ export async function userHasReportForCompany(
     )
     .limit(1);
   return rows.length > 0;
+}
+
+// Count this user's "verified submissions" — non-deleted reports flagged
+// evidence_verified=true (the user had a verified work association with the
+// company; see user_verifications). Feeds the new-user moderation-hold
+// decision ("drops after 3 verified submissions"). In V1 nothing sets
+// evidence_verified yet, so this is 0 for everyone — the hold logic is encoded
+// now, ready for Sprint 6 verification tooling.
+export async function countVerifiedReportsForUser(
+  db: Db,
+  userId: string,
+): Promise<number> {
+  const rows = await db
+    .select({ id: interviewReports.id })
+    .from(interviewReports)
+    .where(
+      and(
+        eq(interviewReports.createdByUserId, userId),
+        eq(interviewReports.evidenceVerified, true),
+        ne(interviewReports.status, "deleted"),
+      ),
+    );
+  return rows.length;
 }
 
 // Ownership-scoped fetch (mirrors getDraft): returns the report row or null
