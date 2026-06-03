@@ -2,3 +2,6 @@
 // the report→draft rehydration the edit flow uses.
 export * from "./reports/submit.js";
 export * from "./reports/rehydrate.js";
+
+// Submission content scanning (contact-info/PII block list + profanity flag).
+export * from "./anti-abuse/regex.js";

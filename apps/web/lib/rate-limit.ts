@@ -62,8 +62,10 @@ export const RATE_LIMITS = {
   suggestTopic: { name: "suggest-topic", limit: 20, windowSeconds: 3600 },
   // Finalizing a report is the heaviest write surface (a multi-row transaction)
   // and the one whose output becomes user-visible content. 10/day per user
-  // matches the sprint's submission cap; this fixed-window check is the Day-5
-  // backstop, with the sliding-window + 1/company/user refinement landing Day 8.
+  // matches the sprint's submission cap. Enforced via slidingWindowRateLimit
+  // (not the fixed-window counter) so the daily budget can't be doubled across
+  // a midnight boundary. The complementary 1/company/user cap is a durable DB
+  // check in core's finalizeSubmission, not a Redis window.
   submitReport: { name: "submit-report", limit: 10, windowSeconds: 86_400 },
 } satisfies Record<string, RateLimitPolicy>;
 
@@ -98,6 +100,55 @@ export async function rateLimit(
       warnedUnavailable = true;
       console.warn(
         `rateLimit: Redis unavailable, failing open for ${policy.name}`,
+        err,
+      );
+    }
+    return { ok: true, remaining: -1 };
+  }
+}
+
+// Sliding-window rate limit, backed by a Redis sorted set (one member per
+// action, scored by timestamp). On each call we drop members older than the
+// window, add the current one, and count what's left. Unlike the fixed-window
+// counter above, this has no boundary-reset exploit: a "10 per 24h" budget
+// can't be bypassed by firing 10 at 23:59 and 10 more at 00:01, because the
+// window slides continuously. Reserved for the surfaces where that precision
+// matters (report submission); the cheap, generous budgets (autosave,
+// suggestions) stay on the fixed-window counter.
+//
+// Same fail-open contract as rateLimit: a Redis hiccup allows the call.
+export async function slidingWindowRateLimit(
+  policy: RateLimitPolicy,
+  principal: string,
+): Promise<RateLimitResult> {
+  const redis = getClient();
+  if (!redis) return { ok: true, remaining: -1 };
+
+  const key = `rlz:${policy.name}:${principal}`;
+  const now = Date.now();
+  const windowMs = policy.windowSeconds * 1000;
+  const windowStart = now - windowMs;
+  // Unique member: timestamp + entropy so two actions in the same millisecond
+  // don't collapse to one sorted-set member.
+  const member = `${now}-${Math.random().toString(36).slice(2)}`;
+
+  try {
+    const results = await redis
+      .multi()
+      .zremrangebyscore(key, 0, windowStart) // evict expired
+      .zadd(key, now, member) // record this action
+      .zcard(key) // count live actions (incl. this one)
+      .pexpire(key, windowMs) // let the key self-expire when idle
+      .exec();
+
+    // exec() → [[err, res], ...] in command order; zcard is index 2.
+    const count = Number(results?.[2]?.[1] ?? 0);
+    return { ok: count <= policy.limit, remaining: Math.max(0, policy.limit - count) };
+  } catch (err) {
+    if (!warnedUnavailable) {
+      warnedUnavailable = true;
+      console.warn(
+        `slidingWindowRateLimit: Redis unavailable, failing open for ${policy.name}`,
         err,
       );
     }

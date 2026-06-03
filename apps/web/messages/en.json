@@ -155,6 +155,12 @@
       "window": "You can edit this report for {hours, plural, =1 {1 more hour} other {# more hours}}.",
       "lockedTitle": "Editing closed",
       "locked": "The 24-hour edit window has closed, so this report can no longer be changed."
+    },
+    "delete": {
+      "cta": "Delete report",
+      "confirm": "Delete this report? It will be hidden immediately, and after 90 days the free text you wrote is permanently scrubbed. This can't be undone.",
+      "doneTitle": "Report deleted",
+      "done": "This report has been deleted and is no longer visible. Its free text is scheduled to be permanently scrubbed after 90 days."
     }
   }
 }

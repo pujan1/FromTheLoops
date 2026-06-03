@@ -14,7 +14,7 @@
 // rounds — and re-inserting, leaving created_at / locked_at untouched so an
 // edit never extends the window.
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, ne } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   companies,
@@ -181,6 +181,118 @@ export async function updateReport(
     await writeChildren(tx, reportId, input.rounds);
     return { id: reportId };
   });
+}
+
+// Soft delete: flip status to 'deleted' and stamp deleted_at = now(). The row
+// stays in the table (created_by_user_id is ON DELETE RESTRICT — the report is
+// the audit trail), but isReportEditable and every read surface treat 'deleted'
+// as gone. Ownership-scoped and idempotent: only matches a row this user owns
+// that isn't already deleted, so a double-submit is a harmless no-op. Returns
+// true if a row was deleted, false if (id, userId) matched nothing live.
+export async function softDeleteReport(
+  db: Db,
+  id: string,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .update(interviewReports)
+    .set({ status: "deleted", deletedAt: new Date() })
+    .where(
+      and(
+        eq(interviewReports.id, id),
+        eq(interviewReports.createdByUserId, userId),
+        // Skip rows already deleted so a double-submit can't re-stamp
+        // deleted_at and slide the 90-day purge clock forward.
+        ne(interviewReports.status, "deleted"),
+      ),
+    )
+    .returning({ id: interviewReports.id });
+  return rows.length > 0;
+}
+
+// PII retention for soft-deleted reports: free-text prose is cleared once a
+// report has been in the 'deleted' state this long. 90 days gives a window for
+// dispute/appeal/audit before the user's words are irrecoverably scrubbed.
+export const PII_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
+// 90-day PII purge. Finds soft-deleted reports whose deleted_at is older than
+// `before` (caller passes now - PII_RETENTION_MS) and that haven't been purged
+// yet, then clears their free-text PII: round experience_prose → null and
+// question_prose → '' (the column is NOT NULL, so '' is the redaction). The
+// report, rounds, questions and topic joins all remain — only the free text a
+// user typed (which can carry names, contact info, etc.) is scrubbed. Stamps
+// pii_purged_at so a re-run skips already-cleared rows. Idempotent and run by
+// the worker's daily cron. Returns how many reports were purged this pass.
+export async function purgeDeletedReportPii(
+  db: Db,
+  before: Date,
+): Promise<{ reportsPurged: number }> {
+  return db.transaction(async (tx) => {
+    const targets = await tx
+      .select({ id: interviewReports.id })
+      .from(interviewReports)
+      .where(
+        and(
+          eq(interviewReports.status, "deleted"),
+          lt(interviewReports.deletedAt, before),
+          isNull(interviewReports.piiPurgedAt),
+        ),
+      );
+    if (targets.length === 0) return { reportsPurged: 0 };
+    const reportIds = targets.map((t) => t.id);
+
+    // Clear round-level free text directly (rounds carry report_id).
+    await tx
+      .update(rounds)
+      .set({ experienceProse: null })
+      .where(inArray(rounds.reportId, reportIds));
+
+    // Questions reference round_id, not report_id, so resolve the round ids
+    // for these reports first, then redact their prose in one statement.
+    const roundIdRows = await tx
+      .select({ id: rounds.id })
+      .from(rounds)
+      .where(inArray(rounds.reportId, reportIds));
+    const roundIds = roundIdRows.map((r) => r.id);
+    if (roundIds.length > 0) {
+      await tx
+        .update(questions)
+        .set({ questionProse: "" })
+        .where(inArray(questions.roundId, roundIds));
+    }
+
+    await tx
+      .update(interviewReports)
+      .set({ piiPurgedAt: new Date() })
+      .where(inArray(interviewReports.id, reportIds));
+
+    return { reportsPurged: reportIds.length };
+  });
+}
+
+// "1 submission per company per user" — does this user already have a
+// non-deleted report for this company? Soft-deleted reports don't count, so
+// deleting a report frees the slot to resubmit. This is the durable form of
+// the per-company cap (a count, not a time window), enforced at finalize for
+// the create path only (an edit keeps the same company). Admin override is a
+// later concern — V1 has no bypass.
+export async function userHasReportForCompany(
+  db: Db,
+  userId: string,
+  companyId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: interviewReports.id })
+    .from(interviewReports)
+    .where(
+      and(
+        eq(interviewReports.createdByUserId, userId),
+        eq(interviewReports.companyId, companyId),
+        ne(interviewReports.status, "deleted"),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 // Ownership-scoped fetch (mirrors getDraft): returns the report row or null

@@ -13,7 +13,10 @@ import {
   getReportForEdit,
   getOrCreateUserByClerkId,
   isReportEditable,
+  PII_RETENTION_MS,
+  purgeDeletedReportPii,
   type ReportWriteInput,
+  softDeleteReport,
   updateReport,
 } from "../src/index.js";
 import {
@@ -264,5 +267,92 @@ describe("interview reports", () => {
     expect(isReportEditable({ ...report, status: "deleted" }, justBefore)).toBe(
       false,
     );
+  });
+
+  it("softDeleteReport flips status + stamps deleted_at, ownership-scoped", async () => {
+    const { id } = await createReport(db, fullInput());
+
+    // Foreign user can't delete it (and gets no existence signal).
+    expect(await softDeleteReport(db, id, otherId)).toBe(false);
+    expect((await getReport(db, id, ownerId))!.status).toBe(
+      "pending_moderation",
+    );
+
+    // Owner deletes: status flips, deleted_at is set, row survives.
+    expect(await softDeleteReport(db, id, ownerId)).toBe(true);
+    const deleted = (await getReport(db, id, ownerId))!;
+    expect(deleted.status).toBe("deleted");
+    expect(deleted.deletedAt).not.toBeNull();
+
+    // Idempotent: a second delete is a no-op and doesn't re-stamp deleted_at.
+    const firstStamp = deleted.deletedAt!.getTime();
+    expect(await softDeleteReport(db, id, ownerId)).toBe(false);
+    expect((await getReport(db, id, ownerId))!.deletedAt!.getTime()).toBe(
+      firstStamp,
+    );
+  });
+
+  it("purgeDeletedReportPii clears prose only for reports deleted past retention", async () => {
+    const { id } = await createReport(db, fullInput());
+    await softDeleteReport(db, id, ownerId);
+
+    // Backdate the soft-delete to just past the 90-day retention boundary.
+    const longAgo = new Date(Date.now() - PII_RETENTION_MS - 60_000);
+    await db
+      .update(interviewReports)
+      .set({ deletedAt: longAgo })
+      .where(eq(interviewReports.id, id));
+
+    const cutoff = new Date(Date.now() - PII_RETENTION_MS);
+    const res = await purgeDeletedReportPii(db, cutoff);
+    expect(res.reportsPurged).toBe(1);
+
+    // Round experience prose nulled; question prose redacted to "".
+    const roundRows = await db
+      .select()
+      .from(rounds)
+      .where(eq(rounds.reportId, id));
+    expect(roundRows.every((r) => r.experienceProse === null)).toBe(true);
+    const qRows = await db
+      .select()
+      .from(questions)
+      .innerJoin(rounds, eq(rounds.id, questions.roundId))
+      .where(eq(rounds.reportId, id));
+    expect(qRows.every((q) => q.questions.questionProse === "")).toBe(true);
+
+    // The report + its child rows still exist; pii_purged_at is stamped.
+    const report = (await getReport(db, id, ownerId))!;
+    expect(report.status).toBe("deleted");
+    expect(report.piiPurgedAt).not.toBeNull();
+
+    // Idempotent: a second pass finds nothing left to purge.
+    expect((await purgeDeletedReportPii(db, cutoff)).reportsPurged).toBe(0);
+  });
+
+  it("purgeDeletedReportPii leaves recently-deleted reports untouched", async () => {
+    const { id } = await createReport(db, fullInput());
+    await softDeleteReport(db, id, ownerId); // deleted_at = now()
+
+    // Cutoff is 90 days ago; a just-deleted report is well inside retention.
+    const cutoff = new Date(Date.now() - PII_RETENTION_MS);
+    expect((await purgeDeletedReportPii(db, cutoff)).reportsPurged).toBe(0);
+
+    const roundRows = await db
+      .select()
+      .from(rounds)
+      .where(eq(rounds.reportId, id));
+    // Prose preserved during the retention window.
+    expect(roundRows.some((r) => r.experienceProse !== null)).toBe(true);
+    expect((await getReport(db, id, ownerId))!.piiPurgedAt).toBeNull();
+  });
+
+  it("purgeDeletedReportPii ignores live (non-deleted) reports", async () => {
+    const { id } = await createReport(db, fullInput());
+    // Never deleted — even an ancient cutoff must not touch it.
+    const cutoff = new Date(Date.now() + PII_RETENTION_MS);
+    expect((await purgeDeletedReportPii(db, cutoff)).reportsPurged).toBe(0);
+    const report = (await getReport(db, id, ownerId))!;
+    expect(report.piiPurgedAt).toBeNull();
+    expect(report.deletedAt).toBeNull();
   });
 });

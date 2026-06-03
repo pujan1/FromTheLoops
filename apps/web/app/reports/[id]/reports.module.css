@@ -32,8 +32,15 @@
 
 .editBlock {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-4);
+}
+
+/* Row of action buttons (Edit + Delete, or Delete alone once locked). */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }

@@ -29,6 +29,7 @@ import {
   suggestCompany,
   suggestTopic,
   updateReport,
+  userHasReportForCompany,
 } from "@fromtheloop/db";
 import {
   type FinalSubmission,
@@ -36,6 +37,7 @@ import {
   type TopicTagSelection,
   validateFinalSubmission,
 } from "@fromtheloop/shared";
+import { type ContentCategory, firstBlockingMatch } from "../anti-abuse/regex.js";
 
 export interface FinalizeInput {
   // Internal users.id (already resolved from the Clerk principal by the caller).
@@ -56,7 +58,22 @@ export type FinalizeResult =
   // Edit target doesn't exist or isn't owned by this user.
   | { ok: false; reason: "not_found" }
   // Edit target exists but its 24h window has closed (or it's deleted).
-  | { ok: false; reason: "locked" };
+  | { ok: false; reason: "locked" }
+  // Free text tripped the block list (contact info / PII). `category` lets the
+  // caller word the rejection without echoing the offending content.
+  | { ok: false; reason: "blocked"; category: ContentCategory }
+  // The user already has a live report for this company (1/company/user cap).
+  | { ok: false; reason: "duplicate_company" };
+
+// Gather every free-text field in a validated submission for content scanning.
+function submissionTexts(final: FinalSubmission): string[] {
+  const texts: string[] = [];
+  for (const round of final.rounds) {
+    if (round.experience) texts.push(round.experience);
+    for (const question of round.questions) texts.push(question.prose);
+  }
+  return texts;
+}
 
 // Resolve one question's tag selections to concrete topic ids. "existing" tags
 // already have an id; "suggested" tags are upserted to a pending row (idempotent
@@ -140,6 +157,14 @@ export async function finalizeSubmission(
     return { ok: false, reason: "invalid", issues: validation.issues };
   }
 
+  // Block list: contact info / PII in any free-text field hard-rejects before
+  // any write (the trimmed, validated prose is what gets scanned). Profanity is
+  // flag-only and never reaches here, so this gate is high-confidence.
+  const blocked = firstBlockingMatch(submissionTexts(validation.data));
+  if (blocked) {
+    return { ok: false, reason: "blocked", category: blocked.category };
+  }
+
   // For an edit, gate on ownership + the window BEFORE doing any resolution
   // writes, so a locked/foreign target can't spawn pending taxonomy rows.
   if (input.editingReportId) {
@@ -149,6 +174,18 @@ export async function finalizeSubmission(
   }
 
   const writeInput = await resolveWriteInput(db, input.userId, validation.data);
+
+  // Per-company cap (create path only — an edit keeps its company). Checked
+  // after company resolution so a "suggested" company is compared by its real
+  // id. A user gets one live report per company; soft-deleting frees the slot.
+  if (!input.editingReportId) {
+    const dupe = await userHasReportForCompany(
+      db,
+      input.userId,
+      writeInput.companyId,
+    );
+    if (dupe) return { ok: false, reason: "duplicate_company" };
+  }
 
   let reportId: string;
   if (input.editingReportId) {

@@ -17,7 +17,9 @@ import {
   getOrCreateUserByClerkId,
   getReportForEdit,
   isReportEditable,
+  softDeleteReport,
 } from "@fromtheloop/db";
+import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { routes } from "@/lib/routes";
 
@@ -51,4 +53,34 @@ export async function startReportEdit(formData: FormData): Promise<void> {
   // Land on the rounds screen — basics are already valid and Submit lives
   // there. "Back to basics" (a draft resume link) covers editing the top fields.
   redirect(routes.submitRounds(draft.id));
+}
+
+// Soft-delete a report. Unlike Edit, this stays available after the 24h
+// window closes — "after 24h, only Soft delete remains" (sprint exit
+// criteria). Auth + ownership are enforced in softDeleteReport (scoped by
+// userId); a foreign/guessed id simply matches nothing and falls through to
+// the same redirect, leaking no existence signal. The report row survives
+// (audit trail); status flips to 'deleted' and the view re-renders into its
+// deleted state.
+export async function softDeleteReportAction(
+  formData: FormData,
+): Promise<void> {
+  const reportId = String(formData.get("reportId") ?? "");
+  if (!reportId) notFound();
+
+  const user = await currentUser();
+  if (!user) redirect(routes.signIn);
+
+  const db = getDb();
+  const internal = await getOrCreateUserByClerkId(db, {
+    clerkId: user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? null,
+  });
+
+  await softDeleteReport(db, reportId, internal.id);
+
+  // Re-render the owner view with the now-deleted status instead of bouncing
+  // away — the user sees their delete took effect.
+  revalidatePath(routes.report(reportId));
+  redirect(routes.report(reportId));
 }

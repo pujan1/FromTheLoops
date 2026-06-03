@@ -27,7 +27,12 @@ import {
   submissionDraftSchema,
   topicSuggestionSchema,
 } from "@fromtheloop/shared";
-import { RATE_LIMITS, RATE_LIMIT_MESSAGE, rateLimit } from "@/lib/rate-limit";
+import {
+  RATE_LIMITS,
+  RATE_LIMIT_MESSAGE,
+  rateLimit,
+  slidingWindowRateLimit,
+} from "@/lib/rate-limit";
 
 export async function saveDraft(input: {
   id: string | null;
@@ -189,8 +194,9 @@ export async function finalizeSubmissionAction(input: {
   }
 
   // Per-user submit budget before any DB work — the heaviest, most abusable
-  // write surface, so it's throttled first and cheaply.
-  const limited = await rateLimit(RATE_LIMITS.submitReport, user.id);
+  // write surface. Sliding window so the 10/day cap can't be doubled across a
+  // midnight boundary.
+  const limited = await slidingWindowRateLimit(RATE_LIMITS.submitReport, user.id);
   if (!limited.ok) {
     return actionError(ACTION_ERROR.rateLimited, RATE_LIMIT_MESSAGE);
   }
@@ -238,6 +244,20 @@ export async function finalizeSubmissionAction(input: {
     return actionError(
       ACTION_ERROR.invalid,
       "We couldn't find that report to update.",
+    );
+  }
+  if (result.reason === "blocked") {
+    // Don't echo the offending text. Contact info / PII is the only blocking
+    // category today, so a single message covers it.
+    return actionError(
+      ACTION_ERROR.invalid,
+      "Please remove contact info or personal details (phone numbers, emails, SSNs) before submitting.",
+    );
+  }
+  if (result.reason === "duplicate_company") {
+    return actionError(
+      ACTION_ERROR.invalid,
+      "You already have a report for this company. Edit or delete it before adding another.",
     );
   }
   // reason === "invalid": the payload failed the finalize gate. The form's

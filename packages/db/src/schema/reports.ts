@@ -95,6 +95,18 @@ export const interviewReports = pgTable(
     lockedAt: timestamp("locked_at", { withTimezone: true })
       .notNull()
       .default(sql`now() + interval '24 hours'`),
+    // Soft-delete timestamp. Null while live; set to now() when the owner
+    // deletes the report (status flips to 'deleted' in the same write). The
+    // row stays in the table — RESTRICT FKs + audit hygiene (PLAN.md §230)
+    // forbid hard-deleting it — but it's invisible to everyone but admins.
+    // The 90-day PII purge keys off this: free-text prose is cleared once a
+    // report has been deleted for PII_RETENTION_MS.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    // Stamped by the purge worker once this deleted report's free-text PII
+    // (round experience + question prose) has been cleared. Null = not yet
+    // purged; the purge job only targets rows where this is null, so a re-run
+    // is a no-op rather than a re-scan of already-cleared rows.
+    piiPurgedAt: timestamp("pii_purged_at", { withTimezone: true }),
   },
   (t) => [
     index("reports_company_role_level_idx").on(

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import { routes } from "@/lib/routes";
 import { startReportEdit } from "./actions";
+import { DeleteReportButton } from "./delete-report-button";
 import styles from "./reports.module.css";
 
 // A submitted report's owner view. Reports aren't public until Sprint 4, so
@@ -47,6 +48,7 @@ export default async function ReportPage({
   const t = await getTranslations("report");
   const tOutcome = await getTranslations("submit");
 
+  const isDeleted = detail.report.status === "deleted";
   const editable = isReportEditable(detail.report);
   const roundCount = detail.rounds.length;
   const questionCount = detail.rounds.reduce(
@@ -102,22 +104,54 @@ export default async function ReportPage({
 
           <FtlRule />
 
-          {editable ? (
-            <div className={styles.editBlock}>
-              <FtlBody tone="muted">
-                {t("edit.window", { hours: hoursLeft })}
-              </FtlBody>
-              <form action={startReportEdit}>
-                <input type="hidden" name="reportId" value={detail.report.id} />
-                <FtlButton type="submit" variant="primary" trailingArrow>
-                  {t("edit.cta")}
-                </FtlButton>
-              </form>
-            </div>
-          ) : (
-            <FtlNotice tone="info" title={t("edit.lockedTitle")}>
-              {t("edit.locked")}
+          {isDeleted ? (
+            // Soft-deleted: no actions. The row survives for audit, but to the
+            // owner it's gone — a 90-day PII purge later scrubs the free text.
+            <FtlNotice tone="info" title={t("delete.doneTitle")}>
+              {t("delete.done")}
             </FtlNotice>
+          ) : (
+            <div className={styles.editBlock}>
+              {editable ? (
+                <>
+                  <FtlBody tone="muted">
+                    {t("edit.window", { hours: hoursLeft })}
+                  </FtlBody>
+                  <div className={styles.actions}>
+                    <form action={startReportEdit}>
+                      <input
+                        type="hidden"
+                        name="reportId"
+                        value={detail.report.id}
+                      />
+                      <FtlButton type="submit" variant="primary" trailingArrow>
+                        {t("edit.cta")}
+                      </FtlButton>
+                    </form>
+                    <DeleteReportButton
+                      reportId={detail.report.id}
+                      label={t("delete.cta")}
+                      confirmText={t("delete.confirm")}
+                    />
+                  </div>
+                </>
+              ) : (
+                // Window closed: editing is off the table, but the owner can
+                // still soft-delete ("after 24h, only Soft delete remains").
+                <>
+                  <FtlNotice tone="info" title={t("edit.lockedTitle")}>
+                    {t("edit.locked")}
+                  </FtlNotice>
+                  <div className={styles.actions}>
+                    <DeleteReportButton
+                      reportId={detail.report.id}
+                      label={t("delete.cta")}
+                      confirmText={t("delete.confirm")}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </FtlContainer>
       </main>

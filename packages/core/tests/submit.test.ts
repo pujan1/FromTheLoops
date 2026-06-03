@@ -268,6 +268,81 @@ describe("finalizeSubmission", () => {
     expect(res.reason).toBe("not_found");
   });
 
+  it("blocks a submission with contact info in the prose and writes nothing", async () => {
+    const draft = validDraft({
+      rounds: [
+        {
+          roundType: "onsite-coding",
+          rating: "positive",
+          experience: null,
+          questions: [
+            {
+              prose: "They said to call me at 555-1234 about next steps",
+              tags: [
+                { kind: "existing", id: topicId, slug: "recursion", name: "Recursion" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const res = await finalizeSubmission(db, { userId: ownerId, draftId: null, data: draft });
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.reason).toBe("blocked");
+    if (res.reason !== "blocked") return;
+    expect(res.category).toBe("contact_info");
+
+    expect(await db.select().from(interviewReports)).toHaveLength(0);
+  });
+
+  it("enforces one live report per company per user", async () => {
+    const first = await finalizeSubmission(db, {
+      userId: ownerId,
+      draftId: null,
+      data: validDraft(),
+    });
+    expect(first.ok).toBe(true);
+
+    // Second submission, same (existing) company → rejected as a duplicate.
+    const second = await finalizeSubmission(db, {
+      userId: ownerId,
+      draftId: null,
+      data: validDraft({ outcome: "reject" }),
+    });
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.reason).toBe("duplicate_company");
+    // Still just the one report.
+    expect(await db.select().from(interviewReports)).toHaveLength(1);
+
+    // A different user is unaffected by the first user's report.
+    const otherUser = await finalizeSubmission(db, {
+      userId: otherId,
+      draftId: null,
+      data: validDraft(),
+    });
+    expect(otherUser.ok).toBe(true);
+  });
+
+  it("does not trip the per-company cap when editing the same company in place", async () => {
+    const created = await finalizeSubmission(db, {
+      userId: ownerId,
+      draftId: null,
+      data: validDraft(),
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const edited = await finalizeSubmission(db, {
+      userId: ownerId,
+      draftId: null,
+      editingReportId: created.reportId,
+      data: validDraft({ outcome: "withdrew" }),
+    });
+    expect(edited.ok).toBe(true);
+  });
+
   it("refuses to edit a report past its locked_at window", async () => {
     const created = await finalizeSubmission(db, {
       userId: ownerId,
