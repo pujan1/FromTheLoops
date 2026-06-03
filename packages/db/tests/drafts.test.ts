@@ -108,6 +108,27 @@ describe("submission drafts", () => {
     await db.delete(users).where(eq(users.clerkId, "clerk_draft_cap"));
   });
 
+  it("prunes the least-recently-touched draft, not the oldest-created", async () => {
+    const u = await getOrCreateUserByClerkId(db, { clerkId: "clerk_draft_lru" });
+    // Fill to the cap; the first one created is the oldest by createdAt.
+    const ids: string[] = [];
+    for (let i = 0; i < MAX_DRAFTS_PER_USER; i++) {
+      ids.push((await createDraft(db, u.id, { i }).then((d) => d.id)));
+    }
+    const oldestCreated = ids[0]!;
+    // Touch the oldest-created draft so it becomes the most-recently-updated.
+    await updateDraft(db, oldestCreated, u.id, { touched: true });
+    // One more create forces a prune. The touched draft must survive; the
+    // victim is now the *second* draft (least recently touched).
+    await createDraft(db, u.id, { overflow: true });
+
+    const list = await listDrafts(db, u.id);
+    expect(list.length).toBe(MAX_DRAFTS_PER_USER);
+    expect(list.some((d) => d.id === oldestCreated)).toBe(true);
+    expect(list.some((d) => d.id === ids[1])).toBe(false);
+    await db.delete(users).where(eq(users.clerkId, "clerk_draft_lru"));
+  });
+
   it("pruneStaleDrafts deletes only drafts older than the cutoff", async () => {
     const stale = await createDraft(db, ownerId, { stale: true });
     // Backdate it 40 days.

@@ -5,8 +5,9 @@
 // these; here it's opaque jsonb. All reads/writes are ownership-scoped by
 // userId so a draft id alone never grants access to another user's draft.
 //
-// Soft cap: MAX_DRAFTS_PER_USER. createDraft prunes the user's oldest drafts
-// so an abandoned-form flood can't grow unbounded. The 30-day TTL prune is a
+// Soft cap: MAX_DRAFTS_PER_USER. createDraft prunes the user's least-recently-
+// touched drafts (by updatedAt, matching the resume list order) so an
+// abandoned-form flood can't grow unbounded. The 30-day TTL prune is a
 // separate cron (Sprint 6); this cap is the per-user backstop.
 
 import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
@@ -53,11 +54,15 @@ export async function createDraft(
   data: DraftData,
 ): Promise<Draft> {
   return db.transaction(async (tx) => {
+    // Order by updatedAt, not createdAt: the resume list is "most recently
+    // touched first", so eviction must drop the *least recently touched*
+    // draft. Pruning by creation order would evict a draft the user is still
+    // actively resuming/editing just because it was created first.
     const existing = await tx
       .select({ id: drafts.id })
       .from(drafts)
       .where(eq(drafts.userId, userId))
-      .orderBy(asc(drafts.createdAt));
+      .orderBy(asc(drafts.updatedAt));
 
     // Keep at most MAX-1 so this insert lands the user exactly at the cap.
     const overflow = existing.length - (MAX_DRAFTS_PER_USER - 1);

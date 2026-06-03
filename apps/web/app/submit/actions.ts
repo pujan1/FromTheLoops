@@ -19,6 +19,7 @@ import {
   isHoneypotTripped,
   submissionDraftSchema,
 } from "@fromtheloop/shared";
+import { RATE_LIMITS, RateLimitError, rateLimit } from "@/lib/rate-limit";
 
 export async function saveDraft(input: {
   id: string | null;
@@ -27,6 +28,13 @@ export async function saveDraft(input: {
 }): Promise<{ id: string }> {
   const user = await currentUser();
   if (!user) throw new Error("saveDraft: unauthenticated");
+
+  // Per-user budget before any DB work (audit High-1). Keyed on the Clerk id
+  // so the limit applies even under a flood that never resolves to our users
+  // row. Generous here — autosave is legitimately frequent — so this only
+  // caps pathological write amplification.
+  const limited = await rateLimit(RATE_LIMITS.saveDraft, user.id);
+  if (!limited.ok) throw new RateLimitError(RATE_LIMITS.saveDraft);
 
   // Anti-abuse (Day 8): a non-empty honeypot means a bot filled a field no
   // real user can reach. Silently refuse to persist — return a benign-looking
@@ -73,6 +81,13 @@ export async function suggestPendingCompany(input: {
 }): Promise<{ id: string; name: string } | null> {
   const user = await currentUser();
   if (!user) throw new Error("suggestPendingCompany: unauthenticated");
+
+  // Tight per-user budget (audit High-1): this is the only surface that
+  // writes into the human moderation queue, so it's the one most worth
+  // throttling. Checked before the honeypot/DB so a flood is rejected cheaply.
+  const limited = await rateLimit(RATE_LIMITS.suggestCompany, user.id);
+  if (!limited.ok) throw new RateLimitError(RATE_LIMITS.suggestCompany);
+
   if (isHoneypotTripped(input.honeypot)) return null;
 
   const { name } = companySuggestionSchema.parse(input);
