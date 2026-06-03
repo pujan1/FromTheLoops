@@ -26,7 +26,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Body, Button, Combobox, type ComboboxOption } from "@/components/ui";
-import { saveDraft } from "./actions";
+import { saveDraft, suggestPendingCompany } from "./actions";
 import styles from "./submit.module.css";
 
 const PENDING_PREFIX = "pending:";
@@ -236,9 +236,10 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     if (match) setLevel({ id: match.id, name: match.name });
   }
 
-  function handleContinue() {
+  async function handleContinue() {
+    const companySelection = toCompanySelection(company);
     const candidate = {
-      company: toCompanySelection(company),
+      company: companySelection,
       role: role ? { id: role.id, name: role.label } : null,
       level,
       outcome,
@@ -264,6 +265,25 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     }
     setErrors({});
     setSubmitting(true);
+
+    // Validation passed — if the company is a fresh "suggest new", promote it
+    // to a status='pending' taxonomy row now (the commit boundary) and backfill
+    // the id so it's no longer a bare suggestion. suggestCompany is idempotent,
+    // so resuming + continuing again is safe.
+    if (companySelection?.kind === "suggested") {
+      try {
+        const created = await suggestPendingCompany({
+          name: companySelection.name,
+          honeypot: honeypotRef.current?.value ?? "",
+        });
+        if (created) setCompany({ id: created.id, label: created.name });
+      } catch {
+        setSubmitting(false);
+        setSaveState("error");
+        return;
+      }
+    }
+
     router.push("/submit/rounds");
   }
 
@@ -433,7 +453,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
         <Button
           variant="primary"
           trailingArrow
-          onClick={handleContinue}
+          onClick={() => void handleContinue()}
           disabled={submitting}
         >
           {t("continue")}

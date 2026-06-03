@@ -72,6 +72,33 @@ test("login → fill → leave → resume → continue", async ({ page }) => {
   await expect(page).toHaveURL(/\/submit\/rounds$/);
 });
 
+test("suggest-new company → continue creates a pending taxonomy row", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/submit");
+
+  // A name with no taxonomy match → the Combobox offers a suggest-new row.
+  const companyName = "E2E PendingCo";
+  const companyInput = page.getByRole("combobox", {
+    name: "Company",
+    exact: true,
+  });
+  await companyInput.click();
+  await companyInput.fill(companyName);
+  await page.getByRole("option", { name: /Suggest/ }).click();
+  await expect(companyInput).toHaveValue(companyName);
+
+  // Suggested company has no level ladder → the form records it as N/A, so the
+  // only remaining required field is the role.
+  await fillCombobox(page, "Role", "software engineer", "Software Engineer");
+
+  // Continue promotes the suggestion to a status='pending' row server-side,
+  // backfills the id, and advances to the Rounds stub.
+  await page.getByRole("button", { name: /Continue/ }).click();
+  await expect(page).toHaveURL(/\/submit\/rounds$/);
+});
+
 test("a tripped honeypot is silently dropped — no draft is created", async ({
   page,
 }) => {

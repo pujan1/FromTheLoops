@@ -41,6 +41,13 @@ export const companySelectionSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+// Input for the "suggest a new company" server action — just the typed name,
+// bounded the same way as the suggested arm of companySelectionSchema. The
+// action turns this into a status='pending' taxonomy row.
+export const companySuggestionSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+});
+
 // Roles are a closed canonical set — no inline create, so existing-only.
 export const roleSelectionSchema = z.object({
   id: z.string().uuid(),
@@ -82,6 +89,7 @@ export const submissionReadySchema = z.object({
 });
 
 export type CompanySelection = z.infer<typeof companySelectionSchema>;
+export type CompanySuggestion = z.infer<typeof companySuggestionSchema>;
 export type RoleSelection = z.infer<typeof roleSelectionSchema>;
 export type LevelSelection = z.infer<typeof levelSelectionSchema>;
 export type ReportOutcome = z.infer<typeof outcomeSchema>;

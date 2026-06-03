@@ -11,9 +11,14 @@ import {
   createDraft,
   getDb,
   getOrCreateUserByClerkId,
+  suggestCompany,
   updateDraft,
 } from "@fromtheloop/db";
-import { isHoneypotTripped, submissionDraftSchema } from "@fromtheloop/shared";
+import {
+  companySuggestionSchema,
+  isHoneypotTripped,
+  submissionDraftSchema,
+} from "@fromtheloop/shared";
 
 export async function saveDraft(input: {
   id: string | null;
@@ -51,4 +56,36 @@ export async function saveDraft(input: {
   }
   const created = await createDraft(db, internal.id, parsed);
   return { id: created.id };
+}
+
+// Promote a "suggest new" company to a real taxonomy row (Sprint 1 Day 10).
+// Called at the Continue boundary when the chosen company is a suggestion with
+// no row yet. suggestCompany inserts it as status='pending' / source=
+// 'user_suggested' (idempotent on slug — never flips an active row to pending)
+// and attributes it to the suggester. Returns the row id+name so the client
+// backfills the selection (suggested → existing) before it advances/persists.
+//
+// Returns null when the honeypot is tripped: a bot doesn't get to seed the
+// pending-company queue, and (as with saveDraft) the trap stays invisible.
+export async function suggestPendingCompany(input: {
+  name: string;
+  honeypot?: string;
+}): Promise<{ id: string; name: string } | null> {
+  const user = await currentUser();
+  if (!user) throw new Error("suggestPendingCompany: unauthenticated");
+  if (isHoneypotTripped(input.honeypot)) return null;
+
+  const { name } = companySuggestionSchema.parse(input);
+
+  const db = getDb();
+  const internal = await getOrCreateUserByClerkId(db, {
+    clerkId: user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? null,
+  });
+
+  const { company } = await suggestCompany(db, {
+    name,
+    suggestedByUserId: internal.id,
+  });
+  return { id: company.id, name: company.name };
 }
