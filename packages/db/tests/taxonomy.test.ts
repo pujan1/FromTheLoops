@@ -15,18 +15,21 @@
 
 import { eq, or } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { companies, companyLevels, roles } from "../src/schema/index.js";
+import { companies, companyLevels, roles, topics } from "../src/schema/index.js";
 import { seedCurated } from "../src/seed/curated.js";
 import {
   getCompanyLevels,
   searchCompanies,
   searchRoles,
+  searchTopics,
   suggestCompany,
+  suggestTopic,
 } from "../src/taxonomy.js";
 import { makeTestClient, type TestDb } from "./helpers.js";
 
 // Slug a suggested-pending test row collides on nothing in the curated set.
 const SUGGESTED_SLUG = "mytinyco-inc";
+const SUGGESTED_TOPIC_SLUG = "rust-async-internals";
 
 describe("taxonomy lookup", () => {
   let db: TestDb;
@@ -52,6 +55,14 @@ describe("taxonomy lookup", () => {
         or(eq(companies.source, "seed_curated"), eq(companies.slug, SUGGESTED_SLUG)),
       );
     await db.delete(roles).where(eq(roles.source, "seed_curated"));
+    await db
+      .delete(topics)
+      .where(
+        or(
+          eq(topics.source, "seed_curated"),
+          eq(topics.slug, SUGGESTED_TOPIC_SLUG),
+        ),
+      );
     await close();
   });
 
@@ -105,6 +116,62 @@ describe("taxonomy lookup", () => {
 
     it("returns nothing for an empty query", async () => {
       expect(await searchRoles(db, "")).toEqual([]);
+    });
+  });
+
+  describe("searchTopics", () => {
+    it("matches curated topic names ('dynamic' → Dynamic Programming)", async () => {
+      const matches = await searchTopics(db, "dynamic");
+      expect(matches[0]?.slug).toBe("dynamic-programming");
+    });
+
+    it("matches topic aliases ('K8s' → Kubernetes)", async () => {
+      const matches = await searchTopics(db, "K8s");
+      expect(matches.some((m) => m.slug === "kubernetes")).toBe(true);
+    });
+
+    it("tolerates a typo ('kubernets' → Kubernetes)", async () => {
+      const matches = await searchTopics(db, "kubernets");
+      expect(matches.some((m) => m.slug === "kubernetes")).toBe(true);
+    });
+
+    it("returns nothing for an empty query", async () => {
+      expect(await searchTopics(db, "")).toEqual([]);
+    });
+
+    it("excludes pending topics from results", async () => {
+      await suggestTopic(db, { name: "Rust Async Internals" });
+      const matches = await searchTopics(db, "Rust Async Internals");
+      expect(matches).toEqual([]);
+    });
+  });
+
+  describe("suggestTopic", () => {
+    it("creates a pending, user_suggested topic", async () => {
+      // Idempotent across the suite: the excludes-pending test may have
+      // created it already, so assert the resulting row, not `created`.
+      const { topic } = await suggestTopic(db, { name: "Rust Async Internals" });
+      expect(topic.slug).toBe(SUGGESTED_TOPIC_SLUG);
+      expect(topic.name).toBe("Rust Async Internals");
+      expect(topic.status).toBe("pending");
+      expect(topic.source).toBe("user_suggested");
+    });
+
+    it("is idempotent on the slug (created=false on repeat)", async () => {
+      const again = await suggestTopic(db, { name: "Rust Async Internals" });
+      expect(again.created).toBe(false);
+      expect(again.topic.slug).toBe(SUGGESTED_TOPIC_SLUG);
+    });
+
+    it("never flips an existing active topic back to pending", async () => {
+      const { topic, created } = await suggestTopic(db, { name: "Caching" });
+      expect(created).toBe(false);
+      expect(topic.slug).toBe("caching");
+      expect(topic.status).toBe("active");
+    });
+
+    it("rejects an empty name", async () => {
+      await expect(suggestTopic(db, { name: "   " })).rejects.toThrow();
     });
   });
 

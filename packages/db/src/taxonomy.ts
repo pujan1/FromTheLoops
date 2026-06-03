@@ -17,9 +17,10 @@
 //   - Ranked by best similarity across name+aliases, then name asc for a
 //     stable tiebreak.
 //
-// Companies allow inline "suggest new → pending" (suggestCompany). Roles do
-// NOT — they're a closed canonical set; the search helper is the only role
-// surface and there is deliberately no role-suggest export here.
+// Companies and topics allow inline "suggest new → pending" (suggestCompany,
+// suggestTopic). Roles do NOT — they're a closed canonical set; the search
+// helper is the only role surface and there is deliberately no role-suggest
+// export here.
 
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -28,6 +29,8 @@ import {
   type Company,
   companyLevels,
   roles,
+  type Topic,
+  topics,
 } from "./schema/index.js";
 import * as schema from "./schema/index.js";
 import { slugify } from "./slug.js";
@@ -112,6 +115,49 @@ export async function searchRoles(
   const rows = await db.execute<RoleMatch>(sql`
     SELECT id, slug, name
     FROM ${roles}
+    WHERE status = 'active'
+      AND (
+        name % ${q}
+        OR taxonomy_aliases_text(aliases) % ${q}
+        OR name ILIKE ${like}
+        OR taxonomy_aliases_text(aliases) ILIKE ${like}
+      )
+    ORDER BY
+      GREATEST(
+        similarity(name, ${q}),
+        similarity(taxonomy_aliases_text(aliases), ${q})
+      ) DESC,
+      name ASC
+    LIMIT ${limit}
+  `);
+  return rows.map((r) => ({ id: r.id, slug: r.slug, name: r.name }));
+}
+
+export type TopicMatch = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+// Topic-tag autocomplete for the question tagger (Sprint 2 Day 3). Identical
+// hybrid match to searchCompanies/searchRoles over the topics_name_trgm_idx /
+// topics_aliases_trgm_idx indexes (migration 0004). status='active' only, so
+// user-suggested-pending tags stay out of the dropdown until a mod promotes
+// them — which is also why a pending tag can't satisfy the ≥1-active-tag
+// rule.
+export async function searchTopics(
+  db: Db,
+  query: string,
+  opts: SearchOptions = {},
+): Promise<TopicMatch[]> {
+  const q = normalizeQuery(query);
+  if (q.length === 0) return [];
+  const limit = opts.limit ?? DEFAULT_LIMIT;
+  const like = `%${q}%`;
+
+  const rows = await db.execute<TopicMatch>(sql`
+    SELECT id, slug, name
+    FROM ${topics}
     WHERE status = 'active'
       AND (
         name % ${q}
@@ -222,4 +268,66 @@ export async function suggestCompany(
     throw new Error(`suggestCompany: slug ${slug} conflicted but no row found`);
   }
   return { company: existingRow, created: false };
+}
+
+export interface SuggestTopicInput {
+  name: string;
+  // Clerk-mapped user id; null allowed (suggested_by_user_id is SET NULL on
+  // user delete) but the submission flow always has a user.
+  suggestedByUserId?: string | null;
+}
+
+export interface SuggestTopicResult {
+  topic: Topic;
+  // false when the slug already existed (active seed OR a prior pending
+  // suggestion). We never mutate the existing row.
+  created: boolean;
+}
+
+// Insert a user-suggested topic tag as status = 'pending'. Idempotent on the
+// slug, exactly like suggestCompany — topics are the other taxonomy that
+// allows inline suggest-new (roles do not). A pending tag is created so a mod
+// can promote it later; until then it stays out of searchTopics and does not
+// count toward a question's ≥1-active-tag requirement.
+export async function suggestTopic(
+  db: Db,
+  input: SuggestTopicInput,
+): Promise<SuggestTopicResult> {
+  const name = input.name.trim();
+  if (name.length === 0) {
+    throw new Error("suggestTopic: name is empty");
+  }
+  const slug = slugify(name);
+  if (slug.length === 0) {
+    throw new Error(`suggestTopic: name produced an empty slug: ${name}`);
+  }
+
+  const inserted = await db
+    .insert(topics)
+    .values({
+      slug,
+      name,
+      status: "pending",
+      source: "user_suggested",
+      suggestedByUserId: input.suggestedByUserId ?? null,
+    })
+    .onConflictDoNothing({ target: topics.slug })
+    .returning();
+
+  const insertedRow = inserted[0];
+  if (insertedRow) {
+    return { topic: insertedRow, created: true };
+  }
+
+  // Slug collided — fetch the existing row to return.
+  const existing = await db
+    .select()
+    .from(topics)
+    .where(eq(topics.slug, slug))
+    .limit(1);
+  const existingRow = existing[0];
+  if (!existingRow) {
+    throw new Error(`suggestTopic: slug ${slug} conflicted but no row found`);
+  }
+  return { topic: existingRow, created: false };
 }

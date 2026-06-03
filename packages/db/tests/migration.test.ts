@@ -54,15 +54,16 @@ describe("migrations", () => {
   });
 
   it("records every migration in the drizzle journal", async () => {
-    // 0000 (initial) + 0001 (taxonomy/drafts) + 0002 (trgm indexes); guards
-    // a corrupted journal silently skipping a file.
+    // 0000 (initial) + 0001 (taxonomy/drafts) + 0002 (trgm indexes) + 0003
+    // (topics taxonomy columns) + 0004 (topics trgm indexes); guards a
+    // corrupted journal silently skipping a file.
     const rows = await db.execute<{ hash: string }>(sql`
       SELECT hash FROM drizzle.__drizzle_migrations
     `);
-    expect(rows.length).toBeGreaterThanOrEqual(3);
+    expect(rows.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("enables pg_trgm and the taxonomy trigram indexes (migration 0002)", async () => {
+  it("enables pg_trgm and the taxonomy trigram indexes (migrations 0002, 0004)", async () => {
     const ext = await db.execute<{ extname: string }>(sql`
       SELECT extname FROM pg_extension WHERE extname = 'pg_trgm'
     `);
@@ -77,6 +78,8 @@ describe("migrations", () => {
       "companies_aliases_trgm_idx",
       "roles_name_trgm_idx",
       "roles_aliases_trgm_idx",
+      "topics_name_trgm_idx",
+      "topics_aliases_trgm_idx",
     ]) {
       expect(names, `index ${expected} missing`).toContain(expected);
     }
@@ -102,6 +105,7 @@ describe("migrations", () => {
       "drafts_user_idx",
       "companies_status_idx",
       "roles_status_idx",
+      "topics_status_idx",
     ]) {
       expect(names, `index ${expected} missing`).toContain(expected);
     }

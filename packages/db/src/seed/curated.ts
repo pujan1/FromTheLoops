@@ -14,7 +14,7 @@
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../schema/index.js";
-import { companies, companyLevels, roles } from "../schema/index.js";
+import { companies, companyLevels, roles, topics } from "../schema/index.js";
 import { slugify } from "../slug.js";
 
 // Minimal DB type: a Drizzle postgres-js client bound to our schema. Both
@@ -35,6 +35,12 @@ export interface CuratedCompany {
 }
 
 export interface CuratedRole {
+  slug: string;
+  name: string;
+  aliases?: string[];
+}
+
+export interface CuratedTopic {
   slug: string;
   name: string;
   aliases?: string[];
@@ -105,10 +111,123 @@ export const CURATED_ROLES: CuratedRole[] = [
   { slug: "product-manager", name: "Product Manager", aliases: ["PM", "Technical Product Manager", "TPM"] },
 ];
 
+// ~85 curated topic tags — the seed set a question is tagged with (≥1
+// active tag required; PLAN.md §Data model). Spans the four families the
+// wedge targets — general SWE (algorithms/DS + system design + language &
+// backend fundamentals), ML, data, and SRE/DevOps — plus a small set of
+// universal behavioral tags. Slugs are stable (topic page URL + the
+// question_topics FK), so don't rename them; widen `aliases` instead.
+// Aliases feed the same fuzzy match as companies/roles (so "DP" → Dynamic
+// Programming, "K8s" → Kubernetes). Unlike roles, topics ALSO allow inline
+// "suggest new → pending" via suggestTopic — this is just the curated floor.
+export const CURATED_TOPICS: CuratedTopic[] = [
+  // Algorithms & data structures (universal SWE)
+  { slug: "arrays", name: "Arrays" },
+  { slug: "strings", name: "Strings" },
+  { slug: "hash-maps", name: "Hash Maps", aliases: ["Hash Tables", "Dictionaries"] },
+  { slug: "linked-lists", name: "Linked Lists" },
+  { slug: "stacks-and-queues", name: "Stacks & Queues" },
+  { slug: "trees", name: "Trees" },
+  { slug: "binary-trees", name: "Binary Trees" },
+  { slug: "binary-search-trees", name: "Binary Search Trees", aliases: ["BST"] },
+  { slug: "graphs", name: "Graphs" },
+  { slug: "heaps", name: "Heaps", aliases: ["Priority Queues"] },
+  { slug: "tries", name: "Tries", aliases: ["Prefix Trees"] },
+  { slug: "dynamic-programming", name: "Dynamic Programming", aliases: ["DP", "Memoization"] },
+  { slug: "greedy-algorithms", name: "Greedy Algorithms" },
+  { slug: "recursion", name: "Recursion" },
+  { slug: "backtracking", name: "Backtracking" },
+  { slug: "sorting", name: "Sorting", aliases: ["Sorting Algorithms"] },
+  { slug: "binary-search", name: "Binary Search" },
+  { slug: "two-pointers", name: "Two Pointers" },
+  { slug: "sliding-window", name: "Sliding Window" },
+  { slug: "bit-manipulation", name: "Bit Manipulation" },
+  { slug: "graph-traversal", name: "Graph Traversal", aliases: ["BFS", "DFS", "Breadth-First Search", "Depth-First Search"] },
+  { slug: "union-find", name: "Union-Find", aliases: ["Disjoint Set"] },
+  { slug: "intervals", name: "Intervals" },
+  { slug: "matrix", name: "Matrix" },
+  // System design (universal)
+  { slug: "system-design", name: "System Design" },
+  { slug: "scalability", name: "Scalability" },
+  { slug: "load-balancing", name: "Load Balancing" },
+  { slug: "caching", name: "Caching", aliases: ["Redis", "Memcached"] },
+  { slug: "database-design", name: "Database Design", aliases: ["Schema Design"] },
+  { slug: "sharding", name: "Sharding", aliases: ["Partitioning"] },
+  { slug: "replication", name: "Replication" },
+  { slug: "message-queues", name: "Message Queues", aliases: ["Kafka", "RabbitMQ"] },
+  { slug: "microservices", name: "Microservices" },
+  { slug: "api-design", name: "API Design", aliases: ["REST API Design"] },
+  { slug: "rate-limiting", name: "Rate Limiting" },
+  { slug: "consistent-hashing", name: "Consistent Hashing" },
+  { slug: "distributed-systems", name: "Distributed Systems" },
+  { slug: "cap-theorem", name: "CAP Theorem" },
+  { slug: "pub-sub", name: "Pub/Sub", aliases: ["Publish-Subscribe"] },
+  { slug: "idempotency", name: "Idempotency" },
+  // Language, web & backend fundamentals
+  { slug: "concurrency", name: "Concurrency", aliases: ["Multithreading", "Parallelism"] },
+  { slug: "transactions", name: "Transactions", aliases: ["ACID"] },
+  { slug: "sql", name: "SQL" },
+  { slug: "database-indexing", name: "Database Indexing" },
+  { slug: "nosql", name: "NoSQL" },
+  { slug: "operating-systems", name: "Operating Systems", aliases: ["OS"] },
+  { slug: "networking", name: "Networking", aliases: ["TCP/IP", "HTTP"] },
+  { slug: "object-oriented-design", name: "Object-Oriented Design", aliases: ["OOP", "OOD"] },
+  { slug: "design-patterns", name: "Design Patterns" },
+  { slug: "testing", name: "Testing", aliases: ["Unit Testing", "TDD"] },
+  { slug: "javascript", name: "JavaScript", aliases: ["JS"] },
+  { slug: "typescript", name: "TypeScript", aliases: ["TS"] },
+  { slug: "react", name: "React" },
+  { slug: "web-performance", name: "Web Performance" },
+  // Machine learning
+  { slug: "machine-learning", name: "Machine Learning", aliases: ["ML"] },
+  { slug: "deep-learning", name: "Deep Learning" },
+  { slug: "neural-networks", name: "Neural Networks" },
+  { slug: "nlp", name: "Natural Language Processing", aliases: ["NLP"] },
+  { slug: "computer-vision", name: "Computer Vision", aliases: ["CV"] },
+  { slug: "transformers", name: "Transformers", aliases: ["Attention", "Self-Attention"] },
+  { slug: "llms", name: "Large Language Models", aliases: ["LLM", "LLMs"] },
+  { slug: "embeddings", name: "Embeddings", aliases: ["Vector Search"] },
+  { slug: "recommendation-systems", name: "Recommendation Systems", aliases: ["RecSys"] },
+  { slug: "feature-engineering", name: "Feature Engineering" },
+  { slug: "model-evaluation", name: "Model Evaluation", aliases: ["Metrics", "Precision/Recall"] },
+  { slug: "gradient-descent", name: "Gradient Descent", aliases: ["Backpropagation"] },
+  { slug: "reinforcement-learning", name: "Reinforcement Learning", aliases: ["RL"] },
+  { slug: "prompt-engineering", name: "Prompt Engineering" },
+  { slug: "mlops", name: "MLOps" },
+  { slug: "statistics", name: "Statistics", aliases: ["Probability"] },
+  // Data engineering / analytics
+  { slug: "data-modeling", name: "Data Modeling", aliases: ["Dimensional Modeling"] },
+  { slug: "etl", name: "ETL", aliases: ["ELT"] },
+  { slug: "data-pipelines", name: "Data Pipelines", aliases: ["Airflow"] },
+  { slug: "data-warehousing", name: "Data Warehousing", aliases: ["Snowflake", "BigQuery"] },
+  { slug: "spark", name: "Apache Spark", aliases: ["Spark", "PySpark"] },
+  { slug: "stream-processing", name: "Stream Processing", aliases: ["Streaming", "Flink"] },
+  { slug: "a-b-testing", name: "A/B Testing", aliases: ["Experimentation"] },
+  // SRE / DevOps / infra
+  { slug: "kubernetes", name: "Kubernetes", aliases: ["K8s"] },
+  { slug: "docker", name: "Docker", aliases: ["Containers"] },
+  { slug: "ci-cd", name: "CI/CD" },
+  { slug: "observability", name: "Observability", aliases: ["Monitoring", "Metrics & Tracing"] },
+  { slug: "incident-response", name: "Incident Response", aliases: ["On-Call", "Postmortems"] },
+  { slug: "infrastructure-as-code", name: "Infrastructure as Code", aliases: ["Terraform", "IaC"] },
+  { slug: "linux", name: "Linux", aliases: ["Bash"] },
+  { slug: "cloud-architecture", name: "Cloud Architecture", aliases: ["AWS", "GCP", "Azure"] },
+  { slug: "sla-slo", name: "SLAs & SLOs", aliases: ["SLI", "Reliability"] },
+  { slug: "capacity-planning", name: "Capacity Planning" },
+  // Behavioral (universal)
+  { slug: "leadership", name: "Leadership" },
+  { slug: "conflict-resolution", name: "Conflict Resolution" },
+  { slug: "teamwork", name: "Teamwork", aliases: ["Collaboration"] },
+  { slug: "ownership", name: "Ownership" },
+  { slug: "dealing-with-ambiguity", name: "Dealing with Ambiguity" },
+  { slug: "project-management", name: "Project Management" },
+];
+
 export interface SeedCuratedResult {
   companies: number;
   roles: number;
   levels: number;
+  topics: number;
 }
 
 // Upsert the curated set. Returns counts (inserted-or-updated rows) so the
@@ -191,9 +310,32 @@ export async function seedCurated(db: Db): Promise<SeedCuratedResult> {
     })
     .returning({ id: roles.id });
 
+  const topicRows = await db
+    .insert(topics)
+    .values(
+      CURATED_TOPICS.map((t) => ({
+        slug: t.slug,
+        name: t.name,
+        aliases: t.aliases ?? [],
+        status: "active" as const,
+        source: "seed_curated" as const,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: topics.slug,
+      set: {
+        name: sql`excluded.name`,
+        aliases: sql`excluded.aliases`,
+        status: sql`excluded.status`,
+        source: sql`excluded.source`,
+      },
+    })
+    .returning({ id: topics.id });
+
   return {
     companies: companyRows.length,
     roles: roleRows.length,
     levels: levelRows.length,
+    topics: topicRows.length,
   };
 }

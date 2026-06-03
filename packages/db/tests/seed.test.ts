@@ -5,10 +5,11 @@
 
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { companies, companyLevels, roles } from "../src/schema/index.js";
+import { companies, companyLevels, roles, topics } from "../src/schema/index.js";
 import {
   CURATED_COMPANIES,
   CURATED_ROLES,
+  CURATED_TOPICS,
   seedCurated,
 } from "../src/seed/curated.js";
 import { makeTestClient, type TestDb } from "./helpers.js";
@@ -38,19 +39,25 @@ describe("curated seed", () => {
       .where(eq(companyLevels.source, "seed_curated"));
     await db.delete(companies).where(eq(companies.source, "seed_curated"));
     await db.delete(roles).where(eq(roles.source, "seed_curated"));
+    await db.delete(topics).where(eq(topics.source, "seed_curated"));
     await close();
   });
 
-  it("ships the agreed taxonomy size (30 companies, 20 roles)", () => {
+  it("ships the agreed taxonomy size (30 companies, 20 roles, ~80 topics)", () => {
     expect(CURATED_COMPANIES).toHaveLength(30);
     expect(CURATED_ROLES).toHaveLength(20);
+    // "~80 tags across SWE/ML/data/SRE" — assert the floor, not an exact
+    // count, so the curated set can grow without breaking the test.
+    expect(CURATED_TOPICS.length).toBeGreaterThanOrEqual(80);
   });
 
-  it("has unique company and role slugs", () => {
+  it("has unique company, role, and topic slugs", () => {
     const companySlugs = CURATED_COMPANIES.map((c) => c.slug);
     const roleSlugs = CURATED_ROLES.map((r) => r.slug);
+    const topicSlugs = CURATED_TOPICS.map((t) => t.slug);
     expect(new Set(companySlugs).size).toBe(companySlugs.length);
     expect(new Set(roleSlugs).size).toBe(roleSlugs.length);
+    expect(new Set(topicSlugs).size).toBe(topicSlugs.length);
   });
 
   it("inserts every curated company as active + seed_curated", async () => {
@@ -70,6 +77,15 @@ describe("curated seed", () => {
       .from(roles)
       .where(eq(roles.source, "seed_curated"));
     expect(rows).toHaveLength(CURATED_ROLES.length);
+    expect(rows.every((r) => r.status === "active")).toBe(true);
+  });
+
+  it("inserts every curated topic as active + seed_curated", async () => {
+    const rows = await db
+      .select()
+      .from(topics)
+      .where(eq(topics.source, "seed_curated"));
+    expect(rows).toHaveLength(CURATED_TOPICS.length);
     expect(rows.every((r) => r.status === "active")).toBe(true);
   });
 
@@ -105,6 +121,10 @@ describe("curated seed", () => {
       .select()
       .from(companyLevels)
       .where(eq(companyLevels.source, "seed_curated"));
+    const topicRows = await db
+      .select()
+      .from(topics)
+      .where(eq(topics.source, "seed_curated"));
 
     const expectedLevels = CURATED_COMPANIES.reduce(
       (sum, c) => sum + c.levels.length,
@@ -113,5 +133,6 @@ describe("curated seed", () => {
     expect(companyRows).toHaveLength(CURATED_COMPANIES.length);
     expect(roleRows).toHaveLength(CURATED_ROLES.length);
     expect(levelRows).toHaveLength(expectedLevels);
+    expect(topicRows).toHaveLength(CURATED_TOPICS.length);
   });
 });

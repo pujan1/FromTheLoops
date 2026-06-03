@@ -58,11 +58,62 @@
   },
   "rounds": {
     "eyebrow": "submit · rounds",
-    "title": "Rounds come next.",
-    "body": "You’ve captured the basics. Adding individual rounds, questions, and topics is the next step — landing in Sprint 2. Your selections aren’t lost; draft persistence arrives shortly.",
-    "tagRounds": "rounds",
-    "tagQuestions": "questions",
-    "tagTopics": "topics",
-    "tagSoon": "coming in sprint 2"
+    "title": "Walk through your <em>rounds</em>.",
+    "lede": "Add a card for each round you went through — its type, how it felt, and the questions you were asked. No rounds? You can submit just the basics.",
+    "empty": "No rounds yet. Add the first one to start capturing questions.",
+    "addRound": "Add round",
+    "addFirstRound": "Add your first round",
+    "roundLabel": "Round {n}",
+    "remove": "Remove",
+    "removeRound": "Remove round {n}",
+    "collapse": "Collapse round {n}",
+    "expand": "Expand round {n}",
+    "untyped": "Untyped round",
+    "typeLabel": "Round type",
+    "typePlaceholder": "Select a round type…",
+    "type": {
+      "recruiter-screen": "Recruiter screen",
+      "technical-phone": "Technical phone",
+      "onsite-coding": "Onsite · Coding",
+      "onsite-system-design": "Onsite · System design",
+      "onsite-behavioral": "Onsite · Behavioral",
+      "take-home": "Take-home",
+      "hiring-manager": "Hiring manager",
+      "exec-final": "Exec / final",
+      "other": "Other"
+    },
+    "ratingLabel": "How did it go?",
+    "rating": {
+      "positive": "Positive",
+      "mixed": "Mixed",
+      "negative": "Negative"
+    },
+    "experienceLabel": "What happened (optional)",
+    "experiencePlaceholder": "Format, vibe, what stood out…",
+    "questionCount": "{count, plural, =0 {No questions} =1 {1 question} other {# questions}}",
+    "capReached": "You’ve reached the max of {max} rounds.",
+    "back": "← Back to basics",
+    "save": {
+      "saving": "Saving…",
+      "saved": "Draft saved",
+      "error": "Couldn’t save draft"
+    }
+  },
+  "questions": {
+    "heading": "Questions",
+    "add": "Add question",
+    "remove": "Remove question {n}",
+    "label": "Question {n}",
+    "proseLabel": "What were you asked?",
+    "prosePlaceholder": "Describe the question or prompt…",
+    "capReached": "Max of {max} questions per round reached.",
+    "empty": "No questions logged for this round yet."
+  },
+  "tags": {
+    "label": "Topics",
+    "placeholder": "Search topics…",
+    "suggestHint": "new · pending review",
+    "hint": "Tag at least one topic per question once you’ve added them.",
+    "comingSoon": "Topic tagging lands next — add your questions now."
   }
 }

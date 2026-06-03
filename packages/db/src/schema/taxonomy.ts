@@ -72,17 +72,39 @@ export const roles = pgTable(
   ],
 );
 
+// Topic tags — the curated taxonomy a question is tagged with (≥1 active
+// tag required per question; PLAN.md §Data model). Unlike `roles`, topics
+// DO allow inline "suggest new → pending" (same affordance as companies):
+// a user can propose a tag the curated set is missing, landing it as
+// status='pending' until a mod promotes it. Pending tags don't satisfy the
+// ≥1-active-tag rule until promoted — that's enforced in the submission
+// validator (Sprint 2 Day 4), the active-vs-pending distinction modeled
+// here mirrors companies. Shares the status/source/aliases shape so the
+// pg_trgm autocomplete + suggest-pending helpers in taxonomy.ts can mirror
+// searchCompanies/suggestCompany exactly.
 export const topics = pgTable(
   "topics",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
+    // Alternate names, matched alongside `name` by fuzzy search.
+    aliases: text("aliases").array().notNull().default(sql`'{}'`),
+    status: taxonomyStatus("status").notNull().default("active"),
+    source: taxonomySource("source").notNull().default("user_suggested"),
+    // Who suggested a pending tag (null for seed rows).
+    suggestedByUserId: uuid("suggested_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex("topics_slug_uq").on(t.slug)],
+  (t) => [
+    uniqueIndex("topics_slug_uq").on(t.slug),
+    index("topics_status_idx").on(t.status),
+  ],
 );
 
 // Per-company levels (Amazon SDE II, Google L4, Meta E4) — meaningless
@@ -116,5 +138,6 @@ export type NewCompany = typeof companies.$inferInsert;
 export type Role = typeof roles.$inferSelect;
 export type NewRole = typeof roles.$inferInsert;
 export type Topic = typeof topics.$inferSelect;
+export type NewTopic = typeof topics.$inferInsert;
 export type CompanyLevel = typeof companyLevels.$inferSelect;
 export type NewCompanyLevel = typeof companyLevels.$inferInsert;

@@ -17,7 +17,8 @@ async function main(): Promise<void> {
   const result = await seedCurated(db);
   console.log(
     `seed ok — companies: ${result.companies}, ` +
-      `levels: ${result.levels}, roles: ${result.roles}`,
+      `levels: ${result.levels}, roles: ${result.roles}, ` +
+      `topics: ${result.topics}`,
   );
   await closeDb();
 }

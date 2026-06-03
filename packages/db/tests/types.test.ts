@@ -24,6 +24,7 @@ import type {
   NewRound,
   Role,
   Round,
+  Topic,
   UserVerification,
 } from "../src/schema/index.js";
 
@@ -118,6 +119,17 @@ describe("schema types", () => {
     expectTypeOf<Company["source"]>().toEqualTypeOf<
       "seed_curated" | "user_suggested"
     >();
+  });
+
+  it("Topic shares the taxonomy status/source/aliases shape", () => {
+    expectTypeOf<Topic["status"]>().toEqualTypeOf<
+      "active" | "pending" | "merged"
+    >();
+    expectTypeOf<Topic["source"]>().toEqualTypeOf<
+      "seed_curated" | "user_suggested"
+    >();
+    expectTypeOf<Topic["aliases"]>().toEqualTypeOf<string[]>();
+    expectTypeOf<Topic["suggestedByUserId"]>().toEqualTypeOf<string | null>();
   });
 
   it("Company.aliases is a non-null string[]; domain + suggestedBy are nullable", () => {

@@ -186,8 +186,12 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       outcome,
       month,
       attribution,
+      // Pass through any rounds already captured on the rounds screen so a
+      // basics-only autosave never clobbers them (Sprint 2 Day 2). Not edited
+      // here; the rounds form owns this branch of the draft.
+      rounds: initialData?.rounds ?? undefined,
     }),
-    [company, role, level, outcome, month, attribution],
+    [company, role, level, outcome, month, attribution, initialData?.rounds],
   );
   const serialized = JSON.stringify(draftData);
 
@@ -270,13 +274,17 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     // to a status='pending' taxonomy row now (the commit boundary) and backfill
     // the id so it's no longer a bare suggestion. suggestCompany is idempotent,
     // so resuming + continuing again is safe.
+    let companyOption = company;
     if (companySelection?.kind === "suggested") {
       try {
         const created = await suggestPendingCompany({
           name: companySelection.name,
           honeypot: honeypotRef.current?.value ?? "",
         });
-        if (created) setCompany({ id: created.id, label: created.name });
+        if (created) {
+          companyOption = { id: created.id, label: created.name };
+          setCompany(companyOption);
+        }
       } catch {
         setSubmitting(false);
         setSaveState("error");
@@ -284,6 +292,35 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       }
     }
 
+    // Persist the draft synchronously so the rounds screen can resume it by id
+    // — the 2s autosave may not have fired yet on a fast Continue. Carry the
+    // resolved company + any existing rounds so nothing is dropped.
+    try {
+      const res = await saveDraft({
+        id: draftId,
+        data: {
+          company: toCompanySelection(companyOption),
+          role: role ? { id: role.id, name: role.label } : null,
+          level,
+          outcome,
+          month,
+          attribution,
+          rounds: initialData?.rounds ?? undefined,
+        },
+        honeypot: honeypotRef.current?.value ?? "",
+      });
+      const id = res.id || draftId;
+      if (id) {
+        router.push(`/submit/rounds?draft=${id}`);
+        return;
+      }
+    } catch {
+      setSubmitting(false);
+      setSaveState("error");
+      return;
+    }
+    // No draft id (e.g. honeypot-dropped write) — advance without one; the
+    // rounds page redirects back to /submit when it can't resolve a draft.
     router.push("/submit/rounds");
   }
 
