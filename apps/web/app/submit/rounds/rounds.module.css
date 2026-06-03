@@ -124,22 +124,6 @@
   display: none;
 }
 
-/* --- shared field bits (mirrors submit.module.css) --- */
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.fieldset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
 .label {
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
@@ -147,80 +131,6 @@
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
   color: var(--color-muted);
-}
-
-.required {
-  color: var(--color-accent);
-}
-
-.select,
-.textarea {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-paper);
-  border: 1px solid var(--color-rule-strong);
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--fs-body);
-  color: var(--color-ink);
-  transition:
-    border-color var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) var(--ease-out);
-}
-
-.select {
-  cursor: pointer;
-}
-
-.textarea {
-  resize: vertical;
-  min-height: calc(var(--space-8) + var(--space-4));
-  line-height: 1.5;
-}
-
-.select:focus,
-.textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  background: var(--color-paper);
-}
-
-/* --- rating chips (mirrors submit.module.css) --- */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-rule-strong);
-  border-radius: var(--radius-full);
-  font-size: var(--fs-small);
-  color: var(--color-ink-2);
-  cursor: pointer;
-  transition:
-    border-color var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
-}
-
-.chip:hover {
-  border-color: var(--color-accent);
-}
-
-.chipActive {
-  background: var(--color-accent-soft);
-  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
-  color: var(--color-accent-deep);
-}
-
-.chip:has(:focus-visible) {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
 }
 
 /* --- questions --- */
@@ -345,25 +255,4 @@
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--color-muted);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.honeypot {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
 }

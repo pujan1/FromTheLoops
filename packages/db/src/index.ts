@@ -64,10 +64,10 @@ export { sql } from "drizzle-orm";
 export { schema };
 export * from "./schema/index.js";
 
-// Taxonomy lookup + suggest-pending helpers (Sprint 1 Day 3). Apps import
-// these for autocomplete; they ride the pg_trgm indexes from migration 0002.
+// Taxonomy lookup + suggest-pending helpers. Apps import these for
+// autocomplete; they ride the pg_trgm indexes from migration 0002.
 export * from "./taxonomy.js";
 
-// User upsert-on-visit + submission-draft data-access (Sprint 1 Day 6).
+// User upsert-on-visit + submission-draft data-access.
 export * from "./users.js";
 export * from "./drafts.js";

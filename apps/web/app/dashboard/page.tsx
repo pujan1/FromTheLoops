@@ -24,9 +24,8 @@ export default async function DashboardPage() {
       <p style={{ marginTop: "1rem", color: "var(--color-muted)", fontSize: "0.875rem" }}>
         Clerk id <code>{user.id}</code> upserted into <code>users</code>.
       </p>
-      {/* TODO(sprint-1): replace upsert-on-visit with Clerk webhook
-          (user.created / user.updated → /api/webhooks/clerk). Needs ngrok
-          tunnel for local dev and a CLERK_WEBHOOK_SECRET env var. */}
+      {/* TODO: replace upsert-on-visit with a Clerk webhook
+          (user.created / user.updated → /api/webhooks/clerk). */}
     </main>
   );
 }

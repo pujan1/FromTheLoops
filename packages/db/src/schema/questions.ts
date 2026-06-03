@@ -16,10 +16,9 @@ import { topics } from "./taxonomy.js";
 // one row = one interview question someone was asked.
 //
 // Topics: many-to-many with the `topics` taxonomy via the
-// `question_topics` join table. PLAN.md §Data model says each question
-// must have ≥1 topic, but Postgres alone can't enforce "row in this join
-// table" — that's an application-level invariant we'll assert in the
-// submission form's Zod validator (Sprint 1).
+// `question_topics` join table. Each question must have ≥1 topic, but Postgres
+// alone can't enforce "row in this join table" — that's an application-level
+// invariant asserted in the submission form's Zod validator.
 //
 // Why no individual /questions/[id] page (PLAN.md §URL structure):
 //   "No individual question pages in V1 (thin-content risk); topic pages

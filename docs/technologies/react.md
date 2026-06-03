@@ -7,8 +7,9 @@ React 19 is the UI layer bundled through Next.js. Server components are the defa
 ## Where It Lives
 
 - Pages and layouts: `apps/web/app/**`
-- Shared UI components: `apps/web/components/ui/**`
-- Submission flow: `apps/web/app/submit/**`
+- Shared UI components: `apps/web/components/ui/**` — exported from `@/components/ui` with an `Ftl` prefix (`FtlButton`, `FtlInput`, `FtlField`, `FtlChoiceChips`, …) so library primitives are distinguishable from app components in JSX. Form primitives (`FtlField`, `FtlInput`, `FtlSelect`, `FtlTextarea`, `FtlChoiceChips`, `FtlHoneypot`) back both the basics and rounds forms.
+- Route constants: `apps/web/lib/routes.ts` — use `routes.*` instead of bare path strings for navigation, redirects, and links.
+- Submission flow: `apps/web/app/submit/**` — each form is a folder (`submit-form/`, `rounds/rounds-form/`) splitting the component from its `helpers`/`types`/`api`/sub-components.
 - Root providers: `apps/web/app/layout.tsx`
 
 ## Workflow Integration
@@ -46,6 +47,7 @@ Client components should stay focused on browser interaction and use server acti
 
 1. Start with a server component for routes and read-heavy UI.
 2. Move only the interactive part into a client component.
-3. Keep design-system primitives in `apps/web/components/ui`.
-4. Keep durable data writes behind server actions or route handlers.
-5. Run the web typecheck after changing component props.
+3. Keep design-system primitives in `apps/web/components/ui` and consume them via the `Ftl`-prefixed exports from `@/components/ui`.
+4. Reference internal paths through `routes.*` (`@/lib/routes`), not bare strings.
+5. Keep durable data writes behind server actions or route handlers.
+6. Run the web typecheck after changing component props.

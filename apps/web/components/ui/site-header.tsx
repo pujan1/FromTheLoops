@@ -1,5 +1,6 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { routes } from "@/lib/routes";
 import { Container } from "./container";
 import styles from "./site-header.module.css";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,17 +14,17 @@ export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string }) {
             <span>{issue}</span> · for engineers, by engineers
           </div>
 
-          <Link href="/" className={styles.wordmark} aria-label="FromTheLoop">
+          <Link href={routes.home} className={styles.wordmark} aria-label="FromTheLoop">
             From <span className={styles.wordmark__italic}>the</span> Loop
           </Link>
 
           <div className={styles.actions}>
             <nav className={styles.nav} aria-label="primary">
-              <Link href="/companies">Companies</Link>
-              <Link href="/topics">Topics</Link>
-              <Link href="/submit">Submit</Link>
+              <Link href={routes.companies}>Companies</Link>
+              <Link href={routes.topics}>Topics</Link>
+              <Link href={routes.submit}>Submit</Link>
               <Show when="signed-in">
-                <Link href="/dashboard">Dashboard</Link>
+                <Link href={routes.dashboard}>Dashboard</Link>
               </Show>
             </nav>
             <div className={styles.auth}>

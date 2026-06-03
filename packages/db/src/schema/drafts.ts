@@ -7,7 +7,7 @@ import { users } from "./users.js";
 // refresh never loses work. `data` is the partial form state as jsonb,
 // validated against shared's draftDataSchema before write; kept schema-light
 // so it doesn't track the evolving reports/rounds tables. CASCADE from users
-// (throwaway scratch, no audit value). Abandoned-draft prune cron: Sprint 6.
+// (throwaway scratch, no audit value). Abandoned drafts are pruned by a cron.
 export const drafts = pgTable(
   "submission_drafts",
   {

@@ -2,15 +2,14 @@ import { clerk } from "@clerk/testing/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { E2E_EMAIL } from "./global.setup";
 
-// End-to-end submission flow (Sprint 1 Day 9). Exercises the exit criteria
-// that need a real authed browser session — the loop the earlier days
-// deferred here because Clerk's sign-up Turnstile loops for an automated
-// browser (clerkSetup's testing token bypasses it).
+// End-to-end submission flow. Exercises the exit criteria that need a real
+// authed browser session (Clerk's sign-up Turnstile loops for an automated
+// browser; clerkSetup's testing token bypasses it).
 //
 //   login → fill top-level fields → autosave → leave (reload) → resume →
-//   continue → Rounds stub
+//   continue → Rounds
 //
-// Plus the Day 8 honeypot rejection path.
+// Plus the honeypot rejection path.
 
 const DRAFT_URL = /\/drafts\/[0-9a-f-]{36}$/;
 
@@ -67,7 +66,7 @@ test("login → fill → leave → resume → continue", async ({ page }) => {
   await expect(page.getByRole("combobox", { name: "Role", exact: true })).toHaveValue("Software Engineer");
   await expect(page.locator("select")).toHaveValue(chosenLevel);
 
-  // Continue → the Sprint 2 Rounds stub.
+  // Continue → the Rounds screen.
   await page.getByRole("button", { name: /Continue/ }).click();
   await expect(page).toHaveURL(/\/submit\/rounds$/);
 });

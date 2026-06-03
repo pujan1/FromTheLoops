@@ -41,7 +41,7 @@ import { users } from "./users.js";
 //
 // Deferred:
 //   - `level_id` FK now exists, but the text `level` column stays until
-//     the Sprint 2 cutover (the wedge index is built on it).
+//     a later cutover (the wedge index is built on it).
 //   - `evidence_verified` is a denormalized boolean that mirrors
 //     "does this user have a user_verifications row for this company?"
 //     Will be maintained by a worker job (BullMQ) when verifications
@@ -62,7 +62,7 @@ export const interviewReports = pgTable(
       .references(() => roles.id, { onDelete: "restrict" }),
     // Per-company level name. Kept as text (NOT NULL) because the wedge
     // index is built on it (query-plan.test.ts); the text→FK cutover to
-    // level_id below finishes in Sprint 2.
+    // level_id below finishes later.
     level: text("level").notNull(),
     // Optional FK to the per-company level. Nullable — a company with no
     // levels uses the "N/A" sentinel. RESTRICT mirrors company_id/role_id.

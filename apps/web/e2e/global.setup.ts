@@ -1,12 +1,11 @@
 import { clerkSetup } from "@clerk/testing/playwright";
 
-// Playwright global setup (Sprint 1 Day 9).
+// Playwright global setup.
 //
 // 1. clerkSetup() mints a Clerk testing token from CLERK_SECRET_KEY and exposes
 //    it to the tests. setupClerkTestingToken() (called inside clerk.signIn)
 //    attaches it so Clerk skips the Turnstile bot challenge that otherwise
-//    loops forever for an automated browser — the exact blocker the earlier
-//    sprint days hit.
+//    loops forever for an automated browser.
 // 2. ensureTestUser() makes the E2E sign-in target exist. Idempotent: look it
 //    up by email, create it via the Backend API only if missing. The email
 //    uses the "+clerk_test" subaddress so Clerk treats it as a test identity

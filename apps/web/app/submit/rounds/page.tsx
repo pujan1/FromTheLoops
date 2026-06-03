@@ -4,31 +4,31 @@ import { type SubmissionDraft, submissionDraftSchema } from "@fromtheloop/shared
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import {
-  Body,
-  Container,
-  Display,
-  Eyebrow,
-  Rule,
-  SiteHeader,
+  FtlBody,
+  FtlContainer,
+  FtlDisplay,
+  FtlEyebrow,
+  FtlRule,
+  FtlSiteHeader,
 } from "@/components/ui";
+import { routes } from "@/lib/routes";
 import styles from "../submit.module.css";
 import { RoundsForm } from "./rounds-form";
 
-// Sprint 2 Day 2: the rounds screen. Reached from the basics form's
-// "Continue → Rounds", which persists the draft and forwards its id as
-// ?draft=<id>. Ownership-scoped via getDraft (a guessed/foreign id 404s).
-// Without a draft id there's nothing to attach rounds to, so we bounce back
-// to the start of the flow.
+// The rounds screen. Reached from the basics form's "Continue → Rounds",
+// which persists the draft and forwards its id as ?draft=<id>. Ownership-scoped
+// via getDraft (a guessed/foreign id 404s). Without a draft id there's nothing
+// to attach rounds to, so we bounce back to the start of the flow.
 export default async function SubmitRoundsPage({
   searchParams,
 }: {
   searchParams: Promise<{ draft?: string }>;
 }) {
   const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  if (!user) redirect(routes.signIn);
 
   const { draft: draftId } = await searchParams;
-  if (!draftId) redirect("/submit");
+  if (!draftId) redirect(routes.submit);
 
   const db = getDb();
   const internal = await getOrCreateUserByClerkId(db, {
@@ -50,19 +50,19 @@ export default async function SubmitRoundsPage({
 
   return (
     <>
-      <SiteHeader />
+      <FtlSiteHeader />
       <main className={styles.page}>
-        <Container width="prose">
-          <Eyebrow tone="accent">{t("eyebrow")}</Eyebrow>
-          <Display as="h1" size="lg" style={{ marginTop: 24 }}>
+        <FtlContainer width="prose">
+          <FtlEyebrow tone="accent">{t("eyebrow")}</FtlEyebrow>
+          <FtlDisplay as="h1" size="lg" style={{ marginTop: 24 }}>
             {t.rich("title", { em: (chunks) => <em>{chunks}</em> })}
-          </Display>
-          <Body size="lead" tone="muted" style={{ marginTop: 16 }}>
+          </FtlDisplay>
+          <FtlBody size="lead" tone="muted" style={{ marginTop: 16 }}>
             {t("lede")}
-          </Body>
-          <Rule />
+          </FtlBody>
+          <FtlRule />
           <RoundsForm draftId={draft.id} initialData={initialData} />
-        </Container>
+        </FtlContainer>
       </main>
     </>
   );

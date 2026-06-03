@@ -1,11 +1,10 @@
-// Submission anti-abuse (Sprint 1 Day 8).
+// Submission anti-abuse.
 //
 // Two layers guard the only data-creation surface in V1:
-//   1. Clerk Smart CAPTCHA at the account boundary — you cannot reach
-//      /submit without a Clerk account, and account creation is Turnstile-
-//      gated. So every submitter has already cleared a captcha; we don't
-//      bolt a second one onto the form itself (see the Sprint 1 Day 8 note
-//      in sprints/sprint-01-submission-form.md for the boundary rationale).
+//   1. Clerk Smart CAPTCHA at the account boundary — you cannot reach /submit
+//      without a Clerk account, and account creation is Turnstile-gated. So
+//      every submitter has already cleared a captcha; we don't bolt a second
+//      one onto the form itself.
 //   2. A honeypot field on the submit form — a decoy input hidden from real
 //      users (off-screen, aria-hidden, tabindex -1, autocomplete off) that
 //      naive bots auto-fill. The saveDraft server action calls

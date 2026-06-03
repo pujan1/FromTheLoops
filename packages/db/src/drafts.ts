@@ -1,4 +1,4 @@
-// Submission-draft data-access (Sprint 1 Day 6).
+// Submission-draft data-access.
 //
 // One row per in-progress /submit form, keyed by (user). The web layer
 // validates `data` against shared's submissionDraftSchema before calling
@@ -8,7 +8,7 @@
 // Soft cap: MAX_DRAFTS_PER_USER. createDraft prunes the user's least-recently-
 // touched drafts (by updatedAt, matching the resume list order) so an
 // abandoned-form flood can't grow unbounded. The 30-day TTL prune is a
-// separate cron (Sprint 6); this cap is the per-user backstop.
+// separate cron; this cap is the per-user backstop.
 
 import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -98,8 +98,8 @@ export async function updateDraft(
   return rows[0] ?? null;
 }
 
-// Used by the (Sprint 6) TTL cron; exported now so the policy lives with the
-// rest of the draft logic. Deletes drafts not updated since `before`.
+// Used by the TTL cron; exported now so the policy lives with the rest of the
+// draft logic. Deletes drafts not updated since `before`.
 export async function pruneStaleDrafts(db: Db, before: Date): Promise<number> {
   const rows = await db
     .delete(drafts)

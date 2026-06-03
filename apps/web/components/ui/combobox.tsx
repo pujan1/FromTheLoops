@@ -1,18 +1,15 @@
 "use client";
 
 // Combobox — accessible autocomplete with a debounced async search and an
-// optional "suggest new" affordance (Sprint 1 Day 4).
+// optional "suggest new" affordance.
 //
-// Decoupled from the data source on purpose: callers pass a `search`
-// function (the /api/taxonomy/* lookups in the submission form), so the
-// same component backs both the company field (suggest-new ON) and the
-// canonical-role field (suggest-new OFF — closed set, PLAN.md §Taxonomy
-// curation). The styleguide demos it against a local in-memory list.
+// Decoupled from the data source on purpose: callers pass a `search` function,
+// so the same component backs both the company field (suggest-new ON) and the
+// canonical-role field (suggest-new OFF — closed set).
 //
 // Follows the WAI-ARIA 1.2 combobox-with-listbox pattern: input is
-// role=combobox + aria-activedescendant; the popup is role=listbox; rows
-// are role=option. Keyboard: ↑/↓ move, Enter selects, Esc closes, Tab
-// commits focus out.
+// role=combobox + aria-activedescendant; the popup is role=listbox; rows are
+// role=option. Keyboard: ↑/↓ move, Enter selects, Esc closes, Tab commits out.
 
 import {
   useCallback,

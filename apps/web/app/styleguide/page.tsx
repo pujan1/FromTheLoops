@@ -1,21 +1,21 @@
 import {
-  Body,
-  Button,
-  Caption,
-  Card,
-  Container,
-  Display,
-  Eyebrow,
-  Heading,
-  LinkButton,
-  Mono,
-  Ornament,
-  ReportCard,
-  Rule,
-  SiteHeader,
-  Stat,
-  StatGroup,
-  Tag,
+  FtlBody,
+  FtlButton,
+  FtlCaption,
+  FtlCard,
+  FtlContainer,
+  FtlDisplay,
+  FtlEyebrow,
+  FtlHeading,
+  FtlLinkButton,
+  FtlMono,
+  FtlOrnament,
+  FtlReportCard,
+  FtlRule,
+  FtlSiteHeader,
+  FtlStat,
+  FtlStatGroup,
+  FtlTag,
 } from "@/components/ui";
 import { ComboboxDemo } from "./_combobox-demo";
 import styles from "./page.module.css";
@@ -40,29 +40,36 @@ const colors = [
 export default function StyleguidePage() {
   return (
     <>
-      <SiteHeader issue="DESIGN SYSTEM · v0.1" />
+      <FtlSiteHeader issue="DESIGN SYSTEM · v0.1" />
 
       <main className={styles.page}>
-        <Container>
+        <FtlContainer>
           {/* ----------------------- Lede ----------------------- */}
           <div className={styles.lede}>
             <div>
-              <Eyebrow tone="accent">Design system</Eyebrow>
-              <Display as="h1" size="2xl" style={{ marginTop: 24 }}>
+              <FtlEyebrow tone="accent">Design system</FtlEyebrow>
+              <FtlDisplay as="h1" size="2xl" style={{ marginTop: 24 }}>
                 The <em>field guide</em> to FromTheLoop.
-              </Display>
+              </FtlDisplay>
             </div>
             <div className={styles.lede__meta}>
-              <Body size="lead">
+              <FtlBody size="lead">
                 Tokens, type, and components. Editorial restraint over generic
                 polish. Built so every surface — wedge page, submission flow,
                 profile — feels like part of the same publication.
-              </Body>
+              </FtlBody>
+              <FtlBody tone="muted" style={{ marginTop: 12, maxWidth: "56ch" }}>
+                Every primitive ships from <FtlMono>@/components/ui</FtlMono> with
+                an <FtlMono>Ftl</FtlMono> prefix — <FtlMono>FtlButton</FtlMono>,{" "}
+                <FtlMono>FtlInput</FtlMono>, <FtlMono>FtlField</FtlMono> — so
+                library components are unmistakable from app code in JSX.
+              </FtlBody>
               <dl>
                 <dt>Version</dt><dd>0.1 · pre-build</dd>
                 <dt>Surface</dt><dd>Light + dark · paper and pressroom</dd>
                 <dt>Stack</dt><dd>Next.js 15 · CSS Modules · next/font</dd>
-                <dt>Updated</dt><dd>2026-05-23</dd>
+                <dt>Components</dt><dd><FtlMono>Ftl</FtlMono>-prefixed · <FtlMono>@/components/ui</FtlMono></dd>
+                <dt>Updated</dt><dd>2026-06-02</dd>
               </dl>
             </div>
           </div>
@@ -72,11 +79,11 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 01 — Color</div>
               <div>
-                <Heading level={2}>Warm paper by day, pressroom ink by night.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Warm paper by day, pressroom ink by night.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   The palette commits to warm neutrals, a dense night mode, and
                   one confident accent that survives both surfaces.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <div className={styles.swatches}>
@@ -97,66 +104,66 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 02 — Typography</div>
               <div>
-                <Heading level={2}>DM Sans × Geist × Geist Mono.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>DM Sans × Geist × Geist Mono.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   A geometric sans for display, a refined grotesque for UI, a
                   precise mono for metadata. Italics in the accent tone are
                   reserved for editorial emphasis.
-                </Body>
+                </FtlBody>
               </div>
             </header>
 
             <div className={styles.fonts}>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Display · 2xl</span>
-                <Display size="2xl">From the <em>loop</em>.</Display>
+                <FtlDisplay size="2xl">From the <em>loop</em>.</FtlDisplay>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Display · xl</span>
-                <Display size="xl">Interview reports, by candidates.</Display>
+                <FtlDisplay size="xl">Interview reports, by candidates.</FtlDisplay>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Display · lg</span>
-                <Display size="lg">A two-week loop, in four acts.</Display>
+                <FtlDisplay size="lg">A two-week loop, in four acts.</FtlDisplay>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Heading 1 · sans</span>
-                <Heading level={1}>Stripe · Staff SWE · L5</Heading>
+                <FtlHeading level={1}>Stripe · Staff SWE · L5</FtlHeading>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Heading 2 · sans</span>
-                <Heading level={2}>What the recruiter actually screened for</Heading>
+                <FtlHeading level={2}>What the recruiter actually screened for</FtlHeading>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Heading 3 · sans</span>
-                <Heading level={3}>Round 3 — system design</Heading>
+                <FtlHeading level={3}>Round 3 — system design</FtlHeading>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Body lead</span>
-                <Body size="lead">
+                <FtlBody size="lead">
                   Find the right interview report for what you are interviewing
                   for — by company, role, level, round-type, and topic.
-                </Body>
+                </FtlBody>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Body</span>
-                <Body>
+                <FtlBody>
                   The recruiter screen lasted thirty-five minutes. Two
                   resume-walk questions, one current-project deep-dive, and a
-                  forty-five-second pitch on why <Mono>distributed payments</Mono>.
+                  forty-five-second pitch on why <FtlMono>distributed payments</FtlMono>.
                   No code. The signal felt low; the stakes felt high.
-                </Body>
+                </FtlBody>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Caption · mono</span>
-                <Caption>posted 2 days ago · verified work-email · 47 helpful votes</Caption>
+                <FtlCaption>posted 2 days ago · verified work-email · 47 helpful votes</FtlCaption>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Eyebrow · mono</span>
                 <div className={styles.row}>
-                  <Eyebrow>aggregate</Eyebrow>
-                  <Eyebrow tone="accent">live · 12 reports</Eyebrow>
-                  <Eyebrow tone="ink" bare>SS · L5</Eyebrow>
+                  <FtlEyebrow>aggregate</FtlEyebrow>
+                  <FtlEyebrow tone="accent">live · 12 reports</FtlEyebrow>
+                  <FtlEyebrow tone="ink" bare>SS · L5</FtlEyebrow>
                 </div>
               </div>
             </div>
@@ -167,22 +174,22 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 03 — Rules</div>
               <div>
-                <Heading level={2}>Hairlines, not shadows.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Hairlines, not shadows.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Editorial layouts use rules to separate, not cards. Five
                   variants cover everything we need.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <div className={styles.stack}>
-              <div><Caption>default</Caption><Rule /></div>
-              <div><Caption>strong</Caption><Rule variant="strong" /></div>
-              <div><Caption>ink</Caption><Rule variant="ink" /></div>
-              <div><Caption>dashed</Caption><Rule variant="dashed" /></div>
-              <div><Caption>dotted</Caption><Rule variant="dotted" /></div>
+              <div><FtlCaption>default</FtlCaption><FtlRule /></div>
+              <div><FtlCaption>strong</FtlCaption><FtlRule variant="strong" /></div>
+              <div><FtlCaption>ink</FtlCaption><FtlRule variant="ink" /></div>
+              <div><FtlCaption>dashed</FtlCaption><FtlRule variant="dashed" /></div>
+              <div><FtlCaption>dotted</FtlCaption><FtlRule variant="dotted" /></div>
               <div style={{ marginTop: 16 }}>
-                <Caption>ornament — section break</Caption>
-                <Ornament mark="§" />
+                <FtlCaption>ornament — section break</FtlCaption>
+                <FtlOrnament mark="§" />
               </div>
             </div>
           </section>
@@ -192,21 +199,21 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 04 — Tags</div>
               <div>
-                <Heading level={2}>Mono tags for taxonomy.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Mono tags for taxonomy.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Tags carry topic, level, and trust signals. Mono case gives
                   them an engineering report quality.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <div className={styles.row}>
-              <Tag>system-design</Tag>
-              <Tag variant="ghost">behavioral</Tag>
-              <Tag variant="accent" dot>verified</Tag>
-              <Tag variant="ink">L5</Tag>
-              <Tag>onsite · 5 rounds</Tag>
-              <Tag variant="ghost">distributed-systems</Tag>
-              <Tag variant="accent">new</Tag>
+              <FtlTag>system-design</FtlTag>
+              <FtlTag variant="ghost">behavioral</FtlTag>
+              <FtlTag variant="accent" dot>verified</FtlTag>
+              <FtlTag variant="ink">L5</FtlTag>
+              <FtlTag>onsite · 5 rounds</FtlTag>
+              <FtlTag variant="ghost">distributed-systems</FtlTag>
+              <FtlTag variant="accent">new</FtlTag>
             </div>
           </section>
 
@@ -215,27 +222,27 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 05 — Buttons</div>
               <div>
-                <Heading level={2}>Four variants, three sizes.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Four variants, three sizes.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Primary is ink, accent is peacock, ghost is hairline, link is
                   underline. Borrowed from print press logic.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <div className={styles.stack}>
               <div className={styles.row}>
-                <Button variant="primary" trailingArrow>Submit a report</Button>
-                <Button variant="accent" trailingArrow>Read latest</Button>
-                <Button variant="ghost">Browse companies</Button>
-                <LinkButton variant="link" href="#">Learn more</LinkButton>
+                <FtlButton variant="primary" trailingArrow>Submit a report</FtlButton>
+                <FtlButton variant="accent" trailingArrow>Read latest</FtlButton>
+                <FtlButton variant="ghost">Browse companies</FtlButton>
+                <FtlLinkButton variant="link" href="#">Learn more</FtlLinkButton>
               </div>
               <div className={styles.row}>
-                <Button size="sm">small</Button>
-                <Button size="md">medium</Button>
-                <Button size="lg" trailingArrow>large</Button>
+                <FtlButton size="sm">small</FtlButton>
+                <FtlButton size="md">medium</FtlButton>
+                <FtlButton size="lg" trailingArrow>large</FtlButton>
               </div>
               <div className={styles.row}>
-                <Button variant="primary" disabled>disabled</Button>
+                <FtlButton variant="primary" disabled>disabled</FtlButton>
               </div>
             </div>
           </section>
@@ -245,12 +252,12 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 5b — Combobox</div>
               <div>
-                <Heading level={2}>Autocomplete with a suggest-new escape hatch.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Autocomplete with a suggest-new escape hatch.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Debounced async lookup, full keyboard nav (↑/↓, Enter, Esc),
                   and an optional &ldquo;suggest new&rdquo; row. Companies allow
                   it; canonical roles are a closed set and do not.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <ComboboxDemo />
@@ -261,32 +268,32 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 06 — Cards</div>
               <div>
-                <Heading level={2}>Cards as composition, not container.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Cards as composition, not container.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Three variants cover the surface area. Default uses only a
                   top rule. No drop shadows.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <div className={styles["grid-3"]}>
-              <Card variant="default" interactive showArrow>
-                <Eyebrow tone="accent">aggregate</Eyebrow>
-                <Heading level={3}>Stripe · Staff SWE · L5</Heading>
-                <Caption>12 reports · 47 rounds · last updated 2 days ago</Caption>
-              </Card>
-              <Card variant="bordered">
-                <Eyebrow>method</Eyebrow>
-                <Heading level={3}>How we score reports</Heading>
-                <Body size="small">
+              <FtlCard variant="default" interactive showArrow>
+                <FtlEyebrow tone="accent">aggregate</FtlEyebrow>
+                <FtlHeading level={3}>Stripe · Staff SWE · L5</FtlHeading>
+                <FtlCaption>12 reports · 47 rounds · last updated 2 days ago</FtlCaption>
+              </FtlCard>
+              <FtlCard variant="bordered">
+                <FtlEyebrow>method</FtlEyebrow>
+                <FtlHeading level={3}>How we score reports</FtlHeading>
+                <FtlBody size="small">
                   Confidence × recency × trust signals. Work-email verified
                   contributors weight higher.
-                </Body>
-              </Card>
-              <Card variant="filled">
-                <Eyebrow tone="ink">callout</Eyebrow>
-                <Heading level={3}>You took the loop. Now write it down.</Heading>
-                <LinkButton variant="link" href="#">Submit a report</LinkButton>
-              </Card>
+                </FtlBody>
+              </FtlCard>
+              <FtlCard variant="filled">
+                <FtlEyebrow tone="ink">callout</FtlEyebrow>
+                <FtlHeading level={3}>You took the loop. Now write it down.</FtlHeading>
+                <FtlLinkButton variant="link" href="#">Submit a report</FtlLinkButton>
+              </FtlCard>
             </div>
           </section>
 
@@ -295,19 +302,19 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 07 — Stats</div>
               <div>
-                <Heading level={2}>Numbers as typographic features.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>Numbers as typographic features.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Stats use the display sans. Numerals set in 2.5rem
                   DM Sans punch above their weight on aggregation pages.
-                </Body>
+                </FtlBody>
               </div>
             </header>
-            <StatGroup>
-              <Stat label="reports" value="412" hint="across 38 companies" />
-              <Stat label="rounds" value="1,847" hint="recruiter → onsite" />
-              <Stat label="verified" value="68%" accent hint="work-email + LinkedIn" />
-              <Stat label="topics" value="124" hint="curated taxonomy" />
-            </StatGroup>
+            <FtlStatGroup>
+              <FtlStat label="reports" value="412" hint="across 38 companies" />
+              <FtlStat label="rounds" value="1,847" hint="recruiter → onsite" />
+              <FtlStat label="verified" value="68%" accent hint="work-email + LinkedIn" />
+              <FtlStat label="topics" value="124" hint="curated taxonomy" />
+            </FtlStatGroup>
           </section>
 
           {/* ----------------------- Report card ----------------------- */}
@@ -315,15 +322,15 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 08 — Report card</div>
               <div>
-                <Heading level={2}>The product unit.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                <FtlHeading level={2}>The product unit.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Every aggregation, search result, and profile is a list of
                   these. The headline is editorial, not a label.
-                </Body>
+                </FtlBody>
               </div>
             </header>
             <div>
-              <ReportCard
+              <FtlReportCard
                 index="01"
                 company="Stripe"
                 role="Staff SWE"
@@ -335,7 +342,7 @@ export default function StyleguidePage() {
                 verified
                 postedAt="2 days ago"
               />
-              <ReportCard
+              <FtlReportCard
                 index="02"
                 company="Anthropic"
                 role="Senior SWE"
@@ -347,7 +354,7 @@ export default function StyleguidePage() {
                 verified
                 postedAt="5 days ago"
               />
-              <ReportCard
+              <FtlReportCard
                 index="03"
                 company="Linear"
                 role="Product Engineer"
@@ -358,7 +365,7 @@ export default function StyleguidePage() {
                 topics={["pairing", "product-sense", "ui-engineering"]}
                 postedAt="1 week ago"
               />
-              <Rule />
+              <FtlRule />
             </div>
           </section>
 
@@ -367,11 +374,11 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>§ 09 — Tokens</div>
               <div>
-                <Heading level={2}>Authoritative reference.</Heading>
-                <Body tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  All tokens are CSS custom properties on <Mono>:root</Mono>.
-                  Components consume them via <Mono>var(--*)</Mono> only.
-                </Body>
+                <FtlHeading level={2}>Authoritative reference.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                  All tokens are CSS custom properties on <FtlMono>:root</FtlMono>.
+                  Components consume them via <FtlMono>var(--*)</FtlMono> only.
+                </FtlBody>
               </div>
             </header>
             <pre className={styles.specBlock}>{`--color-paper        light: #FAF7F2 · dark: #11100E
@@ -386,7 +393,7 @@ export default function StyleguidePage() {
 --container-prose    680
 --theme-storage      fromtheloop-theme`}</pre>
           </section>
-        </Container>
+        </FtlContainer>
       </main>
     </>
   );

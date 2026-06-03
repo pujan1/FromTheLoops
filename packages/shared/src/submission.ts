@@ -1,9 +1,9 @@
-// Zod validators for the interview-report submission form (Sprint 1).
+// Zod validators for the interview-report submission form.
 //
 // Two shapes for the same fields:
 //   - submissionDraftSchema  — everything nullish. Backs the server-side
-//     autosave (Day 6 persists this as submission_drafts.data jsonb), so a
-//     half-filled form is always valid to store.
+//     autosave (persisted as submission_drafts.data jsonb), so a half-filled
+//     form is always valid to store.
 //   - submissionReadySchema  — the gate for "Continue → Rounds": company,
 //     role, level, and month must be present. outcome stays optional.
 //
@@ -40,10 +40,9 @@ export const ROUND_TYPES = [
 
 export const ROUND_RATINGS = ["positive", "mixed", "negative"] as const;
 
-// Per-submission caps (Sprint 2 risk mitigation: a single submission
-// transaction shouldn't grow unbounded). Well over any realistic interview
-// loop; surfaced in form copy and enforced by the UI add buttons + the
-// finalize validator (Day 4).
+// Per-submission caps: a single submission transaction shouldn't grow
+// unbounded. Well over any realistic interview loop; surfaced in form copy and
+// enforced by the UI add buttons + the finalize validator.
 export const MAX_ROUNDS = 20;
 export const MAX_QUESTIONS_PER_ROUND = 30;
 
@@ -91,8 +90,8 @@ export const levelSelectionSchema = z.object({
 // as company selection: an "existing" tag is a curated/active topic (uuid),
 // a "suggested" tag is a user-proposed name the finalize step turns into a
 // status='pending' topic via suggestTopic. Only "existing" (active) tags
-// count toward the ≥1-tag-per-question rule (enforced Day 4); a suggestion
-// is parked until a mod promotes it.
+// count toward the ≥1-tag-per-question rule; a suggestion is parked until a
+// mod promotes it.
 export const topicTagSelectionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("existing"),
@@ -106,15 +105,15 @@ export const topicTagSelectionSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-// Input for the "suggest a new tag" server action (Day 3), bounded like the
-// suggested arm above.
+// Input for the "suggest a new tag" server action, bounded like the suggested
+// arm above.
 export const topicSuggestionSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
 // A single interview question. Draft-tolerant: prose may be blank and tags
-// may be empty while the user is still typing. The finalize gate (Day 4)
-// requires non-empty prose + ≥1 active tag.
+// may be empty while the user is still typing. The finalize gate requires
+// non-empty prose + ≥1 active tag.
 export const questionDraftSchema = z.object({
   prose: z.string().nullish(),
   tags: z.array(topicTagSelectionSchema).default([]),
@@ -143,10 +142,9 @@ export const submissionDraftSchema = z.object({
   outcome: outcomeSchema.nullish(),
   month: monthSchema.nullish(),
   attribution: attributionSchema.default("anonymous"),
-  // Rounds substrate (Sprint 2 Day 2). Nullish so a pre-Sprint-2 draft (no
-  // rounds key) still parses; the rounds form defaults it to []. Capped at
-  // MAX_ROUNDS — a draft that somehow exceeds the cap is rejected rather
-  // than silently truncated.
+  // Rounds substrate. Nullish so an older draft (no rounds key) still parses;
+  // the rounds form defaults it to []. Capped at MAX_ROUNDS — a draft that
+  // somehow exceeds the cap is rejected rather than silently truncated.
   rounds: z.array(roundDraftSchema).max(MAX_ROUNDS).nullish(),
 });
 

@@ -4,26 +4,27 @@ import { type SubmissionDraft, submissionDraftSchema } from "@fromtheloop/shared
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import {
-  Body,
-  Container,
-  Display,
-  Eyebrow,
-  Rule,
-  SiteHeader,
+  FtlBody,
+  FtlContainer,
+  FtlDisplay,
+  FtlEyebrow,
+  FtlRule,
+  FtlSiteHeader,
 } from "@/components/ui";
+import { routes } from "@/lib/routes";
 import styles from "../../submit/submit.module.css";
 import { SubmitForm } from "../../submit/submit-form";
 
-// Resume an in-progress submission (Sprint 1 Day 6). Ownership-scoped:
-// getDraft only returns the row if it belongs to the signed-in user, so a
-// guessed/shared draft id 404s rather than leaking another user's draft.
+// Resume an in-progress submission. Ownership-scoped: getDraft only returns
+// the row if it belongs to the signed-in user, so a guessed/shared draft id
+// 404s rather than leaking another user's draft.
 export default async function DraftPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const user = await currentUser();
-  if (!user) redirect("/sign-in");
+  if (!user) redirect(routes.signIn);
 
   const { id } = await params;
   const db = getDb();
@@ -46,19 +47,19 @@ export default async function DraftPage({
 
   return (
     <>
-      <SiteHeader />
+      <FtlSiteHeader />
       <main className={styles.page}>
-        <Container width="prose">
-          <Eyebrow tone="accent">{t("eyebrow")}</Eyebrow>
-          <Display as="h1" size="lg" style={{ marginTop: 24 }}>
+        <FtlContainer width="prose">
+          <FtlEyebrow tone="accent">{t("eyebrow")}</FtlEyebrow>
+          <FtlDisplay as="h1" size="lg" style={{ marginTop: 24 }}>
             {t.rich("title", { em: (chunks) => <em>{chunks}</em> })}
-          </Display>
-          <Body size="lead" tone="muted" style={{ marginTop: 16 }}>
+          </FtlDisplay>
+          <FtlBody size="lead" tone="muted" style={{ marginTop: 16 }}>
             {t("lede")}
-          </Body>
-          <Rule />
+          </FtlBody>
+          <FtlRule />
           <SubmitForm initialDraftId={draft.id} initialData={initialData} />
-        </Container>
+        </FtlContainer>
       </main>
     </>
   );

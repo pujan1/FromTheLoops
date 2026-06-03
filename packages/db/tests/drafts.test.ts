@@ -1,5 +1,5 @@
-// Sprint 1 Day 6: submission-draft data-access + the per-user cap, and the
-// Clerk-id upsert helper. Uses the shared testcontainer (makeTestClient).
+// Submission-draft data-access + the per-user cap, and the Clerk-id upsert
+// helper. Uses the shared testcontainer (makeTestClient).
 // Cleanup deletes the test users in afterAll; drafts CASCADE from users, so
 // that reaps every draft this file created without a TRUNCATE lock.
 

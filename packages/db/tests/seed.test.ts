@@ -1,5 +1,5 @@
-// Verifies the Sprint 1 Day 2 curated fixtures land correctly and that the
-// seed is idempotent. Uses the shared testcontainer (makeTestClient) like
+// Verifies the curated fixtures land correctly and that the seed is
+// idempotent. Uses the shared testcontainer (makeTestClient) like
 // the rest of the suite — seedCurated() takes any Drizzle db, so the test
 // client works without needing process.env.DATABASE_URL.
 

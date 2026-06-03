@@ -1,9 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { getCompanyLevels, getDb } from "@fromtheloop/db";
 
-// Per-company level ladder for the submission form's Level field (Sprint 1
-// Day 5). Signed-in only. Empty array = company has no ladder → the form
-// falls back to the "N/A" sentinel.
+// Per-company level ladder for the submission form's Level field. Signed-in
+// only. Empty array = company has no ladder → the form falls back to "N/A".
 export const runtime = "nodejs";
 
 const UUID_RE =

@@ -1,10 +1,10 @@
 "use server";
 
-// Submission-draft autosave (Sprint 1 Day 6). Called from the client form's
-// debounced effect. Auth + ownership are enforced here, not trusted from the
-// client: we resolve the Clerk principal to our internal users.id and scope
-// every write to it. `data` is validated against the shared draft schema
-// before it touches the jsonb column.
+// Submission-draft autosave. Called from the client form's debounced effect.
+// Auth + ownership are enforced here, not trusted from the client: we resolve
+// the Clerk principal to our internal users.id and scope every write to it.
+// `data` is validated against the shared draft schema before it touches the
+// jsonb column.
 
 import { currentUser } from "@clerk/nextjs/server";
 import {
@@ -29,17 +29,16 @@ export async function saveDraft(input: {
   const user = await currentUser();
   if (!user) throw new Error("saveDraft: unauthenticated");
 
-  // Per-user budget before any DB work (audit High-1). Keyed on the Clerk id
-  // so the limit applies even under a flood that never resolves to our users
-  // row. Generous here — autosave is legitimately frequent — so this only
-  // caps pathological write amplification.
+  // Per-user budget before any DB work. Keyed on the Clerk id so the limit
+  // applies even under a flood that never resolves to our users row. Generous
+  // here — autosave is legitimately frequent — so this only caps pathological
+  // write amplification.
   const limited = await rateLimit(RATE_LIMITS.saveDraft, user.id);
   if (!limited.ok) throw new RateLimitError(RATE_LIMITS.saveDraft);
 
-  // Anti-abuse (Day 8): a non-empty honeypot means a bot filled a field no
-  // real user can reach. Silently refuse to persist — return a benign-looking
-  // response without writing, so the trap stays invisible to the bot. A
-  // legitimate client always sends this empty, so this never fires for humans.
+  // A non-empty honeypot means a bot filled a field no real user can reach.
+  // Silently refuse to persist — return a benign-looking response without
+  // writing, so the trap stays invisible to the bot.
   if (isHoneypotTripped(input.honeypot)) {
     return { id: input.id ?? "" };
   }
@@ -66,15 +65,13 @@ export async function saveDraft(input: {
   return { id: created.id };
 }
 
-// Promote a "suggest new" company to a real taxonomy row (Sprint 1 Day 10).
-// Called at the Continue boundary when the chosen company is a suggestion with
-// no row yet. suggestCompany inserts it as status='pending' / source=
-// 'user_suggested' (idempotent on slug — never flips an active row to pending)
-// and attributes it to the suggester. Returns the row id+name so the client
-// backfills the selection (suggested → existing) before it advances/persists.
-//
-// Returns null when the honeypot is tripped: a bot doesn't get to seed the
-// pending-company queue, and (as with saveDraft) the trap stays invisible.
+// Promote a "suggest new" company to a real taxonomy row. Called at the
+// Continue boundary when the chosen company is a suggestion with no row yet.
+// suggestCompany inserts it as status='pending' / source='user_suggested'
+// (idempotent on slug — never flips an active row to pending) and attributes
+// it to the suggester. Returns the row id+name so the client backfills the
+// selection (suggested → existing) before it advances/persists. Returns null
+// when the honeypot is tripped.
 export async function suggestPendingCompany(input: {
   name: string;
   honeypot?: string;
@@ -82,9 +79,9 @@ export async function suggestPendingCompany(input: {
   const user = await currentUser();
   if (!user) throw new Error("suggestPendingCompany: unauthenticated");
 
-  // Tight per-user budget (audit High-1): this is the only surface that
-  // writes into the human moderation queue, so it's the one most worth
-  // throttling. Checked before the honeypot/DB so a flood is rejected cheaply.
+  // Tight per-user budget: this is the only surface that writes into the human
+  // moderation queue, so it's the one most worth throttling. Checked before the
+  // honeypot/DB so a flood is rejected cheaply.
   const limited = await rateLimit(RATE_LIMITS.suggestCompany, user.id);
   if (!limited.ok) throw new RateLimitError(RATE_LIMITS.suggestCompany);
 

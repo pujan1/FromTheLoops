@@ -1,4 +1,4 @@
-// Per-user rate limiting (audit High-1).
+// Per-user rate limiting.
 //
 // The submission surfaces are authenticated but were previously unthrottled.
 // The sharpest consequence: `suggestPendingCompany` writes straight into a

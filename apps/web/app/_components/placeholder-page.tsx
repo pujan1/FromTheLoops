@@ -1,13 +1,14 @@
 import {
-  Body,
-  Container,
-  Display,
-  Eyebrow,
-  LinkButton,
-  Rule,
-  SiteHeader,
-  Tag,
+  FtlBody,
+  FtlContainer,
+  FtlDisplay,
+  FtlEyebrow,
+  FtlLinkButton,
+  FtlRule,
+  FtlSiteHeader,
+  FtlTag,
 } from "@/components/ui";
+import { routes } from "@/lib/routes";
 import styles from "../placeholder-page.module.css";
 
 type PlaceholderPageProps = {
@@ -20,27 +21,27 @@ type PlaceholderPageProps = {
 export function PlaceholderPage({ eyebrow, title, body, tags }: PlaceholderPageProps) {
   return (
     <>
-      <SiteHeader />
+      <FtlSiteHeader />
       <main className={styles.page}>
-        <Container width="prose">
-          <Eyebrow tone="accent">{eyebrow}</Eyebrow>
-          <Display as="h1" size="xl" style={{ marginTop: 24 }}>
+        <FtlContainer width="prose">
+          <FtlEyebrow tone="accent">{eyebrow}</FtlEyebrow>
+          <FtlDisplay as="h1" size="xl" style={{ marginTop: 24 }}>
             {title}
-          </Display>
-          <Body size="lead" tone="muted" style={{ marginTop: 24 }}>
+          </FtlDisplay>
+          <FtlBody size="lead" tone="muted" style={{ marginTop: 24 }}>
             {body}
-          </Body>
+          </FtlBody>
           <div className={styles.tags}>
             {tags.map((tag) => (
-              <Tag key={tag} variant="ghost">{tag}</Tag>
+              <FtlTag key={tag} variant="ghost">{tag}</FtlTag>
             ))}
           </div>
-          <Rule />
+          <FtlRule />
           <div className={styles.actions}>
-            <LinkButton href="/" variant="primary" trailingArrow>Back home</LinkButton>
-            <LinkButton href="/styleguide" variant="ghost">View styleguide</LinkButton>
+            <FtlLinkButton href={routes.home} variant="primary" trailingArrow>Back home</FtlLinkButton>
+            <FtlLinkButton href={routes.styleguide} variant="ghost">View styleguide</FtlLinkButton>
           </div>
-        </Container>
+        </FtlContainer>
       </main>
     </>
   );

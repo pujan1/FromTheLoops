@@ -28,7 +28,7 @@ export const companies = pgTable(
     name: text("name").notNull(),
     // Alternate names, matched alongside `name` by fuzzy search.
     aliases: text("aliases").array().notNull().default(sql`'{}'`),
-    // Primary email domain for work-email verification matching (Sprint 3).
+    // Primary email domain for work-email verification matching.
     domain: text("domain"),
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),
@@ -78,8 +78,8 @@ export const roles = pgTable(
 // a user can propose a tag the curated set is missing, landing it as
 // status='pending' until a mod promotes it. Pending tags don't satisfy the
 // ≥1-active-tag rule until promoted — that's enforced in the submission
-// validator (Sprint 2 Day 4), the active-vs-pending distinction modeled
-// here mirrors companies. Shares the status/source/aliases shape so the
+// validator; the active-vs-pending distinction modeled here mirrors companies.
+// Shares the status/source/aliases shape so the
 // pg_trgm autocomplete + suggest-pending helpers in taxonomy.ts can mirror
 // searchCompanies/suggestCompany exactly.
 export const topics = pgTable(

@@ -1,26 +1,18 @@
-// Sprint 1 Day 3: taxonomy lookup (fuzzy autocomplete) + suggest-pending.
+// Taxonomy lookup (fuzzy autocomplete) + suggest-pending. Pure data access
+// against the trigram indexes from migration 0002, consumed through the
+// /api/taxonomy/* route handlers.
 //
-// These are query helpers — pure data access against the trigram indexes
-// added in migration 0002. The submission form (Day 5) and <Combobox>
-// (Day 4) consume them through the /api/taxonomy/* route handlers.
-//
-// Matching strategy (PLAN.md §Taxonomy curation, risk: "feels sluggish"):
-//   - Hybrid fuzzy + substring: `name % q` (trigram similarity, catches
-//     typos) OR `name ILIKE %q%` (substring, catches mid-word matches the
-//     similarity threshold would miss). Both operators ride the
-//     gin_trgm_ops indexes, so the whole WHERE stays index-able as the
-//     taxonomy grows past the seeded 30/20 rows.
+// Matching strategy:
+//   - Hybrid fuzzy + substring: `name % q` (trigram similarity, catches typos)
+//     OR `name ILIKE %q%` (substring, catches mid-word matches the similarity
+//     threshold would miss). Both operators ride the gin_trgm_ops indexes.
 //   - Aliases ("Facebook" → Meta) matched the same way via the
 //     array_to_string(aliases, ' ') expression indexes.
-//   - status = 'active' only: pending suggestions don't pollute results
-//     until a mod approves them.
-//   - Ranked by best similarity across name+aliases, then name asc for a
-//     stable tiebreak.
+//   - status = 'active' only: pending suggestions don't pollute results.
+//   - Ranked by best similarity across name+aliases, then name asc.
 //
-// Companies and topics allow inline "suggest new → pending" (suggestCompany,
-// suggestTopic). Roles do NOT — they're a closed canonical set; the search
-// helper is the only role surface and there is deliberately no role-suggest
-// export here.
+// Companies and topics allow inline "suggest new → pending"; roles do NOT —
+// they're a closed canonical set with no suggest export.
 
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -139,12 +131,11 @@ export type TopicMatch = {
   name: string;
 };
 
-// Topic-tag autocomplete for the question tagger (Sprint 2 Day 3). Identical
-// hybrid match to searchCompanies/searchRoles over the topics_name_trgm_idx /
-// topics_aliases_trgm_idx indexes (migration 0004). status='active' only, so
-// user-suggested-pending tags stay out of the dropdown until a mod promotes
-// them — which is also why a pending tag can't satisfy the ≥1-active-tag
-// rule.
+// Topic-tag autocomplete for the question tagger. Identical hybrid match to
+// searchCompanies/searchRoles over the topics trigram indexes (migration 0004).
+// status='active' only, so user-suggested-pending tags stay out of the dropdown
+// until a mod promotes them — which is also why a pending tag can't satisfy the
+// ≥1-active-tag rule.
 export async function searchTopics(
   db: Db,
   query: string,

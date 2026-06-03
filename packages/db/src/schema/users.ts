@@ -16,13 +16,10 @@ import {
 // to an external vendor's id format).
 //
 // Sync model: Clerk webhook → upsert here on user.created / user.updated.
-// That webhook handler lands in Sprint 0 Day 3 alongside the /dashboard
-// stub. For now, rows are inserted ad hoc by tests and the seed script.
+// Until that webhook handler exists, rows are inserted ad hoc by the
+// upsert-on-visit path, tests, and the seed script.
 //
-// Future fields (deferred):
-//   - karma (Sprint 5)
-//   - role (Sprint 6 RBAC)
-//   - deleted_at for soft-delete (Sprint 6)
+// Future fields (deferred): karma, role (RBAC), deleted_at for soft-delete.
 export const users = pgTable(
   "users",
   {

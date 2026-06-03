@@ -1,12 +1,12 @@
 "use client";
 
-// Styleguide-only demo harness for <Combobox>. Uses an in-memory list +
+// Styleguide-only demo harness for <FtlCombobox>. Uses an in-memory list +
 // local fuzzy filter so the component is visible without auth or the live
 // /api/taxonomy lookups (the real submission form passes a fetch-backed
 // `search`). Not shipped outside the styleguide route.
 
 import { useState } from "react";
-import { Body, Caption, Combobox, type ComboboxOption } from "@/components/ui";
+import { FtlBody, FtlCaption, FtlCombobox, type ComboboxOption } from "@/components/ui";
 
 interface DemoCompany {
   id: string;
@@ -73,7 +73,7 @@ export function ComboboxDemo() {
   return (
     <div style={{ display: "grid", gap: "var(--space-6)", maxWidth: 460 }}>
       <div>
-        <Combobox
+        <FtlCombobox
           label="Company"
           placeholder="Search companies… (try “stri” or “facebook”)"
           value={company}
@@ -96,14 +96,14 @@ export function ComboboxDemo() {
           }}
           required
         />
-        <Caption style={{ marginTop: "var(--space-2)" }}>
+        <FtlCaption style={{ marginTop: "var(--space-2)" }}>
           selected: {company ? `${company.label} (${company.id})` : "—"}
           {suggested && ` · suggested new: “${suggested}”`}
-        </Caption>
+        </FtlCaption>
       </div>
 
       <div>
-        <Combobox
+        <FtlCombobox
           label="Canonical role"
           placeholder="Search roles… (no “suggest new”)"
           value={role}
@@ -112,15 +112,15 @@ export function ComboboxDemo() {
           emptyMessage="No matching role — pick the closest canonical title."
           required
         />
-        <Caption style={{ marginTop: "var(--space-2)" }}>
+        <FtlCaption style={{ marginTop: "var(--space-2)" }}>
           selected: {role ? `${role.label} (${role.id})` : "—"}
-        </Caption>
+        </FtlCaption>
       </div>
 
-      <Body size="small" tone="muted">
+      <FtlBody size="small" tone="muted">
         The company field offers “Suggest new → pending”; the role field is a
         closed canonical set and never does.
-      </Body>
+      </FtlBody>
     </div>
   );
 }

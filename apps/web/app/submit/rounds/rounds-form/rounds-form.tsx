@@ -1,0 +1,216 @@
+"use client";
+
+// Submission flow's second screen: a collapsible card per interview round.
+// State is a flat array with stable client keys (no DB id until finalize),
+// serialized to RoundDraft[] and merged into the draft so the basics survive.
+
+import {
+  MAX_QUESTIONS_PER_ROUND,
+  MAX_ROUNDS,
+  type SubmissionDraft,
+} from "@fromtheloop/shared";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FtlBody, FtlButton, FtlHoneypot } from "@/components/ui";
+import { routes } from "@/lib/routes";
+import { saveDraft } from "../../actions";
+import styles from "../rounds.module.css";
+import {
+  AUTOSAVE_DELAY_MS,
+  fromDraftRounds,
+  newQuestion,
+  newRound,
+  toDraftRounds,
+} from "./helpers";
+import { RoundCard } from "./round-card";
+import type { Round, SaveState } from "./types";
+
+export interface RoundsFormProps {
+  draftId: string;
+  // The full persisted draft (top-level basics + any saved rounds). Spread
+  // back into every autosave so the basics survive a rounds-only save.
+  initialData: SubmissionDraft;
+}
+
+export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
+  const t = useTranslations("rounds");
+  const tq = useTranslations("questions");
+  const tTags = useTranslations("tags");
+
+  const [rounds, setRounds] = useState<Round[]>(() =>
+    fromDraftRounds(initialData.rounds),
+  );
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+
+  const honeypotRef = useRef<HTMLInputElement>(null);
+  // A round key to focus after the next render (set when adding a round).
+  const focusRoundKey = useRef<string | null>(null);
+  const addRoundRef = useRef<HTMLButtonElement>(null);
+  const cardRefs = useRef<Map<string, HTMLLIElement>>(new Map());
+
+  const atRoundCap = rounds.length >= MAX_ROUNDS;
+
+  // Debounced autosave; merges rounds into the draft so basics are preserved.
+  const draftRounds = useMemo(() => toDraftRounds(rounds), [rounds]);
+  const serialized = JSON.stringify(draftRounds);
+  const lastSavedRef = useRef(serialized);
+
+  useEffect(() => {
+    if (serialized === lastSavedRef.current) return;
+    const timer = setTimeout(async () => {
+      setSaveState("saving");
+      try {
+        await saveDraft({
+          id: draftId,
+          data: { ...initialData, rounds: draftRounds },
+          honeypot: honeypotRef.current?.value ?? "",
+        });
+        lastSavedRef.current = serialized;
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    }, AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [serialized, draftId, draftRounds, initialData]);
+
+  // Move focus to a freshly added round's type control.
+  useEffect(() => {
+    const key = focusRoundKey.current;
+    if (!key) return;
+    focusRoundKey.current = null;
+    const card = cardRefs.current.get(key);
+    card?.querySelector<HTMLSelectElement>("select")?.focus();
+  }, [rounds.length]);
+
+  function addRound() {
+    if (atRoundCap) return;
+    const r = newRound();
+    focusRoundKey.current = r.key;
+    setRounds((prev) => [...prev, r]);
+  }
+
+  function removeRound(key: string) {
+    setRounds((prev) => prev.filter((r) => r.key !== key));
+    cardRefs.current.delete(key);
+    // Return focus to the add button so keyboard users aren't dropped.
+    requestAnimationFrame(() => addRoundRef.current?.focus());
+  }
+
+  function patchRound(key: string, patch: Partial<Omit<Round, "key">>) {
+    setRounds((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, ...patch } : r)),
+    );
+  }
+
+  function toggleCollapsed(key: string) {
+    setRounds((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, collapsed: !r.collapsed } : r)),
+    );
+  }
+
+  function addQuestion(roundKey: string) {
+    setRounds((prev) =>
+      prev.map((r) =>
+        r.key === roundKey && r.questions.length < MAX_QUESTIONS_PER_ROUND
+          ? { ...r, questions: [...r.questions, newQuestion()] }
+          : r,
+      ),
+    );
+  }
+
+  function removeQuestion(roundKey: string, questionKey: string) {
+    setRounds((prev) =>
+      prev.map((r) =>
+        r.key === roundKey
+          ? { ...r, questions: r.questions.filter((q) => q.key !== questionKey) }
+          : r,
+      ),
+    );
+  }
+
+  function patchQuestion(roundKey: string, questionKey: string, prose: string) {
+    setRounds((prev) =>
+      prev.map((r) =>
+        r.key === roundKey
+          ? {
+              ...r,
+              questions: r.questions.map((q) =>
+                q.key === questionKey ? { ...q, prose } : q,
+              ),
+            }
+          : r,
+      ),
+    );
+  }
+
+  return (
+    <div className={styles.form}>
+      <FtlHoneypot ref={honeypotRef} />
+
+      {rounds.length === 0 ? (
+        <div className={styles.empty}>
+          <FtlBody tone="muted">{t("empty")}</FtlBody>
+          <FtlButton variant="ghost" onClick={addRound}>
+            {t("addFirstRound")}
+          </FtlButton>
+        </div>
+      ) : (
+        <>
+          <ol className={styles.list}>
+            {rounds.map((round, i) => (
+              <RoundCard
+                key={round.key}
+                index={i}
+                round={round}
+                registerRef={(el) => {
+                  if (el) cardRefs.current.set(round.key, el);
+                  else cardRefs.current.delete(round.key);
+                }}
+                onToggle={() => toggleCollapsed(round.key)}
+                onRemove={() => removeRound(round.key)}
+                onPatch={(patch) => patchRound(round.key, patch)}
+                onAddQuestion={() => addQuestion(round.key)}
+                onRemoveQuestion={(qKey) => removeQuestion(round.key, qKey)}
+                onPatchQuestion={(qKey, prose) =>
+                  patchQuestion(round.key, qKey, prose)
+                }
+                t={t}
+                tq={tq}
+                tTags={tTags}
+              />
+            ))}
+          </ol>
+
+          <div className={styles.addRow}>
+            <button
+              type="button"
+              className={styles.addRound}
+              onClick={addRound}
+              disabled={atRoundCap}
+              ref={addRoundRef}
+            >
+              + {t("addRound")}
+            </button>
+            {atRoundCap && (
+              <span className={styles.cap}>
+                {t("capReached", { max: MAX_ROUNDS })}
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className={styles.actions}>
+        <a className={styles.back} href={routes.draft(draftId)}>
+          {t("back")}
+        </a>
+        <span className={styles.saveState} aria-live="polite">
+          {saveState === "saving" && t("save.saving")}
+          {saveState === "saved" && t("save.saved")}
+          {saveState === "error" && t("save.error")}
+        </span>
+      </div>
+    </div>
+  );
+}

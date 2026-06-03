@@ -1,4 +1,4 @@
-// Sprint 1 Day 3: taxonomy lookup correctness + the p95 latency budget.
+// Taxonomy lookup correctness + the p95 latency budget.
 //
 // Exit criteria exercised here:
 //   - "Typing 'stri' suggests 'Stripe' (curated) within 150ms p95"

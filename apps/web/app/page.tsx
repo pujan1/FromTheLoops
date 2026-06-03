@@ -1,19 +1,20 @@
 import Link from "next/link";
 import {
-  Body,
-  Button,
-  Container,
-  Display,
-  Eyebrow,
-  Heading,
-  LinkButton,
-  Ornament,
-  ReportCard,
-  SiteHeader,
-  Stat,
-  StatGroup,
-  Tag,
+  FtlBody,
+  FtlButton,
+  FtlContainer,
+  FtlDisplay,
+  FtlEyebrow,
+  FtlHeading,
+  FtlLinkButton,
+  FtlOrnament,
+  FtlReportCard,
+  FtlSiteHeader,
+  FtlStat,
+  FtlStatGroup,
+  FtlTag,
 } from "@/components/ui";
+import { routes } from "@/lib/routes";
 import styles from "./page.module.css";
 
 const topics = [
@@ -30,13 +31,13 @@ const topics = [
 export default function HomePage() {
   return (
     <>
-      <SiteHeader issue="ISSUE 001 · 2026" />
+      <FtlSiteHeader issue="ISSUE 001 · 2026" />
 
       {/* Ticker */}
       <div style={{ borderBottom: "1px solid var(--color-rule)" }}>
-        <Container>
+        <FtlContainer>
           <div className={styles.strip}>
-            <Eyebrow tone="accent" bare>live</Eyebrow>
+            <FtlEyebrow tone="accent" bare>live</FtlEyebrow>
             <span>412 reports</span>
             <span className={styles.strip__sep}>/</span>
             <span>38 companies</span>
@@ -45,41 +46,41 @@ export default function HomePage() {
             <span className={styles.strip__sep}>/</span>
             <span>updated 2 min ago</span>
           </div>
-        </Container>
+        </FtlContainer>
       </div>
 
       <main className={styles.page}>
-        <Container>
+        <FtlContainer>
           {/* -------------- Hero -------------- */}
           <section className={styles.hero}>
             <div className={styles.hero__lead}>
-              <Eyebrow tone="accent">interview reports</Eyebrow>
+              <FtlEyebrow tone="accent">interview reports</FtlEyebrow>
               <h1 className={styles.hero__headline}>
                 <span style={{ fontFamily: "var(--font-display)" }}>
                   From <em style={{ fontStyle: "italic", color: "var(--color-accent)" }}>the</em> loop.
                 </span>
               </h1>
-              <Body size="lead" className={styles.hero__sub}>
+              <FtlBody size="lead" className={styles.hero__sub}>
                 Structured interview reports for US tech engineering candidates —
                 <em style={{ fontFamily: "var(--font-display)", fontSize: "1.15em", color: "var(--color-accent)" }}> written by the people who took them.</em>
-              </Body>
+              </FtlBody>
               <div className={styles.hero__cta}>
-                <Button variant="primary" size="lg" trailingArrow>Browse companies</Button>
-                <LinkButton variant="ghost" size="lg" href="/submit">Submit a report</LinkButton>
+                <FtlButton variant="primary" size="lg" trailingArrow>Browse companies</FtlButton>
+                <FtlLinkButton variant="ghost" size="lg" href={routes.submit}>Submit a report</FtlLinkButton>
               </div>
             </div>
 
             <aside className={styles.hero__aside}>
-              <Eyebrow>masthead</Eyebrow>
-              <Body size="small" tone="muted" as="div">
+              <FtlEyebrow>masthead</FtlEyebrow>
+              <FtlBody size="small" tone="muted" as="div">
                 Not reviews of working at a company. Not comp data. Not job
                 listings. Just the loop — round by round, question by question,
                 tagged so you can find what you actually need.
-              </Body>
+              </FtlBody>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                <Tag variant="accent" dot>by candidates</Tag>
-                <Tag variant="ghost">for candidates</Tag>
-                <Tag>verified · trust-weighted</Tag>
+                <FtlTag variant="accent" dot>by candidates</FtlTag>
+                <FtlTag variant="ghost">for candidates</FtlTag>
+                <FtlTag>verified · trust-weighted</FtlTag>
               </div>
             </aside>
           </section>
@@ -89,16 +90,16 @@ export default function HomePage() {
             <div className={styles.section__head}>
               <span className={styles.section__head__no}>§ 01 — The corpus</span>
               <div className={styles.section__head__title}>
-                <Heading level={2}>What&apos;s already in here.</Heading>
+                <FtlHeading level={2}>What&apos;s already in here.</FtlHeading>
               </div>
-              <Link className={styles.section__head__action} href="/stats">all numbers →</Link>
+              <Link className={styles.section__head__action} href={routes.stats}>all numbers →</Link>
             </div>
-            <StatGroup>
-              <Stat label="reports" value="412" hint="across 38 companies" />
-              <Stat label="rounds" value="1,847" hint="recruiter → exec-final" />
-              <Stat label="topics" value="124" hint="curated taxonomy" />
-              <Stat label="verified" value="68%" accent hint="work-email + LinkedIn" />
-            </StatGroup>
+            <FtlStatGroup>
+              <FtlStat label="reports" value="412" hint="across 38 companies" />
+              <FtlStat label="rounds" value="1,847" hint="recruiter → exec-final" />
+              <FtlStat label="topics" value="124" hint="curated taxonomy" />
+              <FtlStat label="verified" value="68%" accent hint="work-email + LinkedIn" />
+            </FtlStatGroup>
           </section>
 
           {/* -------------- Latest reports -------------- */}
@@ -106,12 +107,12 @@ export default function HomePage() {
             <div className={styles.section__head}>
               <span className={styles.section__head__no}>§ 02 — Recent reports</span>
               <div className={styles.section__head__title}>
-                <Heading level={2}>Fresh from the loops.</Heading>
+                <FtlHeading level={2}>Fresh from the loops.</FtlHeading>
               </div>
-              <Link className={styles.section__head__action} href="/reports">all reports →</Link>
+              <Link className={styles.section__head__action} href={routes.reports}>all reports →</Link>
             </div>
             <div>
-              <ReportCard
+              <FtlReportCard
                 index="01"
                 company="Stripe"
                 role="Staff SWE"
@@ -123,7 +124,7 @@ export default function HomePage() {
                 verified
                 postedAt="2 days ago"
               />
-              <ReportCard
+              <FtlReportCard
                 index="02"
                 company="Anthropic"
                 role="Senior SWE"
@@ -135,7 +136,7 @@ export default function HomePage() {
                 verified
                 postedAt="5 days ago"
               />
-              <ReportCard
+              <FtlReportCard
                 index="03"
                 company="Linear"
                 role="Product Engineer"
@@ -157,13 +158,13 @@ export default function HomePage() {
               prep blind — and that&apos;s the gap we&apos;re closing.
             </blockquote>
             <div>
-              <Eyebrow tone="accent">why this exists</Eyebrow>
-              <Body style={{ marginTop: 12, maxWidth: "44ch" }}>
+              <FtlEyebrow tone="accent">why this exists</FtlEyebrow>
+              <FtlBody style={{ marginTop: 12, maxWidth: "44ch" }}>
                 Glassdoor optimizes for HR. LinkedIn optimizes for recruiters.
                 Levels optimizes for comp. No one is writing for the person
                 walking into the loop next Tuesday. That&apos;s the only reader we
                 care about.
-              </Body>
+              </FtlBody>
               <p className={styles.pull__attr}>— the founding note</p>
             </div>
           </section>
@@ -173,13 +174,13 @@ export default function HomePage() {
             <div className={styles.section__head}>
               <span className={styles.section__head__no}>§ 03 — By topic</span>
               <div className={styles.section__head__title}>
-                <Heading level={2}>Search by what you need to study.</Heading>
+                <FtlHeading level={2}>Search by what you need to study.</FtlHeading>
               </div>
-              <Link className={styles.section__head__action} href="/topics">all topics →</Link>
+              <Link className={styles.section__head__action} href={routes.topics}>all topics →</Link>
             </div>
             <div className={styles.topics}>
               {topics.map((t) => (
-                <a key={t.name} className={styles.topic} href={`/topics/${t.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                <a key={t.name} className={styles.topic} href={routes.topic(t.name.toLowerCase().replace(/\s+/g, "-"))}>
                   <span className={styles.topic__count}>{t.count}</span>
                   <h3 className={styles.topic__name}>{t.name}</h3>
                   <span className={styles.topic__hint}>{t.hint}</span>
@@ -188,23 +189,23 @@ export default function HomePage() {
             </div>
           </section>
 
-          <Ornament mark="§" />
+          <FtlOrnament mark="§" />
 
           {/* -------------- CTA -------------- */}
           <section className={styles.section} style={{ borderBottom: 0 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "end" }}>
-              <Display size="lg" as="h2">
+              <FtlDisplay size="lg" as="h2">
                 You took the loop. <em>Write it down.</em>
-              </Display>
+              </FtlDisplay>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <LinkButton href="/submit" variant="accent" size="lg" trailingArrow>Submit a report</LinkButton>
-                <LinkButton href="/about" variant="ghost" size="lg">How submission works</LinkButton>
+                <FtlLinkButton href={routes.submit} variant="accent" size="lg" trailingArrow>Submit a report</FtlLinkButton>
+                <FtlLinkButton href={routes.about} variant="ghost" size="lg">How submission works</FtlLinkButton>
               </div>
             </div>
           </section>
-        </Container>
+        </FtlContainer>
 
-        <Container>
+        <FtlContainer>
           <footer className={styles.footer}>
             <div>
               <div className={styles.footer__wordmark}>
@@ -217,18 +218,18 @@ export default function HomePage() {
             </div>
             <div className={styles.footer__cols}>
               <div className={styles.footer__col}>
-                <Link href="/companies">Companies</Link>
-                <Link href="/topics">Topics</Link>
-                <Link href="/reports">Reports</Link>
+                <Link href={routes.companies}>Companies</Link>
+                <Link href={routes.topics}>Topics</Link>
+                <Link href={routes.reports}>Reports</Link>
               </div>
               <div className={styles.footer__col}>
-                <Link href="/submit">Submit</Link>
-                <Link href="/about">About</Link>
-                <Link href="/styleguide">Design</Link>
+                <Link href={routes.submit}>Submit</Link>
+                <Link href={routes.about}>About</Link>
+                <Link href={routes.styleguide}>Design</Link>
               </div>
             </div>
           </footer>
-        </Container>
+        </FtlContainer>
       </main>
     </>
   );

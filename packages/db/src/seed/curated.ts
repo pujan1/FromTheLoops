@@ -1,11 +1,10 @@
-// Sprint 1 Day 2 deliverable: the curated taxonomy fixtures — 30 top tech
-// companies (with per-company level ladders) and ~20 canonical engineering
-// roles. Everything here is `source = 'seed_curated'`, `status = 'active'`,
-// so it shows up in autocomplete immediately (PLAN.md §Taxonomy curation).
+// The curated taxonomy fixtures — 30 top tech companies (with per-company
+// level ladders) and ~20 canonical engineering roles. Everything here is
+// `source = 'seed_curated'`, `status = 'active'`, so it shows up in
+// autocomplete immediately.
 //
-// This is the data layer only; the search/suggest logic lands Day 3 and the
-// <Combobox> Day 4. Kept as plain exported arrays so tests + future tooling
-// (mod queue, fixtures) can import the canonical set without a DB round-trip.
+// Kept as plain exported arrays so tests + future tooling (mod queue, fixtures)
+// can import the canonical set without a DB round-trip.
 //
 // Idempotent: seedCurated() upserts on the natural keys (company slug, role
 // slug, company_id+level slug), so re-running refreshes edits in place
