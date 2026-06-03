@@ -159,6 +159,158 @@ export const submissionReadySchema = z.object({
   attribution: attributionSchema,
 });
 
+// ---------------------------------------------------------------------------
+// Finalize validation (Sprint 2 Day 4)
+//
+// The draft schema is deliberately permissive — it has to store a half-filled
+// form. Finalization is the opposite: the strict gate the submission
+// transaction (Day 5) runs server-side before it writes anything. Rules:
+//   - 0 rounds is allowed (a recruiter-screen-only "got rejected, no detail"
+//     report is legitimate).
+//   - If a round exists it must have a round_type AND a rating.
+//   - Each question needs non-blank prose AND ≥1 *active* tag. A "suggested"
+//     (pending) tag does NOT count — it's parked until a mod promotes it.
+//   - Top-level company / role / level / month must be present (outcome stays
+//     optional: a candidate may still be mid-process).
+//
+// validateFinalSubmission is the single authority. It returns either the
+// narrowed, ready-to-write FinalSubmission or a structured issue map the form
+// renders inline (booleans, not copy — the web layer owns the wording/i18n).
+
+export interface FinalQuestion {
+  prose: string;
+  // All selected tags (existing + suggested). ≥1 is guaranteed to be
+  // "existing"; suggested tags are resolved to pending rows at finalize.
+  tags: TopicTagSelection[];
+}
+
+export interface FinalRound {
+  roundType: RoundType;
+  rating: RoundRating;
+  experience: string | null;
+  questions: FinalQuestion[];
+}
+
+export interface FinalSubmission {
+  company: CompanySelection;
+  role: RoleSelection;
+  level: LevelSelection;
+  outcome: ReportOutcome | null;
+  month: string;
+  attribution: DisplayAttribution;
+  rounds: FinalRound[];
+}
+
+// true = this field is in error (missing/invalid). Mirrors the form's shape so
+// a card can light up exactly the controls that need attention.
+export interface QuestionIssues {
+  prose: boolean;
+  tags: boolean;
+}
+
+export interface RoundIssues {
+  roundType: boolean;
+  rating: boolean;
+  questions: QuestionIssues[];
+}
+
+export interface SubmissionIssues {
+  company: boolean;
+  role: boolean;
+  level: boolean;
+  month: boolean;
+  rounds: RoundIssues[];
+  // The payload didn't even parse as a draft (arbitrary/corrupt shape). When
+  // set, the per-field flags are not meaningful.
+  malformed?: boolean;
+}
+
+export type SubmissionValidation =
+  | { ok: true; data: FinalSubmission }
+  | { ok: false; issues: SubmissionIssues };
+
+function blankIssues(): SubmissionIssues {
+  return { company: false, role: false, level: false, month: false, rounds: [] };
+}
+
+function activeTagCount(tags: TopicTagSelection[]): number {
+  return tags.filter((t) => t.kind === "existing").length;
+}
+
+// Server-side finalize gate. Accepts the raw draft payload (the jsonb we
+// stored), re-parses it with the tolerant draft schema, then applies the strict
+// finalize rules in code — clearer than threading cross-field/per-index rules
+// through Zod refinements. Returns the narrowed FinalSubmission on success.
+export function validateFinalSubmission(data: unknown): SubmissionValidation {
+  const parsed = submissionDraftSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, issues: { ...blankIssues(), malformed: true } };
+  }
+  const draft = parsed.data;
+  const issues = blankIssues();
+  let ok = true;
+
+  if (!draft.company) {
+    issues.company = true;
+    ok = false;
+  }
+  if (!draft.role) {
+    issues.role = true;
+    ok = false;
+  }
+  if (!draft.level) {
+    issues.level = true;
+    ok = false;
+  }
+  if (!draft.month) {
+    issues.month = true;
+    ok = false;
+  }
+
+  const rounds = draft.rounds ?? [];
+  for (const round of rounds) {
+    const roundIssue: RoundIssues = {
+      roundType: !round.roundType,
+      rating: !round.rating,
+      questions: [],
+    };
+    if (roundIssue.roundType || roundIssue.rating) ok = false;
+
+    for (const question of round.questions ?? []) {
+      const qIssue: QuestionIssues = {
+        prose: !question.prose || question.prose.trim().length === 0,
+        tags: activeTagCount(question.tags) < 1,
+      };
+      if (qIssue.prose || qIssue.tags) ok = false;
+      roundIssue.questions.push(qIssue);
+    }
+    issues.rounds.push(roundIssue);
+  }
+
+  if (!ok) return { ok: false, issues };
+
+  // All rules passed — narrow to the ready-to-write shape. The non-null
+  // assertions are guarded by the checks above.
+  const data2: FinalSubmission = {
+    company: draft.company!,
+    role: draft.role!,
+    level: draft.level!,
+    outcome: draft.outcome ?? null,
+    month: draft.month!,
+    attribution: draft.attribution,
+    rounds: rounds.map((round) => ({
+      roundType: round.roundType!,
+      rating: round.rating!,
+      experience: round.experience?.trim() ? round.experience.trim() : null,
+      questions: (round.questions ?? []).map((question) => ({
+        prose: question.prose!.trim(),
+        tags: question.tags,
+      })),
+    })),
+  };
+  return { ok: true, data: data2 };
+}
+
 export type CompanySelection = z.infer<typeof companySelectionSchema>;
 export type CompanySuggestion = z.infer<typeof companySuggestionSchema>;
 export type RoleSelection = z.infer<typeof roleSelectionSchema>;

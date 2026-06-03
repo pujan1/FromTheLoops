@@ -93,6 +93,10 @@
     "questionCount": "{count, plural, =0 {No questions} =1 {1 question} other {# questions}}",
     "capReached": "You’ve reached the max of {max} rounds.",
     "back": "← Back to basics",
+    "errors": {
+      "roundType": "Choose a round type before submitting.",
+      "rating": "Pick how this round went."
+    },
     "save": {
       "saving": "Saving…",
       "saved": "Draft saved",
@@ -107,13 +111,20 @@
     "proseLabel": "What were you asked?",
     "prosePlaceholder": "Describe the question or prompt…",
     "capReached": "Max of {max} questions per round reached.",
-    "empty": "No questions logged for this round yet."
+    "empty": "No questions logged for this round yet.",
+    "errors": {
+      "prose": "Describe the question before submitting.",
+      "tags": "Add at least one topic (pending suggestions don’t count yet)."
+    }
   },
   "tags": {
     "label": "Topics",
     "placeholder": "Search topics…",
-    "suggestHint": "new · pending review",
-    "hint": "Tag at least one topic per question once you’ve added them.",
-    "comingSoon": "Topic tagging lands next — add your questions now."
+    "empty": "No matching topics.",
+    "suggestNew": "Suggest “{name}”",
+    "selectedLabel": "Selected topics",
+    "pending": "pending",
+    "remove": "Remove topic {name}",
+    "hint": "Tag at least one topic per question."
   }
 }

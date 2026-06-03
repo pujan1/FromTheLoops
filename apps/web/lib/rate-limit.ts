@@ -56,6 +56,10 @@ export interface RateLimitPolicy {
 export const RATE_LIMITS = {
   saveDraft: { name: "save-draft", limit: 120, windowSeconds: 60 },
   suggestCompany: { name: "suggest-company", limit: 10, windowSeconds: 3600 },
+  // Topic suggestions feed the same human moderation queue as companies, so
+  // the same tight budget applies. A question can carry several tags, so this
+  // is a touch more generous than companies (one company per report).
+  suggestTopic: { name: "suggest-topic", limit: 20, windowSeconds: 3600 },
 } satisfies Record<string, RateLimitPolicy>;
 
 export interface RateLimitResult {

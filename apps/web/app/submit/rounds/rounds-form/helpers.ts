@@ -12,7 +12,7 @@ function newKey(): string {
 }
 
 export function newQuestion(): Question {
-  return { key: newKey(), prose: "" };
+  return { key: newKey(), prose: "", tags: [] };
 }
 
 export function newRound(): Round {
@@ -37,9 +37,27 @@ export function fromDraftRounds(rounds: SubmissionDraft["rounds"]): Round[] {
     questions: (r.questions ?? []).map((q) => ({
       key: newKey(),
       prose: q.prose ?? "",
+      tags: q.tags ?? [],
     })),
     collapsed: true, // restored rounds start collapsed — overview first.
   }));
+}
+
+// "Pristine" = the user hasn't started this unit yet, so we hold back the
+// inline validation errors that would otherwise nag a freshly-added card.
+// A question they've touched (typed prose or added a tag) or a round they've
+// begun (typed/rated/described it, or added a question) is fair game.
+export function questionIsPristine(q: Question): boolean {
+  return q.prose.trim().length === 0 && q.tags.length === 0;
+}
+
+export function roundIsPristine(r: Round): boolean {
+  return (
+    r.roundType === null &&
+    r.rating === null &&
+    r.experience.trim().length === 0 &&
+    r.questions.length === 0
+  );
 }
 
 // Serialize UI state back to the shared RoundDraft[] for autosave.
@@ -48,6 +66,6 @@ export function toDraftRounds(rounds: Round[]): RoundDraft[] {
     roundType: r.roundType,
     rating: r.rating,
     experience: r.experience,
-    questions: r.questions.map((q) => ({ prose: q.prose, tags: [] })),
+    questions: r.questions.map((q) => ({ prose: q.prose, tags: q.tags })),
   }));
 }

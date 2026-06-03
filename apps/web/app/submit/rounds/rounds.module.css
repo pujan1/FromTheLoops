@@ -173,10 +173,62 @@
   justify-content: space-between;
 }
 
-.tagsPlaceholder {
-  font-size: var(--fs-small);
+/* --- per-question tag picker --- */
+.tagPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tagList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tagList > li {
+  display: inline-flex;
+}
+
+.tagPending {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
   color: var(--color-muted);
-  font-style: italic;
+}
+
+.tagRemove {
+  margin-left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25em;
+  height: 1.25em;
+  padding: 0;
+  font-size: 1.1em;
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.tagRemove:hover {
+  opacity: 1;
+  color: var(--color-warning);
+}
+
+.tagRemove:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  opacity: 1;
 }
 
 /* --- add buttons --- */
@@ -225,6 +277,13 @@
 .cap {
   font-size: var(--fs-small);
   color: var(--color-muted);
+}
+
+/* Inline finalize-validation error (rating / question prose / tags), matching
+   FtlField's own error styling for controls it can't wrap. */
+.error {
+  font-size: var(--fs-small);
+  color: var(--color-warning);
 }
 
 /* --- footer actions --- */

@@ -12,6 +12,7 @@ import {
   getDb,
   getOrCreateUserByClerkId,
   suggestCompany,
+  suggestTopic,
   updateDraft,
 } from "@fromtheloop/db";
 import {
@@ -22,6 +23,7 @@ import {
   companySuggestionSchema,
   isHoneypotTripped,
   submissionDraftSchema,
+  topicSuggestionSchema,
 } from "@fromtheloop/shared";
 import { RATE_LIMITS, RATE_LIMIT_MESSAGE, rateLimit } from "@/lib/rate-limit";
 
@@ -118,4 +120,51 @@ export async function suggestPendingCompany(input: {
     suggestedByUserId: internal.id,
   });
   return actionOk({ id: company.id, name: company.name });
+}
+
+// Promote a "suggest new" topic tag to a real taxonomy row. The topic analogue
+// of suggestPendingCompany — same shape, same fail-closed-without-tipping-off
+// honeypot handling. suggestTopic inserts it as status='pending' /
+// source='user_suggested' (idempotent on slug) and attributes the suggester.
+// Returns the row id/slug/name so the client backfills the tag selection
+// (suggested → existing) — but note the row is *pending*, so it still won't
+// satisfy the ≥1-active-tag rule until a mod promotes it. Returns null when the
+// honeypot is tripped.
+export async function suggestPendingTopic(input: {
+  name: string;
+  honeypot?: string;
+}): Promise<ActionResult<{ id: string; slug: string; name: string } | null>> {
+  const user = await currentUser();
+  if (!user) {
+    return actionError(ACTION_ERROR.unauthenticated, "You must be signed in.");
+  }
+
+  // Tight per-user budget: like company suggestions, this writes into the
+  // human moderation queue. Checked before the honeypot/DB so a flood is
+  // rejected cheaply.
+  const limited = await rateLimit(RATE_LIMITS.suggestTopic, user.id);
+  if (!limited.ok) {
+    return actionError(ACTION_ERROR.rateLimited, RATE_LIMIT_MESSAGE);
+  }
+
+  // Honeypot tripped: succeed with no suggestion (data: null), keeping the
+  // trap invisible.
+  if (isHoneypotTripped(input.honeypot)) return actionOk(null);
+
+  const parsed = topicSuggestionSchema.safeParse(input);
+  if (!parsed.success) {
+    return actionError(ACTION_ERROR.invalid, "That topic name isn't valid.");
+  }
+
+  const db = getDb();
+  const internal = await getOrCreateUserByClerkId(db, {
+    clerkId: user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? null,
+  });
+
+  const { topic } = await suggestTopic(db, {
+    name: parsed.data.name,
+    suggestedByUserId: internal.id,
+  });
+  return actionOk({ id: topic.id, slug: topic.slug, name: topic.name });
 }

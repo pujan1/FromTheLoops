@@ -8,6 +8,8 @@ import {
   MAX_QUESTIONS_PER_ROUND,
   MAX_ROUNDS,
   type SubmissionDraft,
+  type TopicTagSelection,
+  validateFinalSubmission,
 } from "@fromtheloop/shared";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -58,6 +60,15 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
   const draftRounds = useMemo(() => toDraftRounds(rounds), [rounds]);
   const serialized = JSON.stringify(draftRounds);
   const lastSavedRef = useRef(serialized);
+
+  // Live finalize validation against the shared server-side gate (Day 4). We
+  // only surface a round's per-field issues; the basics fields belong to the
+  // previous screen, so their issues are computed but not rendered here. When
+  // the whole submission validates, there are no issues to show.
+  const roundIssues = useMemo(() => {
+    const result = validateFinalSubmission({ ...initialData, rounds: draftRounds });
+    return result.ok ? null : result.issues.rounds;
+  }, [initialData, draftRounds]);
 
   const runSave = save.run;
   useEffect(() => {
@@ -144,6 +155,25 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
     );
   }
 
+  function patchQuestionTags(
+    roundKey: string,
+    questionKey: string,
+    tags: TopicTagSelection[],
+  ) {
+    setRounds((prev) =>
+      prev.map((r) =>
+        r.key === roundKey
+          ? {
+              ...r,
+              questions: r.questions.map((q) =>
+                q.key === questionKey ? { ...q, tags } : q,
+              ),
+            }
+          : r,
+      ),
+    );
+  }
+
   return (
     <div className={styles.form}>
       <FtlHoneypot ref={honeypotRef} />
@@ -175,6 +205,10 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
                 onPatchQuestion={(qKey, prose) =>
                   patchQuestion(round.key, qKey, prose)
                 }
+                onPatchQuestionTags={(qKey, tags) =>
+                  patchQuestionTags(round.key, qKey, tags)
+                }
+                issues={roundIssues?.[i] ?? null}
                 t={t}
                 tq={tq}
                 tTags={tTags}

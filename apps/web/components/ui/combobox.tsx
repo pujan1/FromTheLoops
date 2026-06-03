@@ -49,6 +49,10 @@ export interface ComboboxProps {
   // (so the field works inside a plain <form> / server action).
   name?: string;
   disabled?: boolean;
+  // Multi-select mode: after a pick (option or suggest-new) the input clears
+  // instead of mirroring the label, and focus stays put so the next item can
+  // be typed immediately. The parent owns the chosen set; this stays value=null.
+  clearOnSelect?: boolean;
 }
 
 // Special activeIndex value: the synthetic suggest-new row sits after the
@@ -66,6 +70,7 @@ export function Combobox({
   required = false,
   name,
   disabled = false,
+  clearOnSelect = false,
 }: ComboboxProps) {
   const baseId = useId();
   const listId = `${baseId}-list`;
@@ -150,15 +155,27 @@ export function Combobox({
 
   function selectOption(option: ComboboxOption) {
     onChange(option);
-    setQuery(option.label);
-    setOpen(false);
+    if (clearOnSelect) {
+      // Multi-select: drop the text and stay open so the next tag can be typed.
+      setQuery("");
+      setOptions([]);
+    } else {
+      setQuery(option.label);
+      setOpen(false);
+    }
     setActiveIndex(-1);
   }
 
   function commitSuggestNew() {
     if (onSuggestNew && trimmed.length > 0) {
       onSuggestNew(trimmed);
-      setOpen(false);
+      if (clearOnSelect) {
+        setQuery("");
+        setOptions([]);
+        setActiveIndex(-1);
+      } else {
+        setOpen(false);
+      }
     }
   }
 

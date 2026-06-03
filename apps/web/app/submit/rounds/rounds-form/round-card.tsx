@@ -2,12 +2,16 @@ import {
   MAX_QUESTIONS_PER_ROUND,
   ROUND_RATINGS,
   ROUND_TYPES,
+  type RoundIssues,
   type RoundType,
+  type TopicTagSelection,
 } from "@fromtheloop/shared";
 import type { useTranslations } from "next-intl";
 import { useId } from "react";
 import { FtlBody, FtlChoiceChips, FtlField, FtlSelect, FtlTextarea } from "@/components/ui";
 import styles from "../rounds.module.css";
+import { questionIsPristine, roundIsPristine } from "./helpers";
+import { TagPicker } from "./tag-picker";
 import type { Round } from "./types";
 
 // Split out so React re-renders only the edited card as users add rounds.
@@ -21,6 +25,11 @@ interface RoundCardProps {
   onAddQuestion: () => void;
   onRemoveQuestion: (questionKey: string) => void;
   onPatchQuestion: (questionKey: string, prose: string) => void;
+  onPatchQuestionTags: (questionKey: string, tags: TopicTagSelection[]) => void;
+  // Live finalize issues for this round (null when the whole submission is
+  // valid). Errors are held back for pristine cards so a freshly-added round
+  // isn't pre-emptively flagged.
+  issues: RoundIssues | null;
   t: ReturnType<typeof useTranslations>;
   tq: ReturnType<typeof useTranslations>;
   tTags: ReturnType<typeof useTranslations>;
@@ -36,6 +45,8 @@ export function RoundCard({
   onAddQuestion,
   onRemoveQuestion,
   onPatchQuestion,
+  onPatchQuestionTags,
+  issues,
   t,
   tq,
   tTags,
@@ -44,6 +55,9 @@ export function RoundCard({
   const n = index + 1;
   const typeLabel = round.roundType ? t(`type.${round.roundType}`) : t("untyped");
   const atQuestionCap = round.questions.length >= MAX_QUESTIONS_PER_ROUND;
+
+  // Hold errors back until the user has engaged with the card.
+  const showRoundErrors = issues != null && !roundIsPristine(round);
 
   return (
     <li className={styles.card} ref={registerRef}>
@@ -77,7 +91,11 @@ export function RoundCard({
       </div>
 
       <div id={bodyId} hidden={round.collapsed} className={styles.cardBody}>
-        <FtlField label={t("typeLabel")} required>
+        <FtlField
+          label={t("typeLabel")}
+          required
+          error={showRoundErrors && issues.roundType ? t("errors.roundType") : undefined}
+        >
           {(id) => (
             <FtlSelect
               id={id}
@@ -96,14 +114,19 @@ export function RoundCard({
           )}
         </FtlField>
 
-        <FtlChoiceChips
-          legend={t("ratingLabel")}
-          required
-          options={ROUND_RATINGS}
-          value={round.rating}
-          onChange={(rating) => onPatch({ rating })}
-          renderOption={(r) => t(`rating.${r}`)}
-        />
+        <div>
+          <FtlChoiceChips
+            legend={t("ratingLabel")}
+            required
+            options={ROUND_RATINGS}
+            value={round.rating}
+            onChange={(rating) => onPatch({ rating })}
+            renderOption={(r) => t(`rating.${r}`)}
+          />
+          {showRoundErrors && issues.rating && (
+            <p className={styles.error}>{t("errors.rating")}</p>
+          )}
+        </div>
 
         <FtlField label={t("experienceLabel")}>
           {(id) => (
@@ -127,7 +150,10 @@ export function RoundCard({
             </FtlBody>
           ) : (
             <ol className={styles.questionList}>
-              {round.questions.map((q, qi) => (
+              {round.questions.map((q, qi) => {
+                const qIssue = issues?.questions[qi];
+                const showQErrors = qIssue != null && !questionIsPristine(q);
+                return (
                 <li key={q.key} className={styles.question}>
                   <div className={styles.questionHead}>
                     <span className={styles.label}>
@@ -149,9 +175,20 @@ export function RoundCard({
                     aria-label={tq("proseLabel")}
                     onChange={(e) => onPatchQuestion(q.key, e.target.value)}
                   />
-                  <p className={styles.tagsPlaceholder}>{tTags("comingSoon")}</p>
+                  {showQErrors && qIssue.prose && (
+                    <p className={styles.error}>{tq("errors.prose")}</p>
+                  )}
+                  <TagPicker
+                    tags={q.tags}
+                    onChange={(tags) => onPatchQuestionTags(q.key, tags)}
+                    t={tTags}
+                  />
+                  {showQErrors && qIssue.tags && (
+                    <p className={styles.error}>{tq("errors.tags")}</p>
+                  )}
                 </li>
-              ))}
+                );
+              })}
             </ol>
           )}
           <div className={styles.addRow}>
