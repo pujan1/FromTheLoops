@@ -15,39 +15,48 @@ import {
   updateDraft,
 } from "@fromtheloop/db";
 import {
+  ACTION_ERROR,
+  type ActionResult,
+  actionError,
+  actionOk,
   companySuggestionSchema,
   isHoneypotTripped,
   submissionDraftSchema,
 } from "@fromtheloop/shared";
-import { RATE_LIMITS, RateLimitError, rateLimit } from "@/lib/rate-limit";
+import { RATE_LIMITS, RATE_LIMIT_MESSAGE, rateLimit } from "@/lib/rate-limit";
 
 export async function saveDraft(input: {
   id: string | null;
   data: unknown;
   honeypot?: string;
-}): Promise<{ id: string }> {
+}): Promise<ActionResult<{ id: string }>> {
   const user = await currentUser();
-  if (!user) throw new Error("saveDraft: unauthenticated");
+  if (!user) {
+    return actionError(ACTION_ERROR.unauthenticated, "You must be signed in.");
+  }
 
   // Per-user budget before any DB work. Keyed on the Clerk id so the limit
   // applies even under a flood that never resolves to our users row. Generous
   // here — autosave is legitimately frequent — so this only caps pathological
   // write amplification.
   const limited = await rateLimit(RATE_LIMITS.saveDraft, user.id);
-  if (!limited.ok) throw new RateLimitError(RATE_LIMITS.saveDraft);
+  if (!limited.ok) {
+    return actionError(ACTION_ERROR.rateLimited, RATE_LIMIT_MESSAGE);
+  }
 
   // A non-empty honeypot means a bot filled a field no real user can reach.
-  // Silently refuse to persist — return a benign-looking response without
-  // writing, so the trap stays invisible to the bot.
+  // Silently refuse to persist but return a benign success — an empty id, the
+  // same shape a first save yields — so the trap stays invisible to the bot.
   if (isHoneypotTripped(input.honeypot)) {
-    return { id: input.id ?? "" };
+    return actionOk({ id: input.id ?? "" });
   }
 
   // Reject malformed payloads (defends the jsonb column from arbitrary shapes).
-  const parsed = submissionDraftSchema.parse(input.data) as Record<
-    string,
-    unknown
-  >;
+  const parsed = submissionDraftSchema.safeParse(input.data);
+  if (!parsed.success) {
+    return actionError(ACTION_ERROR.invalid, "Draft data was malformed.");
+  }
+  const data = parsed.data as Record<string, unknown>;
 
   const db = getDb();
   const internal = await getOrCreateUserByClerkId(db, {
@@ -58,11 +67,11 @@ export async function saveDraft(input: {
   // Update in place when we already have a draft id we own; otherwise (new
   // form, or a stale/foreign id) create a fresh draft.
   if (input.id) {
-    const updated = await updateDraft(db, input.id, internal.id, parsed);
-    if (updated) return { id: updated.id };
+    const updated = await updateDraft(db, input.id, internal.id, data);
+    if (updated) return actionOk({ id: updated.id });
   }
-  const created = await createDraft(db, internal.id, parsed);
-  return { id: created.id };
+  const created = await createDraft(db, internal.id, data);
+  return actionOk({ id: created.id });
 }
 
 // Promote a "suggest new" company to a real taxonomy row. Called at the
@@ -75,19 +84,28 @@ export async function saveDraft(input: {
 export async function suggestPendingCompany(input: {
   name: string;
   honeypot?: string;
-}): Promise<{ id: string; name: string } | null> {
+}): Promise<ActionResult<{ id: string; name: string } | null>> {
   const user = await currentUser();
-  if (!user) throw new Error("suggestPendingCompany: unauthenticated");
+  if (!user) {
+    return actionError(ACTION_ERROR.unauthenticated, "You must be signed in.");
+  }
 
   // Tight per-user budget: this is the only surface that writes into the human
   // moderation queue, so it's the one most worth throttling. Checked before the
   // honeypot/DB so a flood is rejected cheaply.
   const limited = await rateLimit(RATE_LIMITS.suggestCompany, user.id);
-  if (!limited.ok) throw new RateLimitError(RATE_LIMITS.suggestCompany);
+  if (!limited.ok) {
+    return actionError(ACTION_ERROR.rateLimited, RATE_LIMIT_MESSAGE);
+  }
 
-  if (isHoneypotTripped(input.honeypot)) return null;
+  // Honeypot tripped: succeed with no suggestion (data: null) rather than
+  // surface an error, keeping the trap invisible.
+  if (isHoneypotTripped(input.honeypot)) return actionOk(null);
 
-  const { name } = companySuggestionSchema.parse(input);
+  const parsed = companySuggestionSchema.safeParse(input);
+  if (!parsed.success) {
+    return actionError(ACTION_ERROR.invalid, "That company name isn't valid.");
+  }
 
   const db = getDb();
   const internal = await getOrCreateUserByClerkId(db, {
@@ -96,8 +114,8 @@ export async function suggestPendingCompany(input: {
   });
 
   const { company } = await suggestCompany(db, {
-    name,
+    name: parsed.data.name,
     suggestedByUserId: internal.id,
   });
-  return { id: company.id, name: company.name };
+  return actionOk({ id: company.id, name: company.name });
 }

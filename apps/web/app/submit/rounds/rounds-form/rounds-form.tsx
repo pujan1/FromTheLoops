@@ -11,8 +11,9 @@ import {
 } from "@fromtheloop/shared";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FtlBody, FtlButton, FtlHoneypot } from "@/components/ui";
+import { FtlBody, FtlButton, FtlHoneypot, FtlNotice } from "@/components/ui";
 import { routes } from "@/lib/routes";
+import { noticeToneForError, useActionStatus } from "@/lib/use-action-status";
 import { saveDraft } from "../../actions";
 import styles from "../rounds.module.css";
 import {
@@ -23,7 +24,7 @@ import {
   toDraftRounds,
 } from "./helpers";
 import { RoundCard } from "./round-card";
-import type { Round, SaveState } from "./types";
+import type { Round } from "./types";
 
 export interface RoundsFormProps {
   draftId: string;
@@ -40,7 +41,10 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
   const [rounds, setRounds] = useState<Round[]>(() =>
     fromDraftRounds(initialData.rounds),
   );
-  const [saveState, setSaveState] = useState<SaveState>("idle");
+
+  // Autosave through the action hook: status drives the save indicator, error
+  // drives the failure notice. Same pattern as the basics screen.
+  const save = useActionStatus(saveDraft);
 
   const honeypotRef = useRef<HTMLInputElement>(null);
   // A round key to focus after the next render (set when adding a round).
@@ -55,24 +59,20 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
   const serialized = JSON.stringify(draftRounds);
   const lastSavedRef = useRef(serialized);
 
+  const runSave = save.run;
   useEffect(() => {
     if (serialized === lastSavedRef.current) return;
     const timer = setTimeout(async () => {
-      setSaveState("saving");
-      try {
-        await saveDraft({
-          id: draftId,
-          data: { ...initialData, rounds: draftRounds },
-          honeypot: honeypotRef.current?.value ?? "",
-        });
-        lastSavedRef.current = serialized;
-        setSaveState("saved");
-      } catch {
-        setSaveState("error");
-      }
+      const res = await runSave({
+        id: draftId,
+        data: { ...initialData, rounds: draftRounds },
+        honeypot: honeypotRef.current?.value ?? "",
+      });
+      if (!res.ok) return;
+      lastSavedRef.current = serialized;
     }, AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [serialized, draftId, draftRounds, initialData]);
+  }, [serialized, draftId, draftRounds, initialData, runSave]);
 
   // Move focus to a freshly added round's type control.
   useEffect(() => {
@@ -206,11 +206,16 @@ export function RoundsForm({ draftId, initialData }: RoundsFormProps) {
           {t("back")}
         </a>
         <span className={styles.saveState} aria-live="polite">
-          {saveState === "saving" && t("save.saving")}
-          {saveState === "saved" && t("save.saved")}
-          {saveState === "error" && t("save.error")}
+          {save.isPending && t("save.saving")}
+          {save.isSuccess && t("save.saved")}
         </span>
       </div>
+
+      {save.error && (
+        <FtlNotice tone={noticeToneForError(save.error)} title={t("save.error")}>
+          {save.error.message}
+        </FtlNotice>
+      )}
     </div>
   );
 }

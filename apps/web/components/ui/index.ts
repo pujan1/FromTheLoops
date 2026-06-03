@@ -25,6 +25,11 @@ export {
   type ComboboxProps,
 } from "./combobox";
 export { Honeypot as FtlHoneypot } from "./honeypot";
+export { Notice as FtlNotice, type NoticeTone } from "./notice";
+export {
+  StatusBadge as FtlStatusBadge,
+  type BadgeStatus,
+} from "./status-badge";
 export {
   ChoiceChips as FtlChoiceChips,
   Field as FtlField,

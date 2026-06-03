@@ -1,0 +1,33 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  white-space: nowrap;
+  /* Tinted fill + matching border + readable text, all derived from one token
+     per status via color-mix so the badge tracks light/dark automatically. */
+  background: color-mix(in srgb, var(--badge-color) 14%, var(--color-paper));
+  color: color-mix(in srgb, var(--badge-color) 78%, var(--color-ink));
+  border: 1px solid color-mix(in srgb, var(--badge-color) 32%, transparent);
+}
+
+.badge--success { --badge-color: var(--color-success); }
+.badge--warning { --badge-color: var(--color-warning); }
+.badge--danger  { --badge-color: var(--color-danger); }
+.badge--pending { --badge-color: var(--color-pending); }
+.badge--info    { --badge-color: var(--color-info); }
+.badge--neutral { --badge-color: var(--color-muted); }
+
+.badge__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--badge-color);
+}

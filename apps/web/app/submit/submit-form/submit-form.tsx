@@ -23,8 +23,10 @@ import {
   FtlField,
   FtlHoneypot,
   FtlInput,
+  FtlNotice,
 } from "@/components/ui";
 import { routes } from "@/lib/routes";
+import { noticeToneForError, useActionStatus } from "@/lib/use-action-status";
 import { saveDraft, suggestPendingCompany } from "../actions";
 import styles from "../submit.module.css";
 import { fetchLevels, searchCompanies, searchRoles } from "./api";
@@ -37,12 +39,7 @@ import {
   PENDING_PREFIX,
   toCompanySelection,
 } from "./helpers";
-import type {
-  FieldErrors,
-  LevelOption,
-  SaveState,
-  SubmitFormProps,
-} from "./types";
+import type { FieldErrors, LevelOption, SubmitFormProps } from "./types";
 
 export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
   const t = useTranslations("submit");
@@ -74,8 +71,15 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const [draftId, setDraftId] = useState<string | null>(initialDraftId ?? null);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
   const honeypotRef = useRef<HTMLInputElement>(null);
+
+  // One hook per action: `save` drives both autosave and the Continue save;
+  // `suggest` drives the pending-company promotion. Each owns its own
+  // status/error so the save-state indicator and the failure notice derive from
+  // them instead of a hand-rolled enum.
+  const save = useActionStatus(saveDraft);
+  const suggest = useActionStatus(suggestPendingCompany);
+  const failure = save.error ?? suggest.error;
 
   const isSuggestedCompany = company?.id.startsWith(PENDING_PREFIX) ?? false;
 
@@ -127,34 +131,34 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
   const serialized = JSON.stringify(draftData);
   const lastSavedRef = useRef(serialized);
 
-  // Debounced autosave; skips the state we last persisted.
+  // Debounced autosave; skips the state we last persisted. `save.run`
+  // normalizes failures (rate limit, validation, a thrown fault) into the
+  // hook's error, which the notice below renders — no try/catch here.
+  const runSave = save.run;
   useEffect(() => {
     if (serialized === lastSavedRef.current) return;
     const timer = setTimeout(async () => {
-      setSaveState("saving");
-      try {
-        const res = await saveDraft({
-          id: draftId,
-          data: draftData,
-          honeypot: honeypotRef.current?.value ?? "",
-        });
-        lastSavedRef.current = serialized;
-        // Empty id = honeypot-dropped write; only adopt a real one.
-        if (!draftId && res.id) {
-          setDraftId(res.id);
-          window.history.replaceState(null, "", routes.draft(res.id));
-        }
-        setSaveState("saved");
-      } catch {
-        setSaveState("error");
+      const res = await runSave({
+        id: draftId,
+        data: draftData,
+        honeypot: honeypotRef.current?.value ?? "",
+      });
+      if (!res.ok) return;
+      lastSavedRef.current = serialized;
+      // Empty id = honeypot-dropped write; only adopt a real one.
+      if (!draftId && res.data.id) {
+        setDraftId(res.data.id);
+        window.history.replaceState(null, "", routes.draft(res.data.id));
       }
     }, AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [serialized, draftId, draftData]);
+  }, [serialized, draftId, draftData, runSave]);
 
   function handleCompanyChange(option: ComboboxOption | null) {
     setCompany(option);
     setLevel(null);
+    // Drop any stale suggestion error — the chosen company just changed.
+    suggest.reset();
   }
 
   function handleLevelSelect(value: string) {
@@ -192,50 +196,43 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
 
     // Promote a fresh "suggest new" company to a pending taxonomy row and
     // backfill its id. suggestCompany is idempotent, so re-running is safe.
+    // A failure surfaces via the notice (suggest.error); just stop here.
     let companyOption = company;
     if (companySelection?.kind === "suggested") {
-      try {
-        const created = await suggestPendingCompany({
-          name: companySelection.name,
-          honeypot: honeypotRef.current?.value ?? "",
-        });
-        if (created) {
-          companyOption = { id: created.id, label: created.name };
-          setCompany(companyOption);
-        }
-      } catch {
+      const res = await suggest.run({
+        name: companySelection.name,
+        honeypot: honeypotRef.current?.value ?? "",
+      });
+      if (!res.ok) {
         setSubmitting(false);
-        setSaveState("error");
         return;
+      }
+      if (res.data) {
+        companyOption = { id: res.data.id, label: res.data.name };
+        setCompany(companyOption);
       }
     }
 
     // Persist synchronously so rounds can resume by id (autosave may not have fired).
-    try {
-      const res = await saveDraft({
-        id: draftId,
-        data: {
-          company: toCompanySelection(companyOption),
-          role: role ? { id: role.id, name: role.label } : null,
-          level,
-          outcome,
-          month,
-          attribution,
-          rounds: initialData?.rounds ?? undefined,
-        },
-        honeypot: honeypotRef.current?.value ?? "",
-      });
-      const id = res.id || draftId;
-      if (id) {
-        router.push(routes.submitRounds(id));
-        return;
-      }
-    } catch {
+    const res = await save.run({
+      id: draftId,
+      data: {
+        company: toCompanySelection(companyOption),
+        role: role ? { id: role.id, name: role.label } : null,
+        level,
+        outcome,
+        month,
+        attribution,
+        rounds: initialData?.rounds ?? undefined,
+      },
+      honeypot: honeypotRef.current?.value ?? "",
+    });
+    if (!res.ok) {
       setSubmitting(false);
-      setSaveState("error");
       return;
     }
-    router.push(routes.submitRounds());
+    const id = res.data.id || draftId;
+    router.push(id ? routes.submitRounds(id) : routes.submitRounds());
   }
 
   return (
@@ -326,11 +323,16 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
           {t("continue")}
         </FtlButton>
         <span className={styles.saveState} aria-live="polite">
-          {saveState === "saving" && t("save.saving")}
-          {saveState === "saved" && t("save.saved")}
-          {saveState === "error" && t("save.error")}
+          {save.isPending && t("save.saving")}
+          {save.isSuccess && t("save.saved")}
         </span>
       </div>
+
+      {failure && (
+        <FtlNotice tone={noticeToneForError(failure)} title={t("save.error")}>
+          {failure.message}
+        </FtlNotice>
+      )}
     </div>
   );
 }

@@ -96,11 +96,7 @@ export async function rateLimit(
   }
 }
 
-// Thrown by guarded actions when the budget is exhausted. The message is
-// safe to surface to the client.
-export class RateLimitError extends Error {
-  constructor(public readonly policy: RateLimitPolicy) {
-    super("Rate limit exceeded. Please slow down and try again shortly.");
-    this.name = "RateLimitError";
-  }
-}
+// User-facing copy for an exhausted budget. Safe to surface to the client;
+// shared so guarded actions return it in an ActionResult without restating it.
+export const RATE_LIMIT_MESSAGE =
+  "Rate limit exceeded. Please slow down and try again shortly.";

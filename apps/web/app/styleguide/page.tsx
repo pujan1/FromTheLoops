@@ -9,15 +9,18 @@ import {
   FtlHeading,
   FtlLinkButton,
   FtlMono,
+  FtlNotice,
   FtlOrnament,
   FtlReportCard,
   FtlRule,
   FtlSiteHeader,
   FtlStat,
   FtlStatGroup,
+  FtlStatusBadge,
   FtlTag,
 } from "@/components/ui";
 import { ComboboxDemo } from "./_combobox-demo";
+import { DismissibleNoticeDemo } from "./_notice-demo";
 import styles from "./page.module.css";
 
 const colors = [
@@ -35,6 +38,9 @@ const colors = [
   "accent-soft",
   "success",
   "warning",
+  "danger",
+  "pending",
+  "info",
 ];
 
 export default function StyleguidePage() {
@@ -369,10 +375,51 @@ export default function StyleguidePage() {
             </div>
           </section>
 
+          {/* ----------------------- Status & feedback ----------------------- */}
+          <section className={styles.section}>
+            <header className={styles.section__head}>
+              <div className={styles.section__head__no}>§ 09 — Status &amp; feedback</div>
+              <div>
+                <FtlHeading level={2}>The boring, crucial states.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                  Every flow needs to say what just happened. Badges report a
+                  unit&rsquo;s state; notices report a flow&rsquo;s outcome. Both
+                  key on the severity tokens, so the meaning travels with the
+                  color.
+                </FtlBody>
+              </div>
+            </header>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
+              <FtlStatusBadge status="success">verified</FtlStatusBadge>
+              <FtlStatusBadge status="pending">in review</FtlStatusBadge>
+              <FtlStatusBadge status="warning">rate limited</FtlStatusBadge>
+              <FtlStatusBadge status="danger">rejected</FtlStatusBadge>
+              <FtlStatusBadge status="info">draft</FtlStatusBadge>
+              <FtlStatusBadge status="neutral">archived</FtlStatusBadge>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <FtlNotice tone="success" title="Report submitted.">
+                Your interview report is in the moderation queue. We&rsquo;ll email
+                you when it&rsquo;s published — usually within a day.
+              </FtlNotice>
+              <FtlNotice tone="danger" title="Couldn&rsquo;t save your draft.">
+                Three fields still need attention before you can continue. Check
+                the company, level, and month above.
+              </FtlNotice>
+              <FtlNotice tone="warning" title="You&rsquo;re going a little fast.">
+                You&rsquo;ve hit the suggestion limit for now. Try again in an
+                hour — this keeps the moderation queue clean.
+              </FtlNotice>
+              <DismissibleNoticeDemo />
+            </div>
+          </section>
+
           {/* ----------------------- Spec ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 09 — Tokens</div>
+              <div className={styles.section__head__no}>§ 10 — Tokens</div>
               <div>
                 <FtlHeading level={2}>Authoritative reference.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>

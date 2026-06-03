@@ -1,0 +1,68 @@
+.notice {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--notice-color) 10%, var(--color-paper));
+  border: 1px solid color-mix(in srgb, var(--notice-color) 28%, transparent);
+}
+
+.notice--info    { --notice-color: var(--color-info); }
+.notice--success { --notice-color: var(--color-success); }
+.notice--warning { --notice-color: var(--color-warning); }
+.notice--danger  { --notice-color: var(--color-danger); }
+
+/* Accent spine — the editorial "rule" cue rather than an icon. */
+.notice__bar {
+  flex: 0 0 auto;
+  width: 3px;
+  border-radius: var(--radius-full);
+  background: var(--notice-color);
+}
+
+.notice__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.notice__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  color: color-mix(in srgb, var(--notice-color) 70%, var(--color-ink));
+}
+
+.notice__text {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
+  color: var(--color-ink-2);
+}
+
+.notice__dismiss {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin: -2px -4px 0 0;
+  padding: 0 var(--space-1);
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.notice__dismiss:hover {
+  color: var(--color-ink);
+}
+.notice__dismiss:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

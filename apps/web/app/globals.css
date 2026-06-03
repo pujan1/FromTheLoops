@@ -21,6 +21,9 @@
   --color-accent-soft:  #dceaee;  /* tinted highlight */
   --color-success:      #3f6f4a;
   --color-warning:      #8a6a14;
+  --color-danger:       #a23b32;  /* destructive / error states */
+  --color-pending:      #7a6a3c;  /* awaiting moderation / in-queue */
+  --color-info:         #2c6b86;  /* neutral notices, distinct from accent */
   --grain-opacity:      0.035;
   --grain-blend:        multiply;
 
@@ -101,6 +104,9 @@
     --color-accent-soft:  #142d2e;
     --color-success:      #82c48f;
     --color-warning:      #e0bd62;
+    --color-danger:       #e08379;
+    --color-pending:      #cbb375;
+    --color-info:         #6fb8d6;
     --grain-opacity:      0.055;
     --grain-blend:        screen;
   }
@@ -127,6 +133,9 @@
   --color-accent-soft:  #142d2e;
   --color-success:      #82c48f;
   --color-warning:      #e0bd62;
+  --color-danger:       #e08379;
+  --color-pending:      #cbb375;
+  --color-info:         #6fb8d6;
   --grain-opacity:      0.055;
   --grain-blend:        screen;
 }
