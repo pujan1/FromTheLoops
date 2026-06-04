@@ -27,7 +27,7 @@ test("submit → land on report → edit → soft-delete", async ({ page }) => {
 
   // Submit becomes enabled once the whole submission validates; finalize routes
   // to the new report's owner view.
-  await page.getByRole("button", { name: "Submit report" }).click();
+  await page.getByRole("button", { name: "Share experience" }).click();
   await page.waitForURL(REPORT_URL, { timeout: 20_000 });
   const reportUrl = page.url();
 
@@ -36,17 +36,17 @@ test("submit → land on report → edit → soft-delete", async ({ page }) => {
   await expect(page.getByText(/in review/i)).toBeVisible();
 
   // Edit CTA (inside the 24h window) rehydrates the report into the form.
-  await page.getByRole("button", { name: "Edit report" }).click();
+  await page.getByRole("button", { name: "Edit experience" }).click();
   await expect(page).toHaveURL(/\/submit\/rounds\?draft=/);
 
   // Back to the report, then soft-delete. The confirm() dialog must be accepted.
   await page.goto(reportUrl);
   page.once("dialog", (d) => void d.accept());
-  await page.getByRole("button", { name: "Delete report" }).click();
+  await page.getByRole("button", { name: "Delete experience" }).click();
 
   // The view re-renders into its deleted state; Edit/Delete are gone.
-  await expect(page.getByText(/report deleted/i)).toBeVisible();
+  await expect(page.getByText(/experience deleted/i)).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Delete report" }),
+    page.getByRole("button", { name: "Delete experience" }),
   ).toHaveCount(0);
 });

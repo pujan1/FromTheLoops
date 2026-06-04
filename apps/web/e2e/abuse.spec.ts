@@ -23,7 +23,7 @@ test("a submission with contact info in the prose is rejected", async ({
     topicQuery: "arra",
   });
 
-  await page.getByRole("button", { name: "Submit report" }).click();
+  await page.getByRole("button", { name: "Share experience" }).click();
 
   // Finalize returns a "blocked" error; the form shows the notice and stays put
   // (no navigation to a /reports/[id] page, so nothing was written).

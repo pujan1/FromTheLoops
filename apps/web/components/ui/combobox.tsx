@@ -218,6 +218,12 @@ export function Combobox({
         if (open && activeIndex >= 0) {
           e.preventDefault();
           commitActive();
+        } else if (open && showSuggestNew) {
+          // No row is highlighted (a typed query with no matches leaves
+          // activeIndex at -1), but a suggest-new row is on offer — Enter
+          // accepts it, so typing a brand-new name + Enter just works.
+          e.preventDefault();
+          commitSuggestNew();
         }
         break;
       case "Escape":

@@ -40,9 +40,9 @@ const themeInitScript = `
 `;
 
 export const metadata: Metadata = {
-  title: "FromTheLoop — Interview reports, from the loop",
+  title: "FromTheLoop — Interview experiences, from the loop",
   description:
-    "Structured, taxonomy-aware interview reports written by the people who took them.",
+    "Structured, taxonomy-aware interview experiences written by the people who took them.",
 };
 
 export default async function RootLayout({

@@ -35,7 +35,6 @@ import {
   AUTOSAVE_DELAY_MS,
   companySelectionToOption,
   currentMonth,
-  NA_LEVEL,
   PENDING_PREFIX,
   toCompanySelection,
 } from "./helpers";
@@ -85,14 +84,13 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
 
   // Load the per-company level ladder when the company changes. The selected
   // level is reset in handleCompanyChange, not here, so a saved draft keeps it.
+  // A company with no ladder (a fresh suggestion, or an empty existing ladder)
+  // leaves `levels` empty — LevelField then offers the synthetic seniority
+  // ladder instead of forcing N/A; an unset level still defaults to N/A at
+  // finalize.
   useEffect(() => {
-    if (!company) {
+    if (!company || isSuggestedCompany) {
       setLevels([]);
-      return;
-    }
-    if (isSuggestedCompany) {
-      setLevels([]);
-      setLevel(NA_LEVEL);
       return;
     }
     let cancelled = false;
@@ -101,13 +99,11 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       .then((next) => {
         if (cancelled) return;
         setLevels(next);
-        if (next.length === 0) setLevel(NA_LEVEL);
         setLevelsLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
         setLevels([]);
-        setLevel(NA_LEVEL);
         setLevelsLoading(false);
       });
     return () => {
@@ -176,15 +172,6 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     setLevel(null);
     // Drop any stale suggestion error — the chosen company just changed.
     suggest.reset();
-  }
-
-  function handleLevelSelect(value: string) {
-    if (value === "") {
-      setLevel(null);
-      return;
-    }
-    const match = levels.find((l) => l.id === value);
-    if (match) setLevel({ id: match.id, name: match.name });
   }
 
   async function handleContinue() {
@@ -286,6 +273,9 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       {errors.role && <p className={styles.error}>{errors.role}</p>}
 
       <LevelField
+        // Remount per company so the custom-level latch doesn't carry over
+        // when the company (and thus the level ladder) changes.
+        key={company?.id ?? "no-company"}
         t={t}
         company={company}
         roleName={role?.label ?? null}
@@ -293,7 +283,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
         levelsLoading={levelsLoading}
         level={level}
         error={errors.level}
-        onSelect={handleLevelSelect}
+        onChange={setLevel}
       />
       <FtlChoiceChips
         legend={t("outcome.legend")}

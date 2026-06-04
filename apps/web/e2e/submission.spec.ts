@@ -88,8 +88,9 @@ test("suggest-new company → continue creates a pending taxonomy row", async ({
   await page.getByRole("option", { name: /Suggest/ }).click();
   await expect(companyInput).toHaveValue(companyName);
 
-  // Suggested company has no level ladder → the form records it as N/A, so the
-  // only remaining required field is the role.
+  // Suggested company has no level ladder → the form offers a synthetic
+  // seniority dropdown, but level is optional, so leaving it unset defaults to
+  // N/A at finalize and role is the only remaining required field.
   await fillCombobox(page, "Role", "software engineer", "Software Engineer");
 
   // Continue promotes the suggestion to a status='pending' row server-side,

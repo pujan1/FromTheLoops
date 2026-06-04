@@ -22,12 +22,13 @@
   font-weight: 800;
   font-size: clamp(2.75rem, 8vw, 5.5rem);
   line-height: 0.95;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   margin: 0;
+  max-width: 9.5ch;
 }
 
 .hero__sub {
-  max-width: 36ch;
+  max-width: 42ch;
 }
 
 .hero__aside {
@@ -47,26 +48,16 @@
   margin-top: var(--space-3);
 }
 
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 @media (max-width: 880px) {
   .hero { grid-template-columns: 1fr; gap: var(--space-5); padding-block: var(--space-7); }
   .hero__aside { padding-left: 0; border-left: 0; border-top: 1px solid var(--color-rule); padding-top: var(--space-5); }
 }
-
-/* ---------------- Top strip — mono running ticker ---------------- */
-.strip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  padding-block: var(--space-3);
-  border-bottom: 1px solid var(--color-rule);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-muted);
-  overflow: hidden;
-  white-space: nowrap;
-}
-.strip span { color: var(--color-ink); }
-.strip__sep { color: var(--color-rule-strong); }
 
 /* ---------------- Sections ---------------- */
 .section {
@@ -102,6 +93,44 @@
   .section__head { grid-template-columns: 1fr; gap: var(--space-3); }
 }
 
+/* ---------------- Candidate moments ---------------- */
+.moments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--color-rule);
+  border-left: 1px solid var(--color-rule);
+}
+
+.moment {
+  min-height: 220px;
+  padding: var(--space-5);
+  border-right: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-paper-2) 62%, transparent), transparent 80%);
+}
+
+.moment h3 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.15;
+  margin: 0 0 var(--space-4);
+}
+
+.moment p {
+  color: var(--color-ink-2);
+  font-size: var(--fs-small);
+  line-height: var(--lh-relaxed);
+  margin: 0;
+}
+
+@media (max-width: 880px) {
+  .moments { grid-template-columns: 1fr; }
+  .moment { min-height: auto; }
+}
+
 /* ---------------- Topics grid ---------------- */
 .topics {
   display: grid;
@@ -135,7 +164,7 @@
   font-weight: 500;
   font-size: 1.375rem;
   line-height: 1.15;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   color: var(--color-ink);
   margin: 0;
   transition: color var(--dur-base) var(--ease-out);
@@ -165,7 +194,7 @@
   font-style: normal;
   font-size: clamp(1.5rem, 3vw, 2.25rem);
   line-height: 1.2;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   color: var(--color-ink);
   margin: 0;
   padding-left: var(--space-5);
@@ -184,6 +213,32 @@
   .pull { grid-template-columns: 1fr; gap: var(--space-5); }
 }
 
+/* ---------------- CTA ---------------- */
+.ctaPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-6);
+  align-items: end;
+}
+
+.ctaPanel__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 880px) {
+  .ctaPanel {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .ctaPanel__actions {
+    justify-content: flex-start;
+  }
+}
+
 /* ---------------- Footer ---------------- */
 .footer {
   padding-block: var(--space-7) var(--space-8);
@@ -199,7 +254,7 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.125rem;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   color: var(--color-ink);
 }
 .footer__wordmark em { font-style: normal; font-weight: 700; color: var(--color-accent); }

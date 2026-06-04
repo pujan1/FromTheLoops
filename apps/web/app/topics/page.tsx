@@ -5,7 +5,7 @@ export default function TopicsPage() {
     <PlaceholderPage
       eyebrow="topics"
       title="Topic taxonomy is wired in."
-      body="This page will collect system design, behavioral, coding, and role-specific report topics into browsable groups."
+      body="This page will collect system design, behavioral, coding, and role-specific interview topics into browsable groups."
       tags={["system-design", "behavioral", "frontend", "ml-systems"]}
     />
   );

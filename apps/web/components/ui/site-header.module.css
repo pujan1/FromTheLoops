@@ -10,23 +10,12 @@
 
 .inner {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: var(--space-5);
   padding-block: var(--space-4);
 }
 
-/* Issue/date — mono, top-left, like a publication masthead */
-.issue {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-.issue span { color: var(--color-ink); }
-
-/* Wordmark — Archivo, set tight; 'the' carries the single red accent (upright) */
 .wordmark {
   font-family: var(--font-display);
   font-weight: 700;
@@ -35,6 +24,7 @@
   line-height: 1;
   color: var(--color-ink);
   white-space: nowrap;
+  justify-self: start;
 }
 .wordmark__italic { font-style: normal; font-weight: 700; color: var(--color-accent); }
 
@@ -46,11 +36,10 @@
   min-width: 0;
 }
 
-/* Right side — minimal nav */
 .nav {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 .nav a {
   font-family: var(--font-sans);
@@ -76,6 +65,7 @@
   background: none;
   border: none;
   cursor: pointer;
+  white-space: nowrap;
   transition: color var(--dur-base) var(--ease-out);
 }
 
@@ -94,7 +84,6 @@
 
 @media (max-width: 720px) {
   .inner { grid-template-columns: 1fr auto; }
-  .issue { display: none; }
   .nav { gap: var(--space-4); }
 }
 
@@ -106,12 +95,23 @@
 
   .actions {
     width: 100%;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    justify-content: stretch;
+    gap: var(--space-3);
   }
 
   .nav {
     gap: var(--space-3);
     overflow-x: auto;
     padding-bottom: 2px;
+  }
+
+  .auth {
+    gap: var(--space-2);
+  }
+
+  .authPrimary {
+    padding-inline: 10px;
   }
 }

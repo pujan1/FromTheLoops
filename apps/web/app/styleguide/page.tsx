@@ -127,7 +127,7 @@ export default function StyleguidePage() {
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Display · xl</span>
-                <FtlDisplay size="xl">Interview reports, by candidates.</FtlDisplay>
+                <FtlDisplay size="xl">Interview experiences, by candidates.</FtlDisplay>
               </div>
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Display · lg</span>
@@ -148,7 +148,7 @@ export default function StyleguidePage() {
               <div className={styles.fonts__sample}>
                 <span className={styles.fonts__label}>Body lead</span>
                 <FtlBody size="lead">
-                  Find the right interview report for what you are interviewing
+                  Find the right interview experience for what you are interviewing
                   for — by company, role, level, round-type, and topic.
                 </FtlBody>
               </div>
@@ -169,7 +169,7 @@ export default function StyleguidePage() {
                 <span className={styles.fonts__label}>Eyebrow · mono</span>
                 <div className={styles.row}>
                   <FtlEyebrow>aggregate</FtlEyebrow>
-                  <FtlEyebrow tone="accent">live · 12 reports</FtlEyebrow>
+                  <FtlEyebrow tone="accent">shared recently</FtlEyebrow>
                   <FtlEyebrow tone="ink" bare>SS · L5</FtlEyebrow>
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function StyleguidePage() {
                 <FtlHeading level={2}>Mono tags for taxonomy.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
                   Tags carry topic, level, and trust signals. Mono case gives
-                  them an engineering report quality.
+                  them an engineering field-note quality.
                 </FtlBody>
               </div>
             </header>
@@ -238,7 +238,7 @@ export default function StyleguidePage() {
             </header>
             <div className={styles.stack}>
               <div className={styles.row}>
-                <FtlButton variant="primary" trailingArrow>Submit a report</FtlButton>
+                <FtlButton variant="primary" trailingArrow>Share an experience</FtlButton>
                 <FtlButton variant="accent" trailingArrow>Read latest</FtlButton>
                 <FtlButton variant="ghost">Browse companies</FtlButton>
                 <FtlLinkButton variant="link" href="#">Learn more</FtlLinkButton>
@@ -286,11 +286,11 @@ export default function StyleguidePage() {
               <FtlCard variant="default" interactive showArrow>
                 <FtlEyebrow tone="accent">aggregate</FtlEyebrow>
                 <FtlHeading level={3}>Stripe · Staff SWE · L5</FtlHeading>
-                <FtlCaption>12 reports · 47 rounds · last updated 2 days ago</FtlCaption>
+                <FtlCaption>12 experiences · 47 rounds · last updated 2 days ago</FtlCaption>
               </FtlCard>
               <FtlCard variant="bordered">
                 <FtlEyebrow>method</FtlEyebrow>
-                <FtlHeading level={3}>How we score reports</FtlHeading>
+                <FtlHeading level={3}>How we score experiences</FtlHeading>
                 <FtlBody size="small">
                   Confidence × recency × trust signals. Work-email verified
                   contributors weight higher.
@@ -299,7 +299,7 @@ export default function StyleguidePage() {
               <FtlCard variant="filled">
                 <FtlEyebrow tone="ink">callout</FtlEyebrow>
                 <FtlHeading level={3}>You took the loop. Now write it down.</FtlHeading>
-                <FtlLinkButton variant="link" href="#">Submit a report</FtlLinkButton>
+                <FtlLinkButton variant="link" href="#">Share an experience</FtlLinkButton>
               </FtlCard>
             </div>
           </section>
@@ -317,17 +317,17 @@ export default function StyleguidePage() {
               </div>
             </header>
             <FtlStatGroup>
-              <FtlStat label="reports" value="412" hint="across 38 companies" />
-              <FtlStat label="rounds" value="1,847" hint="recruiter → onsite" />
-              <FtlStat label="verified" value="68%" accent hint="work-email + LinkedIn" />
-              <FtlStat label="topics" value="124" hint="curated taxonomy" />
+              <FtlStat label="experiences" value="open" hint="browse by company" />
+              <FtlStat label="rounds" value="tagged" hint="recruiter → onsite" />
+              <FtlStat label="verified" value="optional" accent hint="work-email + LinkedIn" />
+              <FtlStat label="topics" value="curated" hint="shared taxonomy" />
             </FtlStatGroup>
           </section>
 
-          {/* ----------------------- Report card ----------------------- */}
+          {/* ----------------------- Experience card ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>08 / Report card</div>
+              <div className={styles.section__head__no}>08 / Experience card</div>
               <div>
                 <FtlHeading level={2}>The product unit.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -383,8 +383,8 @@ export default function StyleguidePage() {
               <div>
                 <FtlHeading level={2}>The boring, crucial states.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  Every flow needs to say what just happened. Badges report a
-                  unit&rsquo;s state; notices report a flow&rsquo;s outcome. Both
+                  Every flow needs to say what just happened. Badges describe a
+                  unit&rsquo;s state; notices describe a flow&rsquo;s outcome. Both
                   key on the severity tokens, so the meaning travels with the
                   color.
                 </FtlBody>
@@ -401,8 +401,8 @@ export default function StyleguidePage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <FtlNotice tone="success" title="Report submitted.">
-                Your interview report is in the moderation queue. We&rsquo;ll email
+              <FtlNotice tone="success" title="Experience shared.">
+                Your interview experience is in the moderation queue. We&rsquo;ll email
                 you when it&rsquo;s published — usually within a day.
               </FtlNotice>
               <FtlNotice tone="danger" title="Couldn&rsquo;t save your draft.">

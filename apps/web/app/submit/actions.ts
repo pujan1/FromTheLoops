@@ -301,13 +301,13 @@ export async function finalizeSubmissionAction(input: {
   if (result.reason === "locked") {
     return actionError(
       "locked",
-      "This report's 24-hour edit window has closed, so it can no longer be changed.",
+      "This experience's 24-hour edit window has closed, so it can no longer be changed.",
     );
   }
   if (result.reason === "not_found") {
     return actionError(
       ACTION_ERROR.invalid,
-      "We couldn't find that report to update.",
+      "We couldn't find that experience to update.",
     );
   }
   if (result.reason === "blocked") {
@@ -321,7 +321,7 @@ export async function finalizeSubmissionAction(input: {
   if (result.reason === "duplicate_company") {
     return actionError(
       ACTION_ERROR.invalid,
-      "You already have a report for this company. Edit or delete it before adding another.",
+      "You already have an experience for this company. Edit or delete it before adding another.",
     );
   }
   // reason === "invalid": the payload failed the finalize gate. The form's

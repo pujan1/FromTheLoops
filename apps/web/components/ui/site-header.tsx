@@ -5,24 +5,23 @@ import { Container } from "./container";
 import styles from "./site-header.module.css";
 import { ThemeToggle } from "./theme-toggle";
 
-export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string }) {
+export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) {
+  void issue;
+
   return (
     <header className={styles.header}>
       <Container>
         <div className={styles.inner}>
-          <div className={styles.issue}>
-            <span>{issue}</span> 
-          </div>
-
           <Link href={routes.home} className={styles.wordmark} aria-label="FromTheLoop">
             From <span className={styles.wordmark__italic}>the</span> Loop
           </Link>
 
           <div className={styles.actions}>
             <nav className={styles.nav} aria-label="primary">
+              <Link href={routes.reports}>Experiences</Link>
               <Link href={routes.companies}>Companies</Link>
               <Link href={routes.topics}>Topics</Link>
-              <Link href={routes.submit}>Submit</Link>
+              <Link href={routes.submit}>Share</Link>
               <Show when="signed-in">
                 <Link href={routes.dashboard}>Dashboard</Link>
               </Show>

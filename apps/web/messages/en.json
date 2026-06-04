@@ -1,6 +1,6 @@
 {
   "submit": {
-    "eyebrow": "Submit a report",
+    "eyebrow": "Share an experience",
     "title": "Start with the <em>basics</em>.",
     "lede": "Company, role, level, and outcome. You’ll add rounds and questions next. Nothing is published until you finish and it clears review.",
     "company": {
@@ -16,9 +16,12 @@
     "level": {
       "label": "Level (optional)",
       "chooseCompany": "Choose a company first.",
+      "chooseRole": "Add a role first to pick a level.",
       "loading": "Loading levels…",
       "skip": "Not sure yet / skip",
-      "na": "No level ladder on file for this company — recorded as <strong>N/A</strong>."
+      "custom": "Other… (type your own)",
+      "customLabel": "Custom level",
+      "customPlaceholder": "e.g. Lead Engineer"
     },
     "outcome": {
       "legend": "Outcome (optional)",
@@ -103,7 +106,7 @@
       "error": "Couldn’t save draft"
     },
     "submit": {
-      "cta": "Submit report",
+      "cta": "Share experience",
       "submitting": "Submitting…",
       "blocked": "Finish the highlighted rounds and questions before submitting."
     }
@@ -133,7 +136,7 @@
     "hint": "Tag at least one topic per question."
   },
   "report": {
-    "eyebrow": "Your report",
+    "eyebrow": "Your experience",
     "status": {
       "pending_moderation": "In review — visible only to you until it clears moderation.",
       "active": "Published.",
@@ -151,16 +154,16 @@
       "none": "Not specified"
     },
     "edit": {
-      "cta": "Edit report",
-      "window": "You can edit this report for {hours, plural, =1 {1 more hour} other {# more hours}}.",
+      "cta": "Edit experience",
+      "window": "You can edit this experience for {hours, plural, =1 {1 more hour} other {# more hours}}.",
       "lockedTitle": "Editing closed",
-      "locked": "The 24-hour edit window has closed, so this report can no longer be changed."
+      "locked": "The 24-hour edit window has closed, so this experience can no longer be changed."
     },
     "delete": {
-      "cta": "Delete report",
-      "confirm": "Delete this report? It will be hidden immediately, and after 90 days the free text you wrote is permanently scrubbed. This can't be undone.",
-      "doneTitle": "Report deleted",
-      "done": "This report has been deleted and is no longer visible. Its free text is scheduled to be permanently scrubbed after 90 days."
+      "cta": "Delete experience",
+      "confirm": "Delete this experience? It will be hidden immediately, and after 90 days the free text you wrote is permanently scrubbed. This can't be undone.",
+      "doneTitle": "Experience deleted",
+      "done": "This experience has been deleted and is no longer visible. Its free text is scheduled to be permanently scrubbed after 90 days."
     }
   }
 }
