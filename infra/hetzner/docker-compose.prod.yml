@@ -54,7 +54,15 @@ services:
       - --listen-port=8108
       - --enable-cors
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8108/health"]
+      # The typesense:27.1 image ships neither wget nor curl — only bash. Probe
+      # /health over bash's /dev/tcp and assert the {"ok":true} body, so the
+      # check verifies real readiness rather than just an open port. (The old
+      # wget probe always errored "executable not found" → permanently unhealthy.)
+      test:
+        - CMD
+        - bash
+        - -c
+        - 'exec 3<>/dev/tcp/127.0.0.1/8108; printf "GET /health HTTP/1.0\r\n\r\n" >&3; grep -q ''"ok":true'' <&3'
       interval: 10s
       timeout: 3s
       retries: 5
