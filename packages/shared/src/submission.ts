@@ -133,6 +133,22 @@ export const monthSchema = z
   .string()
   .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Expected a YYYY-MM month");
 
+// "YYYY-MM" for the current month. The finalize gate falls back to this when a
+// submission carries no month (the field is optional — many candidates submit
+// before/without pinning the exact month). Server-side clock; mirrors the web
+// form's currentMonth() helper.
+export function currentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// The sentinel level for a submission with no level chosen. Level is optional
+// (a candidate may interview before the level is decided), but the DB column is
+// NOT NULL and the wedge index is built on it — so a missing level resolves to
+// this "N/A" text with a null FK, exactly like a company with no ladder. Mirrors
+// the web form's NA_LEVEL.
+export const NA_LEVEL: LevelSelection = { id: null, name: "N/A" };
+
 // Draft: tolerant of a partially-filled form. attribution keeps a default
 // so a brand-new draft still has a sane privacy posture (anonymous).
 export const submissionDraftSchema = z.object({
@@ -154,14 +170,17 @@ export const submissionDraftSchema = z.object({
   editingReportId: z.string().uuid().nullish(),
 });
 
-// Ready-to-continue: the required top-level fields are present. outcome is
-// deliberately still optional (a candidate mid-process may not know it).
+// Ready-to-continue: the required top-level fields are present. Only company
+// and role are required. outcome, level and month are all optional — a
+// candidate may be mid-process (no outcome), may have interviewed before the
+// level was decided (no level), or may not want to pin an exact month. The
+// finalize gate fills level/month with sane defaults (NA_LEVEL / currentMonth).
 export const submissionReadySchema = z.object({
   company: companySelectionSchema,
   role: roleSelectionSchema,
-  level: levelSelectionSchema,
+  level: levelSelectionSchema.nullish(),
   outcome: outcomeSchema.nullable(),
-  month: monthSchema,
+  month: monthSchema.nullish(),
   attribution: attributionSchema,
 });
 
@@ -176,8 +195,11 @@ export const submissionReadySchema = z.object({
 //   - If a round exists it must have a round_type AND a rating.
 //   - Each question needs non-blank prose AND ≥1 *active* tag. A "suggested"
 //     (pending) tag does NOT count — it's parked until a mod promotes it.
-//   - Top-level company / role / level / month must be present (outcome stays
-//     optional: a candidate may still be mid-process).
+//   - Only company / role must be present. outcome, level and month are
+//     optional: a candidate may be mid-process (no outcome), may have
+//     interviewed before the level was decided (no level), or may not pin a
+//     month. A missing level resolves to NA_LEVEL, a missing month to the
+//     current month — so the NOT NULL columns always get a value.
 //
 // validateFinalSubmission is the single authority. It returns either the
 // narrowed, ready-to-write FinalSubmission or a structured issue map the form
@@ -223,6 +245,8 @@ export interface RoundIssues {
 export interface SubmissionIssues {
   company: boolean;
   role: boolean;
+  // level and month are optional at finalize (defaulted, never flagged). The
+  // keys stay for shape stability but are always false.
   level: boolean;
   month: boolean;
   rounds: RoundIssues[];
@@ -264,14 +288,8 @@ export function validateFinalSubmission(data: unknown): SubmissionValidation {
     issues.role = true;
     ok = false;
   }
-  if (!draft.level) {
-    issues.level = true;
-    ok = false;
-  }
-  if (!draft.month) {
-    issues.month = true;
-    ok = false;
-  }
+  // level and month are optional — missing values are defaulted below, never
+  // flagged as errors.
 
   const rounds = draft.rounds ?? [];
   for (const round of rounds) {
@@ -300,9 +318,10 @@ export function validateFinalSubmission(data: unknown): SubmissionValidation {
   const data2: FinalSubmission = {
     company: draft.company!,
     role: draft.role!,
-    level: draft.level!,
+    // Optional → defaulted: no level means "N/A", no month means this month.
+    level: draft.level ?? NA_LEVEL,
     outcome: draft.outcome ?? null,
-    month: draft.month!,
+    month: draft.month ?? currentMonth(),
     attribution: draft.attribution,
     rounds: rounds.map((round) => ({
       roundType: round.roundType!,

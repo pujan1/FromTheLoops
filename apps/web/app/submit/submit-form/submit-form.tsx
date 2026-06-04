@@ -115,13 +115,18 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     };
   }, [company, isSuggestedCompany]);
 
+  // Month is optional: an empty <input type="month"> yields "", which isn't a
+  // valid YYYY-MM. Coerce it to undefined so the draft/ready schemas (month is
+  // nullish) accept it; the finalize gate fills in the current month.
+  const monthValue = month || undefined;
+
   const draftData = useMemo<Record<string, unknown>>(
     () => ({
       company: toCompanySelection(company),
       role: role ? { id: role.id, name: role.label } : null,
       level,
       outcome,
-      month,
+      month: monthValue,
       attribution,
       // Carry rounds owned by the rounds screen so a basics save never drops them.
       rounds: initialData?.rounds ?? undefined,
@@ -134,7 +139,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       role,
       level,
       outcome,
-      month,
+      monthValue,
       attribution,
       initialData?.rounds,
       initialData?.editingReportId,
@@ -189,7 +194,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       role: role ? { id: role.id, name: role.label } : null,
       level,
       outcome,
-      month,
+      month: monthValue,
       attribution,
     });
     if (!parsed.success) {
@@ -233,7 +238,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
         role: role ? { id: role.id, name: role.label } : null,
         level,
         outcome,
-        month,
+        month: monthValue,
         attribution,
         rounds: initialData?.rounds ?? undefined,
         editingReportId: initialData?.editingReportId ?? undefined,
@@ -283,6 +288,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
       <LevelField
         t={t}
         company={company}
+        roleName={role?.label ?? null}
         levels={levels}
         levelsLoading={levelsLoading}
         level={level}
@@ -300,7 +306,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
         clearLabel={t("outcome.clear")}
       />
 
-      <FtlField label={t("month.label")} required error={errors.month}>
+      <FtlField label={t("month.label")} error={errors.month}>
         {(id) => (
           <FtlInput
             id={id}

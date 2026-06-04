@@ -50,6 +50,13 @@
       "when": 1780520856381,
       "tag": "0006_cloudy_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780538210545,
+      "tag": "0007_dry_luke_cage",
+      "breakpoints": true
     }
   ]
 }

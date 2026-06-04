@@ -58,6 +58,21 @@ export const taxonomySource = pgEnum("taxonomy_source", [
   "user_suggested",
 ]);
 
+// Canonical IC seniority tier a per-company level maps to. Lets the submission
+// UI render a company-specific level (Meta "E5", Google "L5") as a standard
+// role label ("Senior Frontend Engineer (E5)"). Nullable on the column: a
+// user-suggested level or an un-mapped ladder rung simply renders with no
+// seniority prefix. mid = the baseline IC tier (no prefix). See PLAN.md
+// §Taxonomy curation.
+export const levelTier = pgEnum("level_tier", [
+  "junior",
+  "mid",
+  "senior",
+  "staff",
+  "senior_staff",
+  "principal",
+]);
+
 export const roundType = pgEnum("round_type", [
   "recruiter-screen",
   "technical-phone",

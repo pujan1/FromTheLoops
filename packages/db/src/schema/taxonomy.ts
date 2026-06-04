@@ -8,7 +8,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { taxonomySource, taxonomyStatus } from "./enums.js";
+import { levelTier, taxonomySource, taxonomyStatus } from "./enums.js";
 import { users } from "./users.js";
 
 // Curated taxonomy: companies, roles, topics, per-company levels. FK
@@ -121,6 +121,10 @@ export const companyLevels = pgTable(
     name: text("name").notNull(),
     // Ladder order (L3 < L4 < L5) — levels don't sort lexically.
     orderIndex: integer("order_index").notNull().default(0),
+    // Canonical seniority tier this rung maps to, for the submission UI's
+    // "Senior Frontend Engineer (E5)" relabeling. Nullable: a user-suggested
+    // level or an un-mapped rung renders with no seniority prefix.
+    tier: levelTier("tier"),
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),
     createdAt: timestamp("created_at", { withTimezone: true })

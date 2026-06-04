@@ -19,6 +19,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   companies,
   type Company,
+  type CompanyLevel,
   companyLevels,
   roles,
   type Topic,
@@ -171,6 +172,9 @@ export type CompanyLevelOption = {
   id: string;
   slug: string;
   name: string;
+  // Canonical seniority tier (null when the rung isn't mapped). The submission
+  // UI uses it to relabel "E5" → "Senior {role}".
+  tier: CompanyLevel["tier"];
 };
 
 // The active level ladder for a company, low → high (order_index). Drives
@@ -185,6 +189,7 @@ export async function getCompanyLevels(
       id: companyLevels.id,
       slug: companyLevels.slug,
       name: companyLevels.name,
+      tier: companyLevels.tier,
     })
     .from(companyLevels)
     .where(

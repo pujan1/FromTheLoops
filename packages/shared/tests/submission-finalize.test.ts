@@ -70,7 +70,7 @@ describe("validateFinalSubmission", () => {
     expect(data.outcome).toBeNull();
   });
 
-  it("flags missing top-level fields", () => {
+  it("flags missing company and role (the only required top-level fields)", () => {
     const result = validateFinalSubmission({
       attribution: "anonymous",
       rounds: [],
@@ -79,8 +79,23 @@ describe("validateFinalSubmission", () => {
     if (result.ok) return;
     expect(result.issues.company).toBe(true);
     expect(result.issues.role).toBe(true);
-    expect(result.issues.level).toBe(true);
-    expect(result.issues.month).toBe(true);
+    // level and month are optional — never flagged.
+    expect(result.issues.level).toBe(false);
+    expect(result.issues.month).toBe(false);
+  });
+
+  it("treats level as optional, defaulting a missing level to N/A", () => {
+    const { level: _drop, ...noLevel } = validBasics();
+    const data = expectOk(validateFinalSubmission({ ...noLevel, rounds: [] }));
+    expect(data.level).toEqual({ id: null, name: "N/A" });
+  });
+
+  it("treats month as optional, defaulting a missing month to the current month", () => {
+    const { month: _drop, ...noMonth } = validBasics();
+    const data = expectOk(validateFinalSubmission({ ...noMonth, rounds: [] }));
+    const now = new Date();
+    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    expect(data.month).toBe(expected);
   });
 
   it("requires round_type and rating once a round exists", () => {

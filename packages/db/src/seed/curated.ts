@@ -23,14 +23,30 @@ import { slugify } from "../slug.js";
 // tests without dragging in the production client's exact shape.
 type Db = PostgresJsDatabase<typeof schema>;
 
+// Canonical seniority tier a rung maps to (mirrors the level_tier pgEnum).
+// `null` = no standard tier → the submission UI renders the rung with no
+// seniority prefix. `mid` is the baseline IC tier (also no prefix).
+export type LevelTier =
+  | "junior"
+  | "mid"
+  | "senior"
+  | "staff"
+  | "senior_staff"
+  | "principal";
+
+// One ladder rung: display name + the tier it maps to. Tuple keeps the table
+// below scannable: ["E5", "senior"].
+export type LevelSpec = [name: string, tier: LevelTier | null];
+
 export interface CuratedCompany {
   slug: string;
   name: string;
   domain: string;
   aliases?: string[];
   // Ladder, low → high. Order is preserved as company_levels.order_index
-  // since level names don't sort lexically (L3 < L4 < L5, E3 < E4 …).
-  levels: string[];
+  // since level names don't sort lexically (L3 < L4 < L5, E3 < E4 …). Each
+  // rung carries its canonical seniority tier for the submission UI relabel.
+  levels: LevelSpec[];
 }
 
 export interface CuratedRole {
@@ -52,36 +68,36 @@ export interface CuratedTopic {
 // 30 companies. Ladders are the public/known IC engineering tracks; where a
 // company is famously flat (Netflix) the ladder is short on purpose.
 export const CURATED_COMPANIES: CuratedCompany[] = [
-  { slug: "google", name: "Google", domain: "google.com", aliases: ["Alphabet"], levels: ["L3", "L4", "L5", "L6", "L7"] },
-  { slug: "meta", name: "Meta", domain: "meta.com", aliases: ["Facebook"], levels: ["E3", "E4", "E5", "E6", "E7"] },
-  { slug: "amazon", name: "Amazon", domain: "amazon.com", aliases: ["AWS", "Amazon Web Services"], levels: ["SDE I", "SDE II", "SDE III", "Principal"] },
-  { slug: "apple", name: "Apple", domain: "apple.com", levels: ["ICT2", "ICT3", "ICT4", "ICT5", "ICT6"] },
-  { slug: "microsoft", name: "Microsoft", domain: "microsoft.com", aliases: ["MSFT"], levels: ["SDE (59-60)", "SDE II (61-62)", "Senior (63-64)", "Principal (65-67)"] },
-  { slug: "netflix", name: "Netflix", domain: "netflix.com", levels: ["Senior", "Principal"] },
-  { slug: "stripe", name: "Stripe", domain: "stripe.com", levels: ["L1", "L2", "L3", "L4", "L5"] },
-  { slug: "uber", name: "Uber", domain: "uber.com", levels: ["3", "4", "5a", "5b", "6"] },
-  { slug: "airbnb", name: "Airbnb", domain: "airbnb.com", levels: ["G7", "G8", "G9", "G10"] },
-  { slug: "linkedin", name: "LinkedIn", domain: "linkedin.com", levels: ["Associate", "Senior", "Staff", "Senior Staff", "Principal"] },
-  { slug: "salesforce", name: "Salesforce", domain: "salesforce.com", levels: ["Associate MTS", "MTS", "Senior MTS", "Lead MTS", "Principal MTS"] },
-  { slug: "oracle", name: "Oracle", domain: "oracle.com", levels: ["IC1", "IC2", "IC3", "IC4", "IC5"] },
-  { slug: "nvidia", name: "Nvidia", domain: "nvidia.com", levels: ["IC1", "IC2", "IC3", "IC4", "IC5", "IC6"] },
-  { slug: "adobe", name: "Adobe", domain: "adobe.com", levels: ["Eng 2", "Eng 3", "Senior", "Principal"] },
-  { slug: "atlassian", name: "Atlassian", domain: "atlassian.com", levels: ["P3", "P4", "P5", "P6"] },
-  { slug: "shopify", name: "Shopify", domain: "shopify.com", levels: ["Junior", "Intermediate", "Senior", "Staff", "Principal"] },
-  { slug: "coinbase", name: "Coinbase", domain: "coinbase.com", levels: ["IC3", "IC4", "IC5", "IC6"] },
-  { slug: "databricks", name: "Databricks", domain: "databricks.com", levels: ["L3", "L4", "L5", "L6"] },
-  { slug: "snowflake", name: "Snowflake", domain: "snowflake.com", levels: ["IC2", "IC3", "IC4", "IC5"] },
-  { slug: "palantir", name: "Palantir", domain: "palantir.com", levels: ["New Grad", "Engineer", "Senior", "Lead"] },
-  { slug: "dropbox", name: "Dropbox", domain: "dropbox.com", levels: ["IC1", "IC2", "IC3", "IC4"] },
-  { slug: "pinterest", name: "Pinterest", domain: "pinterest.com", levels: ["Eng 1", "Eng 2", "Senior", "Staff"] },
-  { slug: "block", name: "Block", domain: "block.xyz", aliases: ["Square", "Cash App"], levels: ["L3", "L4", "L5", "L6"] },
-  { slug: "doordash", name: "DoorDash", domain: "doordash.com", levels: ["E3", "E4", "E5", "E6"] },
-  { slug: "lyft", name: "Lyft", domain: "lyft.com", levels: ["T3", "T4", "T5", "T6"] },
-  { slug: "robinhood", name: "Robinhood", domain: "robinhood.com", levels: ["IC3", "IC4", "IC5", "IC6"] },
-  { slug: "reddit", name: "Reddit", domain: "reddit.com", levels: ["IC3", "IC4", "IC5", "IC6"] },
-  { slug: "twilio", name: "Twilio", domain: "twilio.com", levels: ["TM3", "TM4", "TM5", "TM6"] },
-  { slug: "roblox", name: "Roblox", domain: "roblox.com", levels: ["ICT2", "ICT3", "ICT4", "ICT5"] },
-  { slug: "openai", name: "OpenAI", domain: "openai.com", levels: ["IC3", "IC4", "IC5", "IC6"] },
+  { slug: "google", name: "Google", domain: "google.com", aliases: ["Alphabet"], levels: [["L3", "junior"], ["L4", "mid"], ["L5", "senior"], ["L6", "staff"], ["L7", "senior_staff"]] },
+  { slug: "meta", name: "Meta", domain: "meta.com", aliases: ["Facebook"], levels: [["E3", "junior"], ["E4", "mid"], ["E5", "senior"], ["E6", "staff"], ["E7", "senior_staff"]] },
+  { slug: "amazon", name: "Amazon", domain: "amazon.com", aliases: ["AWS", "Amazon Web Services"], levels: [["SDE I", "junior"], ["SDE II", "mid"], ["SDE III", "senior"], ["Principal", "principal"]] },
+  { slug: "apple", name: "Apple", domain: "apple.com", levels: [["ICT2", "junior"], ["ICT3", "mid"], ["ICT4", "senior"], ["ICT5", "staff"], ["ICT6", "principal"]] },
+  { slug: "microsoft", name: "Microsoft", domain: "microsoft.com", aliases: ["MSFT"], levels: [["SDE (59-60)", "junior"], ["SDE II (61-62)", "mid"], ["Senior (63-64)", "senior"], ["Principal (65-67)", "principal"]] },
+  { slug: "netflix", name: "Netflix", domain: "netflix.com", levels: [["Senior", "senior"], ["Principal", "principal"]] },
+  { slug: "stripe", name: "Stripe", domain: "stripe.com", levels: [["L1", "junior"], ["L2", "mid"], ["L3", "senior"], ["L4", "staff"], ["L5", "senior_staff"]] },
+  { slug: "uber", name: "Uber", domain: "uber.com", levels: [["3", "junior"], ["4", "mid"], ["5a", "senior"], ["5b", "staff"], ["6", "senior_staff"]] },
+  { slug: "airbnb", name: "Airbnb", domain: "airbnb.com", levels: [["G7", "junior"], ["G8", "mid"], ["G9", "senior"], ["G10", "staff"]] },
+  { slug: "linkedin", name: "LinkedIn", domain: "linkedin.com", levels: [["Associate", "junior"], ["Senior", "senior"], ["Staff", "staff"], ["Senior Staff", "senior_staff"], ["Principal", "principal"]] },
+  { slug: "salesforce", name: "Salesforce", domain: "salesforce.com", levels: [["Associate MTS", "junior"], ["MTS", "mid"], ["Senior MTS", "senior"], ["Lead MTS", "staff"], ["Principal MTS", "principal"]] },
+  { slug: "oracle", name: "Oracle", domain: "oracle.com", levels: [["IC1", "junior"], ["IC2", "mid"], ["IC3", "senior"], ["IC4", "staff"], ["IC5", "principal"]] },
+  { slug: "nvidia", name: "Nvidia", domain: "nvidia.com", levels: [["IC1", "junior"], ["IC2", "mid"], ["IC3", "senior"], ["IC4", "staff"], ["IC5", "senior_staff"], ["IC6", "principal"]] },
+  { slug: "adobe", name: "Adobe", domain: "adobe.com", levels: [["Eng 2", "junior"], ["Eng 3", "mid"], ["Senior", "senior"], ["Principal", "principal"]] },
+  { slug: "atlassian", name: "Atlassian", domain: "atlassian.com", levels: [["P3", "junior"], ["P4", "mid"], ["P5", "senior"], ["P6", "staff"]] },
+  { slug: "shopify", name: "Shopify", domain: "shopify.com", levels: [["Junior", "junior"], ["Intermediate", "mid"], ["Senior", "senior"], ["Staff", "staff"], ["Principal", "principal"]] },
+  { slug: "coinbase", name: "Coinbase", domain: "coinbase.com", levels: [["IC3", "junior"], ["IC4", "mid"], ["IC5", "senior"], ["IC6", "staff"]] },
+  { slug: "databricks", name: "Databricks", domain: "databricks.com", levels: [["L3", "junior"], ["L4", "mid"], ["L5", "senior"], ["L6", "staff"]] },
+  { slug: "snowflake", name: "Snowflake", domain: "snowflake.com", levels: [["IC2", "junior"], ["IC3", "mid"], ["IC4", "senior"], ["IC5", "staff"]] },
+  { slug: "palantir", name: "Palantir", domain: "palantir.com", levels: [["New Grad", "junior"], ["Engineer", "mid"], ["Senior", "senior"], ["Lead", "staff"]] },
+  { slug: "dropbox", name: "Dropbox", domain: "dropbox.com", levels: [["IC1", "junior"], ["IC2", "mid"], ["IC3", "senior"], ["IC4", "staff"]] },
+  { slug: "pinterest", name: "Pinterest", domain: "pinterest.com", levels: [["Eng 1", "junior"], ["Eng 2", "mid"], ["Senior", "senior"], ["Staff", "staff"]] },
+  { slug: "block", name: "Block", domain: "block.xyz", aliases: ["Square", "Cash App"], levels: [["L3", "junior"], ["L4", "mid"], ["L5", "senior"], ["L6", "staff"]] },
+  { slug: "doordash", name: "DoorDash", domain: "doordash.com", levels: [["E3", "junior"], ["E4", "mid"], ["E5", "senior"], ["E6", "staff"]] },
+  { slug: "lyft", name: "Lyft", domain: "lyft.com", levels: [["T3", "junior"], ["T4", "mid"], ["T5", "senior"], ["T6", "staff"]] },
+  { slug: "robinhood", name: "Robinhood", domain: "robinhood.com", levels: [["IC3", "junior"], ["IC4", "mid"], ["IC5", "senior"], ["IC6", "staff"]] },
+  { slug: "reddit", name: "Reddit", domain: "reddit.com", levels: [["IC3", "junior"], ["IC4", "mid"], ["IC5", "senior"], ["IC6", "staff"]] },
+  { slug: "twilio", name: "Twilio", domain: "twilio.com", levels: [["TM3", "junior"], ["TM4", "mid"], ["TM5", "senior"], ["TM6", "staff"]] },
+  { slug: "roblox", name: "Roblox", domain: "roblox.com", levels: [["ICT2", "junior"], ["ICT3", "mid"], ["ICT4", "senior"], ["ICT5", "staff"]] },
+  { slug: "openai", name: "OpenAI", domain: "openai.com", levels: [["IC3", "junior"], ["IC4", "mid"], ["IC5", "senior"], ["IC6", "staff"]] },
 ];
 
 // ~20 canonical engineering roles. Slugs are stable (URL + reports FK), so
@@ -261,11 +277,12 @@ export async function seedCurated(db: Db): Promise<SeedCuratedResult> {
   const levelValues = CURATED_COMPANIES.flatMap((c) => {
     const companyId = idBySlug.get(c.slug);
     if (!companyId) return [];
-    return c.levels.map((name, orderIndex) => ({
+    return c.levels.map(([name, tier], orderIndex) => ({
       companyId,
       slug: slugify(name),
       name,
       orderIndex,
+      tier,
       status: "active" as const,
       source: "seed_curated" as const,
     }));
@@ -280,6 +297,7 @@ export async function seedCurated(db: Db): Promise<SeedCuratedResult> {
           set: {
             name: sql`excluded.name`,
             orderIndex: sql`excluded.order_index`,
+            tier: sql`excluded.tier`,
             status: sql`excluded.status`,
             source: sql`excluded.source`,
           },

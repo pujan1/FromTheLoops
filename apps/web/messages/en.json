@@ -14,10 +14,10 @@
       "empty": "No matching role — pick the closest canonical title."
     },
     "level": {
-      "label": "Level",
+      "label": "Level (optional)",
       "chooseCompany": "Choose a company first.",
       "loading": "Loading levels…",
-      "select": "Select a level…",
+      "skip": "Not sure yet / skip",
       "na": "No level ladder on file for this company — recorded as <strong>N/A</strong>."
     },
     "outcome": {
@@ -30,7 +30,7 @@
       "clear": "clear"
     },
     "month": {
-      "label": "Interview month"
+      "label": "Interview month (optional)"
     },
     "attribution": {
       "legend": "Attribution",
