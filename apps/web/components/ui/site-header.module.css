@@ -26,17 +26,17 @@
 }
 .issue span { color: var(--color-ink); }
 
-/* Wordmark — DM Sans, with italic 'the' for character */
+/* Wordmark — Archivo, set tight; 'the' carries the single red accent (upright) */
 .wordmark {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.25rem;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
   line-height: 1;
   color: var(--color-ink);
   white-space: nowrap;
 }
-.wordmark__italic { font-style: italic; font-weight: 500; color: var(--color-accent); }
+.wordmark__italic { font-style: normal; font-weight: 700; color: var(--color-accent); }
 
 .actions {
   display: flex;
@@ -87,8 +87,8 @@
 .authPrimary {
   color: var(--color-paper);
   background: var(--color-ink);
-  padding: 6px 12px;
-  border-radius: 999px;
+  padding: 7px 14px;
+  border-radius: 0;
 }
 .authPrimary:hover { background: var(--color-accent); }
 

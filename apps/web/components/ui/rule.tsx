@@ -17,7 +17,7 @@ export function Rule({ variant = "default", className }: RuleProps) {
   return <hr className={cx(styles.rule, variantClass, className)} aria-hidden="true" />;
 }
 
-export function Ornament({ mark = "§", className }: { mark?: string; className?: string }) {
+export function Ornament({ mark = "■", className }: { mark?: string; className?: string }) {
   return (
     <div className={cx(styles.ornament, className)} role="separator" aria-hidden="true">
       <span className={styles.ornament__mark}>{mark}</span>

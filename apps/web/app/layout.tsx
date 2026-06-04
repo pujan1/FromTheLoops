@@ -2,19 +2,21 @@ import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
-import { DM_Sans, Geist, Geist_Mono } from "next/font/google";
+import { Archivo, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = DM_Sans({
+// Swiss Precision: a single neo-grotesque (Archivo) used systematically
+// for both display and UI, differentiated only by weight and size.
+const display = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--next-font-display",
   display: "swap",
 });
 
-const sans = Geist({
+const sans = Archivo({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--next-font-sans",
   display: "swap",
 });

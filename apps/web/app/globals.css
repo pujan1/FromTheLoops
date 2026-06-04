@@ -1,30 +1,31 @@
 /* =============================================================
    FromTheLoop — design tokens
-   Editorial / modern-minimalist. Warm paper, deep ink, peacock accent.
+   Swiss Precision. International Typographic style: near-white field,
+   true black, one decisive signal-blue. Flat, grid-locked, no ornament.
    ============================================================= */
 
 :root {
   color-scheme: light;
 
   /* ---------- Color ---------- */
-  --color-paper:        #faf7f2;  /* warm cream canvas */
-  --color-paper-2:      #f2ede5;  /* recessed surface */
-  --color-paper-3:      #ebe5db;  /* card surface, slightly more saturated */
-  --color-ink:          #18171a;  /* primary ink, not pure black */
-  --color-ink-2:        #3a3936;  /* body copy on accent surfaces */
-  --color-muted:        #8b8780;  /* metadata, captions, secondary */
-  --color-muted-2:      #b8b2a7;  /* tertiary, hints */
-  --color-rule:         #ddd6c9;  /* hairline rules */
-  --color-rule-strong:  #c6bdab;  /* emphasized rule */
-  --color-accent:       #167c8c;  /* peacock blue — single editorial accent */
-  --color-accent-deep:  #0e5965;  /* hover / pressed */
-  --color-accent-soft:  #dceaee;  /* tinted highlight */
-  --color-success:      #3f6f4a;
-  --color-warning:      #8a6a14;
-  --color-danger:       #a23b32;  /* destructive / error states */
-  --color-pending:      #7a6a3c;  /* awaiting moderation / in-queue */
-  --color-info:         #2c6b86;  /* neutral notices, distinct from accent */
-  --grain-opacity:      0.035;
+  --color-paper:        #f5f6f8;  /* cool off-white field — shares the blue's family */
+  --color-paper-2:      #edeff2;  /* recessed surface */
+  --color-paper-3:      #e4e7ec;  /* card surface */
+  --color-ink:          #10131a;  /* cool near-black ink */
+  --color-ink-2:        #2c313b;  /* secondary text */
+  --color-muted:        #666c77;  /* metadata, captions, secondary */
+  --color-muted-2:      #9aa0aa;  /* tertiary, hints */
+  --color-rule:         #dde1e7;  /* hairline rules */
+  --color-rule-strong:  #c5cad2;  /* emphasized rule */
+  --color-accent:       #4a6a96;  /* muted steel-blue — quiet, cohesive accent */
+  --color-accent-deep:  #38527a;  /* hover / pressed */
+  --color-accent-soft:  #e7ecf3;  /* pastel tint for fills */
+  --color-success:      #1f7a37;
+  --color-warning:      #8a6500;
+  --color-danger:       #b21e16;  /* destructive / error states */
+  --color-pending:      #5b6470;  /* awaiting moderation / in-queue */
+  --color-info:         #2b4c7e;  /* neutral notices, distinct from accent */
+  --grain-opacity:      0;        /* Swiss = no texture */
   --grain-blend:        multiply;
 
   /* ---------- Type ---------- */
@@ -68,10 +69,10 @@
 
   /* ---------- Radii ---------- */
   --radius-none: 0;
-  --radius-sm:   2px;
-  --radius-md:   4px;       /* default — barely-rounded, editorial */
-  --radius-lg:   8px;
-  --radius-full: 999px;
+  --radius-sm:   0;         /* Swiss = sharp corners everywhere */
+  --radius-md:   0;
+  --radius-lg:   0;
+  --radius-full: 999px;     /* reserved for genuine circles (dots, toggle knob) */
 
   /* ---------- Layout ---------- */
   --container-max: 1240px;
@@ -90,24 +91,24 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --color-paper:        #11100e;
-    --color-paper-2:      #191714;
-    --color-paper-3:      #22201b;
-    --color-ink:          #f4efe4;
-    --color-ink-2:        #d8d0c2;
-    --color-muted:        #9b9283;
-    --color-muted-2:      #70685e;
-    --color-rule:         #332f28;
-    --color-rule-strong:  #4a4338;
-    --color-accent:       #36b6bd;
-    --color-accent-deep:  #92e2da;
-    --color-accent-soft:  #142d2e;
-    --color-success:      #82c48f;
-    --color-warning:      #e0bd62;
-    --color-danger:       #e08379;
-    --color-pending:      #cbb375;
-    --color-info:         #6fb8d6;
-    --grain-opacity:      0.055;
+    --color-paper:        #0c0e12;
+    --color-paper-2:      #14171d;
+    --color-paper-3:      #1c2027;
+    --color-ink:          #f0f2f5;
+    --color-ink-2:        #c6cad1;
+    --color-muted:        #888e98;
+    --color-muted-2:      #5b606a;
+    --color-rule:         #232730;
+    --color-rule-strong:  #363b45;
+    --color-accent:       #8fa9cf;
+    --color-accent-deep:  #aec2e0;
+    --color-accent-soft:  #141d2c;
+    --color-success:      #4caf6a;
+    --color-warning:      #d4a017;
+    --color-danger:       #ff5c4f;
+    --color-pending:      #8a93a0;
+    --color-info:         #6f9bd6;
+    --grain-opacity:      0;
     --grain-blend:        screen;
   }
 }
@@ -119,24 +120,24 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-paper:        #11100e;
-  --color-paper-2:      #191714;
-  --color-paper-3:      #22201b;
-  --color-ink:          #f4efe4;
-  --color-ink-2:        #d8d0c2;
-  --color-muted:        #9b9283;
-  --color-muted-2:      #70685e;
-  --color-rule:         #332f28;
-  --color-rule-strong:  #4a4338;
-  --color-accent:       #36b6bd;
-  --color-accent-deep:  #92e2da;
-  --color-accent-soft:  #142d2e;
-  --color-success:      #82c48f;
-  --color-warning:      #e0bd62;
-  --color-danger:       #e08379;
-  --color-pending:      #cbb375;
-  --color-info:         #6fb8d6;
-  --grain-opacity:      0.055;
+  --color-paper:        #0c0e12;
+  --color-paper-2:      #14171d;
+  --color-paper-3:      #1c2027;
+  --color-ink:          #f0f2f5;
+  --color-ink-2:        #c6cad1;
+  --color-muted:        #888e98;
+  --color-muted-2:      #5b606a;
+  --color-rule:         #232730;
+  --color-rule-strong:  #363b45;
+  --color-accent:       #8fa9cf;
+  --color-accent-deep:  #aec2e0;
+  --color-accent-soft:  #141d2c;
+  --color-success:      #4caf6a;
+  --color-warning:      #d4a017;
+  --color-danger:       #ff5c4f;
+  --color-pending:      #8a93a0;
+  --color-info:         #6f9bd6;
+  --grain-opacity:      0;
   --grain-blend:        screen;
 }
 
@@ -158,7 +159,7 @@ body {
   font-family: var(--font-sans);
   font-size: var(--fs-body);
   line-height: var(--lh-normal);
-  font-feature-settings: "ss01", "cv11";
+  font-feature-settings: "kern";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

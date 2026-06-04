@@ -1,15 +1,16 @@
-/* ===== Display (DM Sans — modern geometric sans) ===== */
+/* ===== Display (Archivo — neo-grotesque, set tight & bold) ===== */
 .display {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 700;
   line-height: var(--lh-tight);
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
   color: var(--color-ink);
   text-wrap: balance;
 }
+/* Swiss emphasis: signal-red, upright — never italic */
 .display em, .display i {
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 700;
   color: var(--color-accent);
 }
 
@@ -20,10 +21,10 @@
 /* ===== Headings (sans) ===== */
 .heading {
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-ink);
   line-height: var(--lh-snug);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 .h1 { font-size: var(--fs-h1); }

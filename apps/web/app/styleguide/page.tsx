@@ -83,12 +83,12 @@ export default function StyleguidePage() {
           {/* ----------------------- Color ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 01 — Color</div>
+              <div className={styles.section__head__no}>01 / Color</div>
               <div>
-                <FtlHeading level={2}>Warm paper by day, pressroom ink by night.</FtlHeading>
+                <FtlHeading level={2}>Off-white by day, pressroom black by night.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  The palette commits to warm neutrals, a dense night mode, and
-                  one confident accent that survives both surfaces.
+                  The palette commits to a near-white field, a true-black night
+                  mode, and one confident signal-blue that survives both surfaces.
                 </FtlBody>
               </div>
             </header>
@@ -108,13 +108,14 @@ export default function StyleguidePage() {
           {/* ----------------------- Type ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 02 — Typography</div>
+              <div className={styles.section__head__no}>02 / Typography</div>
               <div>
-                <FtlHeading level={2}>DM Sans × Geist × Geist Mono.</FtlHeading>
+                <FtlHeading level={2}>Archivo × Geist Mono.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  A geometric sans for display, a refined grotesque for UI, a
-                  precise mono for metadata. Italics in the accent tone are
-                  reserved for editorial emphasis.
+                  A single neo-grotesque (Archivo) carries both display and UI,
+                  differentiated only by weight and size, with a precise mono for
+                  metadata. Emphasis is the signal-blue accent, set upright —
+                  never italic.
                 </FtlBody>
               </div>
             </header>
@@ -178,7 +179,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Rules & ornaments ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 03 — Rules</div>
+              <div className={styles.section__head__no}>03 / Rules</div>
               <div>
                 <FtlHeading level={2}>Hairlines, not shadows.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -195,7 +196,7 @@ export default function StyleguidePage() {
               <div><FtlCaption>dotted</FtlCaption><FtlRule variant="dotted" /></div>
               <div style={{ marginTop: 16 }}>
                 <FtlCaption>ornament — section break</FtlCaption>
-                <FtlOrnament mark="§" />
+                <FtlOrnament mark="■" />
               </div>
             </div>
           </section>
@@ -203,7 +204,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Tags ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 04 — Tags</div>
+              <div className={styles.section__head__no}>04 / Tags</div>
               <div>
                 <FtlHeading level={2}>Mono tags for taxonomy.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -226,11 +227,11 @@ export default function StyleguidePage() {
           {/* ----------------------- Buttons ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 05 — Buttons</div>
+              <div className={styles.section__head__no}>05 / Buttons</div>
               <div>
                 <FtlHeading level={2}>Four variants, three sizes.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  Primary is ink, accent is peacock, ghost is hairline, link is
+                  Primary is ink, accent is signal blue, ghost is hairline, link is
                   underline. Borrowed from print press logic.
                 </FtlBody>
               </div>
@@ -256,7 +257,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Combobox ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 5b — Combobox</div>
+              <div className={styles.section__head__no}>05b / Combobox</div>
               <div>
                 <FtlHeading level={2}>Autocomplete with a suggest-new escape hatch.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -272,7 +273,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Cards ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 06 — Cards</div>
+              <div className={styles.section__head__no}>06 / Cards</div>
               <div>
                 <FtlHeading level={2}>Cards as composition, not container.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -306,7 +307,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Stats ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 07 — Stats</div>
+              <div className={styles.section__head__no}>07 / Stats</div>
               <div>
                 <FtlHeading level={2}>Numbers as typographic features.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -326,7 +327,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Report card ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 08 — Report card</div>
+              <div className={styles.section__head__no}>08 / Report card</div>
               <div>
                 <FtlHeading level={2}>The product unit.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -378,7 +379,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Status & feedback ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 09 — Status &amp; feedback</div>
+              <div className={styles.section__head__no}>09 / Status &amp; feedback</div>
               <div>
                 <FtlHeading level={2}>The boring, crucial states.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -419,7 +420,7 @@ export default function StyleguidePage() {
           {/* ----------------------- Spec ----------------------- */}
           <section className={styles.section}>
             <header className={styles.section__head}>
-              <div className={styles.section__head__no}>§ 10 — Tokens</div>
+              <div className={styles.section__head__no}>10 / Tokens</div>
               <div>
                 <FtlHeading level={2}>Authoritative reference.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
@@ -428,14 +429,14 @@ export default function StyleguidePage() {
                 </FtlBody>
               </div>
             </header>
-            <pre className={styles.specBlock}>{`--color-paper        light: #FAF7F2 · dark: #11100E
---color-ink          light: #18171A · dark: #F4EFE4
---color-accent       light: #167C8C · dark: #36B6BD
---font-display       DM Sans
---font-sans          Geist
+            <pre className={styles.specBlock}>{`--color-paper        light: #F5F6F8 · dark: #0C0E12
+--color-ink          light: #10131A · dark: #F0F2F5
+--color-accent       light: #4A6A96 · dark: #8FA9CF
+--font-display       Archivo
+--font-sans          Archivo
 --font-mono          Geist Mono
 --space scale        4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 144
---radius             0 · 2 · 4 · 8 · 999
+--radius             0 · 0 · 0 · 0 · 999
 --container-max      1240
 --container-prose    680
 --theme-storage      fromtheloop-theme`}</pre>

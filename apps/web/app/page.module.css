@@ -19,10 +19,10 @@
 
 .hero__headline {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
   font-size: clamp(2.75rem, 8vw, 5.5rem);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
   margin: 0;
 }
 
@@ -161,25 +161,16 @@
 }
 .pull__quote {
   font-family: var(--font-display);
-  font-weight: 500;
-  font-style: italic;
+  font-weight: 700;
+  font-style: normal;
   font-size: clamp(1.5rem, 3vw, 2.25rem);
-  line-height: 1.25;
-  letter-spacing: -0.025em;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
   color: var(--color-ink);
   margin: 0;
+  padding-left: var(--space-5);
+  border-left: 3px solid var(--color-accent);
   text-wrap: balance;
-}
-.pull__quote::before {
-  content: "“";
-  font-family: var(--font-display);
-  font-style: normal;
-  font-weight: 500;
-  font-size: 1.15em;
-  color: var(--color-accent);
-  margin-right: 0.08em;
-  display: inline-block;
-  transform: translateY(0.1em);
 }
 .pull__attr {
   font-family: var(--font-mono);
@@ -206,12 +197,12 @@
 }
 .footer__wordmark {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.125rem;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
   color: var(--color-ink);
 }
-.footer__wordmark em { font-style: italic; font-weight: 500; color: var(--color-accent); }
+.footer__wordmark em { font-style: normal; font-weight: 700; color: var(--color-accent); }
 .footer__cols {
   display: flex;
   gap: var(--space-6);

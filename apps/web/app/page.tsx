@@ -57,12 +57,12 @@ export default function HomePage() {
               <FtlEyebrow tone="accent">interview reports</FtlEyebrow>
               <h1 className={styles.hero__headline}>
                 <span style={{ fontFamily: "var(--font-display)" }}>
-                  From <em style={{ fontStyle: "italic", color: "var(--color-accent)" }}>the</em> loop.
+                  From <em style={{ fontStyle: "normal", color: "var(--color-accent)" }}>the</em> loop.
                 </span>
               </h1>
               <FtlBody size="lead" className={styles.hero__sub}>
                 Structured interview reports for US tech engineering candidates —
-                <em style={{ fontFamily: "var(--font-display)", fontSize: "1.15em", color: "var(--color-accent)" }}> written by the people who took them.</em>
+                <em style={{ fontStyle: "normal", fontWeight: 600, color: "var(--color-ink)" }}> written by the people who took them.</em>
               </FtlBody>
               <div className={styles.hero__cta}>
                 <FtlButton variant="primary" size="lg" trailingArrow>Browse companies</FtlButton>
@@ -88,7 +88,7 @@ export default function HomePage() {
           {/* -------------- Stats -------------- */}
           <section className={styles.section}>
             <div className={styles.section__head}>
-              <span className={styles.section__head__no}>§ 01 — The corpus</span>
+              <span className={styles.section__head__no}>01 / The corpus</span>
               <div className={styles.section__head__title}>
                 <FtlHeading level={2}>What&apos;s already in here.</FtlHeading>
               </div>
@@ -105,7 +105,7 @@ export default function HomePage() {
           {/* -------------- Latest reports -------------- */}
           <section className={styles.section}>
             <div className={styles.section__head}>
-              <span className={styles.section__head__no}>§ 02 — Recent reports</span>
+              <span className={styles.section__head__no}>02 / Recent reports</span>
               <div className={styles.section__head__title}>
                 <FtlHeading level={2}>Fresh from the loops.</FtlHeading>
               </div>
@@ -172,7 +172,7 @@ export default function HomePage() {
           {/* -------------- Topics -------------- */}
           <section className={styles.section}>
             <div className={styles.section__head}>
-              <span className={styles.section__head__no}>§ 03 — By topic</span>
+              <span className={styles.section__head__no}>03 / By topic</span>
               <div className={styles.section__head__title}>
                 <FtlHeading level={2}>Search by what you need to study.</FtlHeading>
               </div>
@@ -189,7 +189,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <FtlOrnament mark="§" />
+          <FtlOrnament mark="■" />
 
           {/* -------------- CTA -------------- */}
           <section className={styles.section} style={{ borderBottom: 0 }}>
@@ -209,7 +209,7 @@ export default function HomePage() {
           <footer className={styles.footer}>
             <div>
               <div className={styles.footer__wordmark}>
-                From <em style={{ fontStyle: "italic" }}>the</em> Loop
+                From <em style={{ fontStyle: "normal" }}>the</em> Loop
               </div>
               <div style={{ marginTop: 8, maxWidth: "44ch" }}>
                 Interview reports straight from the loop. By candidates, for
