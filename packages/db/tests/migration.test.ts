@@ -48,8 +48,25 @@ describe("migrations", () => {
       "mod_action_logs",
       "company_levels",
       "submission_drafts",
+      "aggregates_company_role_level",
     ]) {
       expect(names, `table ${expected} missing`).toContain(expected);
+    }
+  });
+
+  it("creates the aggregation refresh functions (migration 0008)", async () => {
+    const rows = await db.execute<{ proname: string }>(sql`
+      SELECT proname FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+    `);
+    const names = new Set(rows.map((r) => r.proname));
+    for (const expected of [
+      "report_trust_weight",
+      "refresh_aggregate_cell",
+      "refresh_all_aggregates",
+    ]) {
+      expect(names, `function ${expected} missing`).toContain(expected);
     }
   });
 
