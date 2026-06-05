@@ -17,6 +17,7 @@
     "test": "pnpm -r test",
     "db:migrate": "pnpm --filter @fromtheloop/db migrate",
     "db:seed": "pnpm --filter @fromtheloop/db seed",
+    "db:seed:reports": "pnpm --filter @fromtheloop/db seed:reports",
     "search:provision": "pnpm --filter @fromtheloop/search provision",
     "backfill:aggregates": "pnpm --filter @fromtheloop/db backfill:aggregates",
     "backfill:typesense": "pnpm --filter @fromtheloop/search backfill",

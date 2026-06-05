@@ -44,3 +44,73 @@
   gap: var(--space-3);
   flex-wrap: wrap;
 }
+
+/* Public detail: the rounds → questions → topics tree. */
+.rounds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.round__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.round__type {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.round__rating {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.round__experience {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-left: 2px solid var(--color-line);
+  padding-left: var(--space-4);
+}
+
+.question__prose {
+  margin: 0 0 var(--space-2);
+  color: var(--color-ink);
+}
+
+.question__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sectionHeading {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-4);
+}

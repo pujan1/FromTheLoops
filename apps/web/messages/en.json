@@ -137,6 +137,16 @@
   },
   "report": {
     "eyebrow": "Your experience",
+    "detail": {
+      "publicEyebrow": "Interview report",
+      "anonymous": "Anonymous",
+      "by": "Shared by {name}",
+      "verified": "Verified",
+      "roundsHeading": "Rounds",
+      "questionsHeading": "Questions",
+      "noQuestions": "No questions logged for this round.",
+      "experience": "Experience"
+    },
     "status": {
       "pending_moderation": "In review — visible only to you until it clears moderation.",
       "active": "Published.",

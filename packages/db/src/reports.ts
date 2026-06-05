@@ -466,15 +466,7 @@ export async function getReportForEdit(
   userId: string,
 ): Promise<ReportDetail | null> {
   const headRows = await db
-    .select({
-      report: interviewReports,
-      companyId: companies.id,
-      companySlug: companies.slug,
-      companyName: companies.name,
-      roleId: roles.id,
-      roleSlug: roles.slug,
-      roleName: roles.name,
-    })
+    .select(reportHeadColumns)
     .from(interviewReports)
     .innerJoin(companies, eq(companies.id, interviewReports.companyId))
     .innerJoin(roles, eq(roles.id, interviewReports.canonicalRoleId))
@@ -487,6 +479,38 @@ export async function getReportForEdit(
     .limit(1);
   const head = headRows[0];
   if (!head) return null;
+  return assembleReportDetail(db, head);
+}
+
+// The head row both deep reads fetch (they differ only in their WHERE clause).
+interface ReportHead {
+  report: InterviewReport;
+  companyId: string;
+  companySlug: string;
+  companyName: string;
+  roleId: string;
+  roleSlug: string;
+  roleName: string;
+}
+
+// The select shape shared by getReportForEdit + getPublicReportDetail.
+const reportHeadColumns = {
+  report: interviewReports,
+  companyId: companies.id,
+  companySlug: companies.slug,
+  companyName: companies.name,
+  roleId: roles.id,
+  roleSlug: roles.slug,
+  roleName: roles.name,
+} as const;
+
+// Load a head row's rounds→questions→topics tree and fold it into ReportDetail.
+// Shared by both deep reads so the (somewhat fiddly) join-folding lives once.
+async function assembleReportDetail(
+  db: Db,
+  head: ReportHead,
+): Promise<ReportDetail> {
+  const id = head.report.id;
 
   // Rounds in declared order.
   const roundRows = await db
@@ -550,4 +574,31 @@ export async function getReportForEdit(
       questions: questionsByRound.get(r.id) ?? [],
     })),
   };
+}
+
+// Public deep read for the Sprint-4 report detail page (`/reports/[id]`). NOT
+// ownership-scoped — anyone can read it — but gated on the SAME visibility
+// filter as every other public surface: `status = 'active' AND deleted_at IS
+// NULL`. A pending/deleted/guessed id returns null → the page 404s, so a
+// non-public report never leaks through this read.
+export async function getPublicReportDetail(
+  db: Db,
+  id: string,
+): Promise<ReportDetail | null> {
+  const headRows = await db
+    .select(reportHeadColumns)
+    .from(interviewReports)
+    .innerJoin(companies, eq(companies.id, interviewReports.companyId))
+    .innerJoin(roles, eq(roles.id, interviewReports.canonicalRoleId))
+    .where(
+      and(
+        eq(interviewReports.id, id),
+        eq(interviewReports.status, "active"),
+        isNull(interviewReports.deletedAt),
+      ),
+    )
+    .limit(1);
+  const head = headRows[0];
+  if (!head) return null;
+  return assembleReportDetail(db, head);
 }

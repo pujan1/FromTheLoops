@@ -142,3 +142,53 @@ export function buildReportFiltersQuery(filters: ReportFilters): string {
     perPage: filters.perPage === DEFAULT_PER_PAGE ? undefined : filters.perPage,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Canonical browse-path builders (Sprint 4).
+//
+// THE one place the public browse URLs are constructed — every link + redirect
+// builds its href through these, never a hand-written template, so the URL
+// shape is defined once. Pure string construction (no DB, no I/O), and lives in
+// shared (not core) because lib/routes + client components import it and must
+// not pull in the db/postgres dependency the core resolver carries.
+//
+// Slugs are assumed already-normalized (the curated seed + suggest-pending path
+// store lowercase hyphenated slugs). These builders emit what they're given and
+// only URL-encode; the db-backed resolver (@fromtheloop/core) does exact slug
+// lookups, so a non-canonical (e.g. uppercased) path 404s rather than rendering
+// duplicate content at two URLs.
+//
+//   /companies
+//   /companies/:company
+//   /companies/:company/:role
+//   /companies/:company/:role/:level     ← the canonical wedge page
+//   /reports/:id
+// ---------------------------------------------------------------------------
+
+const enc = encodeURIComponent;
+
+export function companiesPath(): string {
+  return "/companies";
+}
+
+export function companyPath(companySlug: string): string {
+  return `/companies/${enc(companySlug)}`;
+}
+
+export function companyRolePath(companySlug: string, roleSlug: string): string {
+  return `/companies/${enc(companySlug)}/${enc(roleSlug)}`;
+}
+
+// levelSlug is a per-company level slug (company_levels.slug) — "l4", "sde-ii",
+// "e4" — unique within the company.
+export function wedgePath(
+  companySlug: string,
+  roleSlug: string,
+  levelSlug: string,
+): string {
+  return `/companies/${enc(companySlug)}/${enc(roleSlug)}/${enc(levelSlug)}`;
+}
+
+export function reportPath(reportId: string): string {
+  return `/reports/${enc(reportId)}`;
+}

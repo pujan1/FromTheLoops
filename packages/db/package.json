@@ -19,6 +19,7 @@
     "migrate": "tsx src/migrate.ts",
     "studio": "drizzle-kit studio",
     "seed": "tsx src/seed/index.ts",
+    "seed:reports": "tsx src/seed/reports-run.ts",
     "backfill:aggregates": "tsx src/scripts/backfill-aggregates.ts"
   },
   "dependencies": {

@@ -83,3 +83,7 @@ export * from "./aggregates.js";
 
 // Search-index reads: per-report projection + company/topic backfill sources.
 export * from "./search-index.js";
+
+// Public browse reads: /companies index + rollup pages + wedge cell list +
+// the slug lookups the canonical URL resolver composes (Sprint 4).
+export * from "./browse.js";

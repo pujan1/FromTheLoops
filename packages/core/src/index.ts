@@ -11,3 +11,6 @@ export * from "./reports/moderation.js";
 
 // Sparse-data fallback: which scope the wedge page renders when a cell is thin.
 export * from "./aggregation/scope.js";
+
+// Canonical URL contract: pure path builders + db-backed slug→entity resolvers.
+export * from "./url/index.js";
