@@ -18,7 +18,8 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
     "studio": "drizzle-kit studio",
-    "seed": "tsx src/seed/index.ts"
+    "seed": "tsx src/seed/index.ts",
+    "backfill:aggregates": "tsx src/scripts/backfill-aggregates.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

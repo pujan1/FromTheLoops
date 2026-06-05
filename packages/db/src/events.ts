@@ -97,3 +97,46 @@ export async function countUnprocessedAggregateEvents(db: Db): Promise<number> {
   );
   return Number(rows[0]?.n ?? 0);
 }
+
+// ── search consumer (Day 6) ─────────────────────────────────────────────────
+// The exact mirror of the aggregate trio above, against the independent
+// search_processed_at marker. The two consumers drain the same event log on
+// their own clocks (sprint risk table: "both retried independently") — a
+// Typesense outage stalls only search, never the aggregate refresh.
+
+// The fallback poller's read for the SEARCH consumer: oldest-first events it
+// hasn't drained. Rides the events_search_pending_idx partial index.
+export async function claimUnprocessedSearchEvents(
+  db: Db,
+  limit = 100,
+): Promise<ReportEventRow[]> {
+  return db
+    .select()
+    .from(events)
+    .where(isNull(events.searchProcessedAt))
+    .orderBy(asc(events.createdAt))
+    .limit(limit);
+}
+
+// Mark an event drained by the search consumer. Guarded on still-null so a
+// concurrent double-process is a harmless no-op. Returns true if it flipped.
+export async function markSearchEventProcessed(
+  db: Db,
+  id: string,
+): Promise<boolean> {
+  const rows = await db
+    .update(events)
+    .set({ searchProcessedAt: new Date() })
+    .where(and(eq(events.id, id), isNull(events.searchProcessedAt)))
+    .returning({ id: events.id });
+  return rows.length > 0;
+}
+
+// Search-index lag for /admin/health (Day 8): how many events the search
+// consumer still owes.
+export async function countUnprocessedSearchEvents(db: Db): Promise<number> {
+  const rows = await db.execute<{ n: number }>(
+    sql`SELECT count(*)::int AS n FROM events WHERE search_processed_at IS NULL`,
+  );
+  return Number(rows[0]?.n ?? 0);
+}

@@ -80,3 +80,6 @@ export * from "./events.js";
 
 // Per-(company, role, level) aggregate refresh + reads (Sprint 3).
 export * from "./aggregates.js";
+
+// Search-index reads: per-report projection + company/topic backfill sources.
+export * from "./search-index.js";

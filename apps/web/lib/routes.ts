@@ -27,4 +27,7 @@ export const routes = {
   submitRounds: (draftId?: string) =>
     draftId ? `/submit/rounds?draft=${draftId}` : "/submit/rounds",
   draft: (id: string) => `/drafts/${id}`,
+
+  // Admin-only ops dashboards (allowlist-gated; see lib/admin.ts).
+  adminHealth: "/admin/health",
 } as const;

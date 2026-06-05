@@ -186,3 +186,52 @@ function mapAggregateRow(row: AggregateRow): CompanyRoleLevelAggregate {
 // last-refresh-per-cell query, Day 8). The table is hand-DDL'd in migration
 // 0008, not declared in schema/*.ts.
 export const aggregatesTableName = "aggregates_company_role_level";
+
+// One cell's freshness, for /admin/health (Day 8). Joined to company/role names
+// so the page reads "Google · Software Engineer · L5 — 12 reports, 3m ago".
+export interface AggregateCellHealth {
+  companyName: string;
+  roleName: string;
+  level: string;
+  reportCount: number;
+  refreshedAt: Date;
+}
+
+// Most-recently-refreshed cells first. Capped — the health page only needs a
+// glanceable sample, not the whole table.
+export async function listRecentAggregateRefreshes(
+  db: Db,
+  limit = 20,
+): Promise<AggregateCellHealth[]> {
+  const rows = await db.execute<{
+    company_name: string;
+    role_name: string;
+    level: string;
+    report_count: number;
+    refreshed_at: string | Date;
+  }>(sql`
+    SELECT c.name AS company_name, ro.name AS role_name, a.level,
+           a.report_count, a.refreshed_at
+    FROM aggregates_company_role_level a
+    JOIN companies c ON c.id = a.company_id
+    JOIN roles ro ON ro.id = a.canonical_role_id
+    ORDER BY a.refreshed_at DESC
+    LIMIT ${limit}
+  `);
+  return rows.map((r) => ({
+    companyName: r.company_name,
+    roleName: r.role_name,
+    level: r.level,
+    reportCount: Number(r.report_count),
+    refreshedAt: new Date(r.refreshed_at),
+  }));
+}
+
+// Total live cells in the aggregate table — a one-number "how much has been
+// aggregated" for the health page header.
+export async function countAggregateCells(db: Db): Promise<number> {
+  const rows = await db.execute<{ n: number }>(
+    sql`SELECT count(*)::int AS n FROM aggregates_company_role_level`,
+  );
+  return Number(rows[0]?.n ?? 0);
+}

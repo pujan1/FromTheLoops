@@ -10,12 +10,23 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "echo 'TODO: tsc -p tsconfig.json'",
+    "build": "tsc --noEmit -p tsconfig.json",
     "lint": "echo 'TODO: eslint .'",
-    "typecheck": "echo 'TODO: tsc --noEmit'",
-    "test": "echo 'no tests yet'"
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests yet'",
+    "provision": "tsx src/scripts/provision.ts",
+    "backfill": "tsx src/scripts/backfill.ts"
   },
   "dependencies": {
-    "@fromtheloop/shared": "workspace:*"
+    "@fromtheloop/db": "workspace:*",
+    "@fromtheloop/shared": "workspace:*",
+    "typesense": "^3.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "tsx": "^4.22.3",
+    "typescript": "^5.5.0"
   }
 }

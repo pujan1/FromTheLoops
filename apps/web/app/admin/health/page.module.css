@@ -1,0 +1,132 @@
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--space-9) var(--space-5) var(--space-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-rule);
+  padding-bottom: var(--space-6);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1;
+  margin: 0;
+}
+
+.sub {
+  max-width: 56ch;
+  color: var(--color-ink-2);
+  margin: 0;
+}
+
+.h2 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-4);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+}
+
+.metricLabel {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.metricValue {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.metricWarn {
+  color: var(--color-warning);
+}
+
+.metricHint {
+  font-size: 0.8125rem;
+  color: var(--color-muted-2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.table th {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.table tbody tr:hover {
+  background: var(--color-paper-2);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  padding: var(--space-6);
+  background: var(--color-paper-2);
+  border: 1px dashed var(--color-rule);
+  border-radius: var(--radius-lg);
+  color: var(--color-ink-2);
+  margin: 0;
+}
+
+.empty code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}

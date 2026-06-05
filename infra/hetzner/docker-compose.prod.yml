@@ -86,8 +86,17 @@ services:
       # submission-confirmed email. Blank disables send (job logs + no-ops).
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-no-reply@fromtheloop.com}
+      # Typesense — the search indexer (index-typesense job) reaches the
+      # in-network container by service name. Same API key the typesense service
+      # boots with. The worker ensures collections on boot, then indexes.
+      - TYPESENSE_HOST=typesense
+      - TYPESENSE_PORT=8108
+      - TYPESENSE_PROTOCOL=http
+      - TYPESENSE_API_KEY=${TYPESENSE_API_KEY:?TYPESENSE_API_KEY required}
     depends_on:
       redis:
+        condition: service_healthy
+      typesense:
         condition: service_healthy
 
 volumes:
