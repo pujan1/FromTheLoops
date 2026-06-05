@@ -36,6 +36,7 @@ export function makeTestClient(): {
 // RESTART IDENTITY: resets sequences so test runs don't accumulate
 // auto-increment drift across cases.
 const TRUNCATE_TABLES = [
+  "events",
   "question_topics",
   "questions",
   "rounds",

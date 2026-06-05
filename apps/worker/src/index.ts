@@ -16,6 +16,14 @@ import {
   processPurgeDeletedPii,
 } from "./jobs/purge-deleted-pii.js";
 import { processSendEmail } from "./jobs/send-email.js";
+import {
+  processRefreshAggregate,
+  REFRESH_AGGREGATE_QUEUE,
+  REFRESH_SWEEP_EVERY_MS,
+  REFRESH_SWEEP_JOB,
+  REFRESH_SWEEP_SCHEDULER,
+} from "./jobs/refresh-aggregate.js";
+import { startEventListener } from "./listen.js";
 
 const concurrency = Number(process.env.WORKER_CONCURRENCY ?? 4);
 
@@ -50,7 +58,30 @@ const notificationsWorker = new Worker(NOTIFICATIONS_QUEUE, processSendEmail, {
   concurrency,
 });
 
-const workers = [helloWorker, purgeWorker, notificationsWorker];
+// Aggregation refresh: drains the events outbox into per-(company,role,level)
+// matview refreshes. Fed by the live LISTEN bridge (fast path) + a repeatable
+// sweep (fallback for dropped notifications).
+const refreshAggregateWorker = new Worker(
+  REFRESH_AGGREGATE_QUEUE,
+  processRefreshAggregate,
+  { connection: redisConnection, concurrency },
+);
+const refreshAggregateQueue = new Queue(REFRESH_AGGREGATE_QUEUE, {
+  connection: redisConnection,
+});
+await refreshAggregateQueue.upsertJobScheduler(
+  REFRESH_SWEEP_SCHEDULER,
+  { every: REFRESH_SWEEP_EVERY_MS },
+  { name: REFRESH_SWEEP_JOB },
+);
+const eventListener = await startEventListener(refreshAggregateQueue);
+
+const workers = [
+  helloWorker,
+  purgeWorker,
+  notificationsWorker,
+  refreshAggregateWorker,
+];
 
 helloWorker.on("ready", () =>
   console.log(`[worker] ready — queue=${HELLO_QUEUE} concurrency=${concurrency}`),
@@ -62,6 +93,11 @@ purgeWorker.on("ready", () =>
 );
 notificationsWorker.on("ready", () =>
   console.log(`[worker] ready — queue=${NOTIFICATIONS_QUEUE}`),
+);
+refreshAggregateWorker.on("ready", () =>
+  console.log(
+    `[worker] ready — queue=${REFRESH_AGGREGATE_QUEUE} sweep=${REFRESH_SWEEP_EVERY_MS}ms`,
+  ),
 );
 for (const w of workers) {
   w.on("completed", (job) => console.log(`[worker] completed ${job.id}`));
@@ -76,9 +112,11 @@ for (const w of workers) {
 
 const shutdown = async (signal: string) => {
   console.log(`[worker] ${signal} — shutting down`);
+  // Stop accepting NOTIFY-driven enqueues before tearing down the queue.
+  await eventListener.close();
   await Promise.all(workers.map((w) => w.close()));
-  await purgeQueue.close();
-  // Release the shared Postgres pool the purge job opened via getDb().
+  await Promise.all([purgeQueue.close(), refreshAggregateQueue.close()]);
+  // Release the shared Postgres pool the jobs opened via getDb().
   await closeDb();
   process.exit(0);
 };

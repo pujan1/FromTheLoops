@@ -16,6 +16,7 @@
 
 import { and, asc, eq, inArray, isNull, lt, ne } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { emitReportEvent } from "./events.js";
 import {
   companies,
   type InterviewReport,
@@ -144,6 +145,14 @@ export async function createReport(
     const reportId = inserted[0]!.id;
 
     await writeChildren(tx, reportId, input.rounds);
+    // Outbox event in the same tx: aggregate/search refresh for this cell.
+    await emitReportEvent(tx, {
+      op: "created",
+      reportId,
+      companyId: input.companyId,
+      canonicalRoleId: input.canonicalRoleId,
+      level: input.level,
+    });
     return { id: reportId };
   });
 }
@@ -160,6 +169,25 @@ export async function updateReport(
   input: ReportWriteInput,
 ): Promise<{ id: string } | null> {
   return db.transaction(async (tx) => {
+    // Capture the pre-edit cell first: an edit may move the report to a
+    // different (company, role, level), which means BOTH the old and new cells
+    // need re-aggregating (old loses this report, new gains it).
+    const before = await tx
+      .select({
+        companyId: interviewReports.companyId,
+        canonicalRoleId: interviewReports.canonicalRoleId,
+        level: interviewReports.level,
+      })
+      .from(interviewReports)
+      .where(
+        and(
+          eq(interviewReports.id, reportId),
+          eq(interviewReports.createdByUserId, userId),
+        ),
+      )
+      .limit(1);
+    if (!before[0]) return null;
+
     const updated = await tx
       .update(interviewReports)
       .set({
@@ -184,6 +212,32 @@ export async function updateReport(
     // rounds, so this clears the whole child tree. Then re-insert.
     await tx.delete(rounds).where(eq(rounds.reportId, reportId));
     await writeChildren(tx, reportId, input.rounds);
+
+    // New-cell event (current state). The search consumer upserts the doc from
+    // this; the aggregate consumer recomputes the new cell.
+    await emitReportEvent(tx, {
+      op: "updated",
+      reportId,
+      companyId: input.companyId,
+      canonicalRoleId: input.canonicalRoleId,
+      level: input.level,
+    });
+    // If the edit moved cells, also refresh the vacated old cell. Still op
+    // 'updated' (the report isn't gone) — the aggregate handler just recomputes
+    // that cell; a redundant search upsert of the same current doc is harmless.
+    const moved =
+      before[0].companyId !== input.companyId ||
+      before[0].canonicalRoleId !== input.canonicalRoleId ||
+      before[0].level !== input.level;
+    if (moved) {
+      await emitReportEvent(tx, {
+        op: "updated",
+        reportId,
+        companyId: before[0].companyId,
+        canonicalRoleId: before[0].canonicalRoleId,
+        level: before[0].level,
+      });
+    }
     return { id: reportId };
   });
 }
@@ -199,20 +253,38 @@ export async function softDeleteReport(
   id: string,
   userId: string,
 ): Promise<boolean> {
-  const rows = await db
-    .update(interviewReports)
-    .set({ status: "deleted", deletedAt: new Date() })
-    .where(
-      and(
-        eq(interviewReports.id, id),
-        eq(interviewReports.createdByUserId, userId),
-        // Skip rows already deleted so a double-submit can't re-stamp
-        // deleted_at and slide the 90-day purge clock forward.
-        ne(interviewReports.status, "deleted"),
-      ),
-    )
-    .returning({ id: interviewReports.id });
-  return rows.length > 0;
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .update(interviewReports)
+      .set({ status: "deleted", deletedAt: new Date() })
+      .where(
+        and(
+          eq(interviewReports.id, id),
+          eq(interviewReports.createdByUserId, userId),
+          // Skip rows already deleted so a double-submit can't re-stamp
+          // deleted_at and slide the 90-day purge clock forward.
+          ne(interviewReports.status, "deleted"),
+        ),
+      )
+      .returning({
+        id: interviewReports.id,
+        companyId: interviewReports.companyId,
+        canonicalRoleId: interviewReports.canonicalRoleId,
+        level: interviewReports.level,
+      });
+    const row = rows[0];
+    if (!row) return false;
+    // The report drops out of its cell's aggregate (the refresh filters on
+    // status='active'); emit so that cell recomputes. Search drops the doc.
+    await emitReportEvent(tx, {
+      op: "deleted",
+      reportId: row.id,
+      companyId: row.companyId,
+      canonicalRoleId: row.canonicalRoleId,
+      level: row.level,
+    });
+    return true;
+  });
 }
 
 // PII retention for soft-deleted reports: free-text prose is cleared once a

@@ -11,6 +11,10 @@
 
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import {
+  getEventById,
+  markAggregateEventProcessed,
+} from "./events.js";
 import * as schema from "./schema/index.js";
 
 type Db = PostgresJsDatabase<typeof schema>;
@@ -78,6 +82,28 @@ export async function refreshAggregateCell(
   await db.execute(
     sql`SELECT refresh_aggregate_cell(${cell.companyId}::uuid, ${cell.canonicalRoleId}::uuid, ${cell.level})`,
   );
+}
+
+// The aggregate consumer's per-event handler — the testable core of the
+// refresh-aggregate worker job (Day 4). Loads the event, recomputes its cell,
+// and marks the event drained by the aggregate consumer. Idempotent: a missing
+// or already-processed event is a clean no-op, so BullMQ retries and the
+// fallback poller can both deliver the same event safely.
+export type RefreshEventResult = "missing" | "refreshed";
+
+export async function refreshAggregateForEvent(
+  db: Db,
+  eventId: string,
+): Promise<RefreshEventResult> {
+  const event = await getEventById(db, eventId);
+  if (!event) return "missing";
+  await refreshAggregateCell(db, {
+    companyId: event.companyId,
+    canonicalRoleId: event.canonicalRoleId,
+    level: event.level,
+  });
+  await markAggregateEventProcessed(db, eventId);
+  return "refreshed";
 }
 
 // Full backfill / reconciliation. Returns the number of cells refreshed.

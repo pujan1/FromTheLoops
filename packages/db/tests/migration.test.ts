@@ -49,9 +49,25 @@ describe("migrations", () => {
       "company_levels",
       "submission_drafts",
       "aggregates_company_role_level",
+      "events",
     ]) {
       expect(names, `table ${expected} missing`).toContain(expected);
     }
+  });
+
+  it("creates the events NOTIFY trigger (migration 0010)", async () => {
+    const fns = await db.execute<{ proname: string }>(sql`
+      SELECT proname FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND proname = 'notify_event'
+    `);
+    expect(fns.map((r) => r.proname)).toContain("notify_event");
+
+    const trigs = await db.execute<{ tgname: string }>(sql`
+      SELECT tgname FROM pg_trigger
+      WHERE tgrelid = 'public.events'::regclass AND NOT tgisinternal
+    `);
+    expect(trigs.map((r) => r.tgname)).toContain("events_notify");
   });
 
   it("creates the aggregation refresh functions (migration 0008)", async () => {

@@ -75,5 +75,8 @@ export * from "./drafts.js";
 // Interview-report transactional writes + edit-flow reads.
 export * from "./reports.js";
 
+// Internal event outbox: emit (in report-write txns) + drain (worker).
+export * from "./events.js";
+
 // Per-(company, role, level) aggregate refresh + reads (Sprint 3).
 export * from "./aggregates.js";

@@ -64,6 +64,20 @@
       "when": 1780538310545,
       "tag": "0008_aggregates_company_role_level",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780624870827,
+      "tag": "0009_graceful_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780624970827,
+      "tag": "0010_events_notify_trigger",
+      "breakpoints": true
     }
   ]
 }
