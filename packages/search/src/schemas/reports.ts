@@ -40,6 +40,10 @@ export const reportsCollectionSchema: CollectionCreateSchema = {
     // Round-type facet — the set of round_types across the report's rounds.
     { name: "round_types", type: "string[]", facet: true },
 
+    // Total round count (not deduped — drives the "N rounds" display). Optional
+    // so docs indexed before this field was added still validate.
+    { name: "round_count", type: "int32", optional: true },
+
     // Topic-tag facets — ids for exact filtering, names for human-readable
     // facet labels, slugs for /topics deep-links.
     { name: "topic_ids", type: "string[]", facet: true },

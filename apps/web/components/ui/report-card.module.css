@@ -69,6 +69,14 @@
   max-width: 62ch;
 }
 
+/* Search-snippet match highlight — a quiet accent underline, not browser yellow. */
+.report__excerpt mark {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+  font-weight: 600;
+  padding: 0 1px;
+}
+
 .report__tags {
   display: flex;
   flex-wrap: wrap;

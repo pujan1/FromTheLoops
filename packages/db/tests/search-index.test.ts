@@ -142,6 +142,7 @@ describe("search-index reads", () => {
     expect(input!.evidenceVerified).toBe(true);
     expect(input!.interviewMonth).toBe("2026-05");
     expect(input!.roundTypes).toEqual(["onsite-system-design"]);
+    expect(input!.roundCount).toBe(1);
     // Both question tags, deduped by id.
     expect(new Set(input!.topics.map((t) => t.slug))).toEqual(
       new Set(["srch-arrays", "srch-graphs"]),
@@ -149,6 +150,36 @@ describe("search-index reads", () => {
     // Full-text body = round experience prose + question prose.
     expect(input!.text).toContain("rate limiter");
     expect(input!.text).toContain("shard a counter");
+  });
+
+  it("counts every round (not deduped by type) for roundCount", async () => {
+    // Two onsite-coding rounds + one system-design: 3 rounds, but only 2
+    // distinct round types. roundCount is the true total; roundTypes dedupes.
+    const id = await makeReport({
+      rounds: [
+        {
+          roundType: "onsite-coding",
+          rating: "positive",
+          experienceProse: "Coding round one.",
+          questions: [{ prose: "Reverse a list.", topicIds: [arraysId] }],
+        },
+        {
+          roundType: "onsite-coding",
+          rating: "mixed",
+          experienceProse: "Coding round two.",
+          questions: [{ prose: "Detect a cycle.", topicIds: [graphsId] }],
+        },
+        {
+          roundType: "onsite-system-design",
+          rating: "positive",
+          experienceProse: "Design a queue.",
+          questions: [{ prose: "Back-pressure?", topicIds: [graphsId] }],
+        },
+      ],
+    });
+    const input = await getReportForIndex(db, id);
+    expect(input!.roundCount).toBe(3);
+    expect(input!.roundTypes).toEqual(["onsite-coding", "onsite-system-design"]);
   });
 
   it("carries a null outcome through (pending interview)", async () => {

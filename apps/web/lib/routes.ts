@@ -25,6 +25,10 @@ export const routes = {
   topics: "/topics",
   reports: "/reports",
   stats: "/stats",
+  // Global search results. Bare path for the header form's GET action; the
+  // builder pre-fills a query (e.g. linking a topic into search).
+  search: "/search",
+  searchFor: (q: string) => (q ? `/search?q=${encodeURIComponent(q)}` : "/search"),
   topic: (slug: string) => `/topics/${slug}`,
   // Canonical browse paths.
   company: (companySlug: string) => companyPath(companySlug),

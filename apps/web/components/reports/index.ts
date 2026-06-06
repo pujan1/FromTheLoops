@@ -4,3 +4,4 @@
 export { FilterBar } from "./filter-bar";
 export { Pagination } from "./pagination";
 export { ReportList } from "./report-list";
+export { SearchResults } from "./search-results";

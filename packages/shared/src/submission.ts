@@ -142,12 +142,20 @@ export function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// The sentinel level for a submission with no level chosen. Level is optional
-// (a candidate may interview before the level is decided), but the DB column is
-// NOT NULL and the wedge index is built on it — so a missing level resolves to
-// this "N/A" text with a null FK, exactly like a company with no ladder. Mirrors
-// the web form's NA_LEVEL.
-export const NA_LEVEL: LevelSelection = { id: null, name: "N/A" };
+// The sentinel level text for a submission with no level chosen. Level is
+// optional (a candidate may interview before the level is decided), but the DB
+// column is NOT NULL — so a missing level resolves to this text with a null FK.
+// "Unspecified" (not "N/A") because we DON'T assert a level we don't know: these
+// reports count in the role-grain aggregate + feed, render as "Unspecified" in
+// the level filter, and never form a level cell (refresh_aggregate_cell refuses
+// the sentinel). Mirrors the web form's UNSPECIFIED_LEVEL.
+export const UNSPECIFIED_LEVEL_NAME = "Unspecified";
+export const UNSPECIFIED_LEVEL: LevelSelection = {
+  id: null,
+  name: UNSPECIFIED_LEVEL_NAME,
+};
+// Back-compat alias — older call sites import NA_LEVEL.
+export const NA_LEVEL: LevelSelection = UNSPECIFIED_LEVEL;
 
 // Draft: tolerant of a partially-filled form. attribution keeps a default
 // so a brand-new draft still has a sane privacy posture (anonymous).

@@ -17,6 +17,7 @@ export { Button as FtlButton, LinkButton as FtlLinkButton } from "./button";
 export { Card as FtlCard } from "./card";
 export { Stat as FtlStat, StatGroup as FtlStatGroup } from "./stat";
 export { SiteHeader as FtlSiteHeader } from "./site-header";
+export { SearchBar as FtlSearchBar } from "./search-bar";
 export { ThemeToggle as FtlThemeToggle } from "./theme-toggle";
 export { ReportCard as FtlReportCard, type ReportCardProps } from "./report-card";
 export {

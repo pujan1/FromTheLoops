@@ -117,6 +117,11 @@ export const reportFiltersSchema = z.object({
   q: z.string().trim().max(120).catch("").default(""),
   outcome: outcomeSchema.optional().catch(undefined),
   roundType: roundTypeSchema.optional().catch(undefined),
+  // Level facet (role page): a per-company level SLUG (e.g. "l4"). The page
+  // resolves it to the level text to filter + swap Position Y to that cell. A
+  // bounded free string (slugs aren't a closed enum); unknown slugs resolve to
+  // "no level cell" and just fall through to the whole-role view.
+  level: z.string().trim().max(80).optional().catch(undefined),
   topics: slugListSchema.default([]),
   trust: reportTrustSchema.catch(DEFAULT_REPORT_TRUST).default(DEFAULT_REPORT_TRUST),
   sort: reportSortSchema.catch(DEFAULT_REPORT_SORT).default(DEFAULT_REPORT_SORT),
@@ -145,6 +150,7 @@ export function buildReportFiltersQuery(filters: ReportFilters): string {
     q: filters.q || undefined,
     outcome: filters.outcome,
     roundType: filters.roundType,
+    level: filters.level,
     topics: filters.topics,
     trust: filters.trust === DEFAULT_REPORT_TRUST ? undefined : filters.trust,
     sort: filters.sort === DEFAULT_REPORT_SORT ? undefined : filters.sort,

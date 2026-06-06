@@ -9,8 +9,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   companies,
   companyLevels,
+  countActiveReportsForCompanyRole,
   createReport,
   getCompanyBySlug,
+  getCompanyStats,
   getCompanyLevelBySlug,
   getPublicReportDetail,
   getOrCreateUserByClerkId,
@@ -19,6 +21,8 @@ import {
   listCompaniesWithReports,
   listLevelsForCompanyRoleWithReports,
   listReportsForCell,
+  listReportsForCompany,
+  listReportsForRole,
   listRolesForCompanyWithReports,
   type ReportWriteInput,
   roles,
@@ -209,6 +213,69 @@ describe("public browse reads", () => {
     expect(custom?.reportCount).toBe(1);
     // L4 (orderIndex 0) sorts before the null-order custom level.
     expect(levels[0]!.name).toBe("L4");
+  });
+
+  it("countActiveReportsForCompanyRole sums all levels, visible only", async () => {
+    await makeReport({ level: "L4", levelId: l4Id });
+    await makeReport({ level: "L5", levelId: null }); // different level, same role
+    await makeReport({ canonicalRoleId: feId }); // different role — excluded
+    await makeReport({ status: "pending_moderation" }); // not visible — excluded
+    const n = await countActiveReportsForCompanyRole(db, companyAId, sweId);
+    expect(n).toBe(2);
+    // A role with no visible reports counts zero.
+    expect(await countActiveReportsForCompanyRole(db, companyAId, feId)).toBe(1);
+  });
+
+  it("listReportsForRole spans all levels; level facet narrows to one", async () => {
+    await makeReport({ level: "L4", levelId: l4Id });
+    await makeReport({ level: "L5", levelId: null });
+    await makeReport({ level: "Unspecified", levelId: null });
+    const cell = { companyId: companyAId, canonicalRoleId: sweId };
+    // No level filter → every level, incl. Unspecified.
+    const all = await listReportsForRole(db, cell, { limit: 20, offset: 0 });
+    expect(all.total).toBe(3);
+    expect(new Set(all.items.map((i) => i.level))).toEqual(
+      new Set(["L4", "L5", "Unspecified"]),
+    );
+    // Each item carries its own role (slug/name) for cross-surface reuse.
+    expect(all.items[0]!.roleSlug).toBe("browseswe");
+    // Level facet pins to one level's text.
+    const l4 = await listReportsForRole(db, cell, {
+      limit: 20,
+      offset: 0,
+      filters: { level: "L4" },
+    });
+    expect(l4.total).toBe(1);
+    expect(l4.items[0]!.level).toBe("L4");
+  });
+
+  it("listReportsForCompany feeds across all roles, newest first, outcome-filterable", async () => {
+    await makeReport({ canonicalRoleId: sweId, outcome: "offer" });
+    await makeReport({ canonicalRoleId: feId, outcome: "reject" });
+    await makeReport({ canonicalRoleId: feId, outcome: "offer" });
+    const all = await listReportsForCompany(db, companyAId, { limit: 20, offset: 0 });
+    expect(all.total).toBe(3);
+    // Mixed roles surface in one feed.
+    expect(new Set(all.items.map((i) => i.roleSlug))).toEqual(
+      new Set(["browseswe", "browsefe"]),
+    );
+    // Outcome facet narrows the feed (and the window total).
+    const offers = await listReportsForCompany(db, companyAId, {
+      limit: 20,
+      offset: 0,
+      filters: { outcome: "offer" },
+    });
+    expect(offers.total).toBe(2);
+  });
+
+  it("getCompanyStats counts visible reports + distinct roles", async () => {
+    await makeReport({ canonicalRoleId: sweId });
+    await makeReport({ canonicalRoleId: sweId });
+    await makeReport({ canonicalRoleId: feId });
+    await makeReport({ canonicalRoleId: feId, status: "pending_moderation" }); // hidden
+    const stats = await getCompanyStats(db, companyAId);
+    expect(stats.reportCount).toBe(3);
+    expect(stats.roleCount).toBe(2);
   });
 
   it("listReportsForCell paginates with a window total + resolves attribution", async () => {

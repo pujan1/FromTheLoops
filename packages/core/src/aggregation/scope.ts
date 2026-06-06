@@ -60,3 +60,37 @@ export function decideScope(
   }
   return { scope: "tag", count: counts.tag, broadened: true };
 }
+
+// ---------------------------------------------------------------------------
+// Level-view decision (Sprint 4 role-primary amendment).
+//
+// In the role-primary model the ROLE page is the canonical aggregated unit; a
+// LEVEL view (/companies/c/r/l, or the role page with ?level=) is secondary. So
+// the broaden ladder collapses to a single rung: a level view either stands on
+// its own (the level cell cleared the threshold) or it broadens to the role
+// aggregate. There is no `tag` fallback here — the role grain is always the
+// floor, and the role page itself never broadens (it IS the corpus).
+// ---------------------------------------------------------------------------
+
+export type LevelView = "level" | "role";
+
+export interface LevelViewDecision {
+  // Which precomputed aggregate Position Y should show.
+  view: LevelView;
+  // True when we fell back to the role aggregate — the level view then shows a
+  // sparse banner and canonicalizes UP to the role page (thin near-duplicate
+  // level pages shouldn't compete for index space). False → the level page is
+  // dense enough to render + self-canonicalize.
+  broadened: boolean;
+}
+
+// Decide whether a level view renders its own cell or broadens to the role.
+// `levelCount` is the exact level cell's report count (0 when it has no cell,
+// e.g. the sentinel/Unspecified level). Dense → stand alone; else broaden.
+export function decideLevelView(
+  levelCount: number,
+  threshold: number = SPARSE_REPORT_THRESHOLD,
+): LevelViewDecision {
+  if (levelCount >= threshold) return { view: "level", broadened: false };
+  return { view: "role", broadened: true };
+}

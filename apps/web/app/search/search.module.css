@@ -1,0 +1,28 @@
+.page {
+  padding-block: var(--space-6) var(--space-8);
+}
+
+/* The large search box sits right under the eyebrow. */
+.searchHead {
+  margin-top: var(--space-3);
+}
+
+.summary {
+  margin-top: var(--space-5);
+}
+
+.term {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.timing {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-muted-2);
+}
+
+.prompt {
+  margin-top: var(--space-5);
+  max-width: 40rem;
+}

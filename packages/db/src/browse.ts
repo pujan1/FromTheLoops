@@ -14,7 +14,8 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
+import type { RoleCellKey } from "./aggregates.js";
 import * as schema from "./schema/index.js";
 import { companies, companyLevels, roles } from "./schema/index.js";
 
@@ -220,6 +221,10 @@ export interface CellReportListItem {
   id: string;
   outcome: schema.InterviewReport["outcome"];
   level: string;
+  // The report's canonical role — carried per-row so a cross-role feed (the
+  // company page) can label + link each card; constant on the role/level pages.
+  roleSlug: string;
+  roleName: string;
   interviewMonth: string;
   roundCount: number;
   evidenceVerified: boolean;
@@ -256,12 +261,18 @@ export interface CellReportFilters {
   topics?: string[];
   // Trust-tier floor: when true, only evidence-verified reports.
   verifiedOnly?: boolean;
+  // Level facet (role-page only): pin to a single level text. The role page
+  // lists ALL levels by default; this narrows to one (e.g. ?level=L4 → the
+  // exact level text the slug resolves to). Ignored on the level-pinned read.
+  level?: string;
 }
 
 type CellReportSqlRow = {
   id: string;
   outcome: schema.InterviewReport["outcome"];
   level: string;
+  role_slug: string;
+  role_name: string;
   interview_month: string;
   round_count: number | string;
   evidence_verified: boolean;
@@ -271,43 +282,24 @@ type CellReportSqlRow = {
   total: number | string;
 };
 
-// One page of visible reports for a (company, role, level) cell, newest first,
-// plus the window total (over() so it costs one query, not two). round_count is
-// a correlated COUNT over rounds; `topics` is a name-sorted distinct set built
-// via the rounds→questions→question_topics→topics path. author_name is NULL
-// unless the report opted into display_name attribution. Optional `filters`
-// narrow the result set (and the window total, so pagination reflects them).
-export async function listReportsForCell(
-  db: Db,
-  cell: CellKey,
-  opts: { limit: number; offset: number; filters?: CellReportFilters },
-): Promise<CellReportList> {
-  const { filters } = opts;
-
-  // Build the WHERE predicate from the always-on cell + visibility clauses plus
-  // any active filters, then AND them together. Topic / round-type filters are
-  // EXISTS sub-selects so a report is counted once regardless of how many of
-  // its rounds/questions match.
-  const conditions = [
-    sql`r.company_id = ${cell.companyId}::uuid`,
-    sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
-    sql`r.level = ${cell.level}`,
-    sql`r.status = 'active'`,
-    sql`r.deleted_at IS NULL`,
-  ];
-  if (filters?.outcome) {
-    conditions.push(sql`r.outcome = ${filters.outcome}`);
-  }
-  if (filters?.verifiedOnly) {
-    conditions.push(sql`r.evidence_verified = true`);
-  }
-  if (filters?.roundType) {
+// The optional, facet-driven WHERE clauses shared by every report-list read
+// (cell / role / company). The scope clauses (company/role/level) are the
+// caller's; these are the user-toggled filters. Topic / round-type filters are
+// EXISTS sub-selects so a report is counted once however many of its
+// rounds/questions match. Returns the extra conditions to AND onto the scope.
+function reportFilterConditions(filters?: CellReportFilters): SQL[] {
+  const conditions: SQL[] = [];
+  if (!filters) return conditions;
+  if (filters.outcome) conditions.push(sql`r.outcome = ${filters.outcome}`);
+  if (filters.level) conditions.push(sql`r.level = ${filters.level}`);
+  if (filters.verifiedOnly) conditions.push(sql`r.evidence_verified = true`);
+  if (filters.roundType) {
     conditions.push(sql`EXISTS (
       SELECT 1 FROM rounds rd
       WHERE rd.report_id = r.id AND rd.round_type = ${filters.roundType}
     )`);
   }
-  if (filters?.topics && filters.topics.length > 0) {
+  if (filters.topics && filters.topics.length > 0) {
     // IN-list (one bound param per slug) rather than `= ANY($arr)` — drizzle's
     // sql template binds a JS array as a scalar, which postgres rejects as a
     // malformed array literal.
@@ -323,10 +315,23 @@ export async function listReportsForCell(
       WHERE rd.report_id = r.id AND t.slug IN (${slugList})
     )`);
   }
-  const where = sql.join(conditions, sql` AND `);
+  return conditions;
+}
 
+// The one report-list query. Takes the already-built WHERE (scope + filters),
+// runs the paginated, newest-first read with the window total, and maps rows.
+// Every list surface (cell / role / company) funnels through here so the SELECT
+// shape — round_count, per-row role, topics, attribution, total — is defined
+// once. The visibility filter (active + not deleted) is folded into `where` by
+// the callers, identical to the aggregate/search pipelines.
+async function runReportList(
+  db: Db,
+  where: SQL,
+  opts: { limit: number; offset: number },
+): Promise<CellReportList> {
   const rows = await db.execute<CellReportSqlRow>(sql`
     SELECT r.id, r.outcome, r.level, r.interview_month,
+           ro.slug AS role_slug, ro.name AS role_name,
            (SELECT COUNT(*)::int FROM rounds rd WHERE rd.report_id = r.id) AS round_count,
            r.evidence_verified,
            CASE WHEN r.display_attribution = 'display_name' THEN u.display_name END AS author_name,
@@ -345,6 +350,7 @@ export async function listReportsForCell(
            (COUNT(*) OVER ())::int AS total
     FROM interview_reports r
     JOIN users u ON u.id = r.created_by_user_id
+    JOIN roles ro ON ro.id = r.canonical_role_id
     WHERE ${where}
     ORDER BY r.created_at DESC
     LIMIT ${opts.limit} OFFSET ${opts.offset}
@@ -354,6 +360,8 @@ export async function listReportsForCell(
       id: r.id,
       outcome: r.outcome,
       level: r.level,
+      roleSlug: r.role_slug,
+      roleName: r.role_name,
       interviewMonth: r.interview_month,
       roundCount: Number(r.round_count),
       evidenceVerified: r.evidence_verified,
@@ -363,4 +371,114 @@ export async function listReportsForCell(
     })),
     total: rows[0] ? Number(rows[0].total) : 0,
   };
+}
+
+const VISIBLE = [sql`r.status = 'active'`, sql`r.deleted_at IS NULL`];
+
+// One page of visible reports for a (company, role, level) cell, newest first,
+// plus the window total (over() so it costs one query, not two). Optional
+// `filters` narrow the result set (and the window total, so pagination reflects
+// them). The level is pinned by the cell, so filters.level is redundant here.
+export async function listReportsForCell(
+  db: Db,
+  cell: CellKey,
+  opts: { limit: number; offset: number; filters?: CellReportFilters },
+): Promise<CellReportList> {
+  const where = sql.join(
+    [
+      sql`r.company_id = ${cell.companyId}::uuid`,
+      sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
+      sql`r.level = ${cell.level}`,
+      ...VISIBLE,
+      ...reportFilterConditions(opts.filters),
+    ],
+    sql` AND `,
+  );
+  return runReportList(db, where, opts);
+}
+
+// One page of visible reports for a (company, role) across ALL levels — the role
+// page's Position X. `filters.level` narrows to one level (the level-page view);
+// absent, every level (incl. Unspecified) is listed. Newest first.
+export async function listReportsForRole(
+  db: Db,
+  cell: RoleCellKey,
+  opts: { limit: number; offset: number; filters?: CellReportFilters },
+): Promise<CellReportList> {
+  const where = sql.join(
+    [
+      sql`r.company_id = ${cell.companyId}::uuid`,
+      sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
+      ...VISIBLE,
+      ...reportFilterConditions(opts.filters),
+    ],
+    sql` AND `,
+  );
+  return runReportList(db, where, opts);
+}
+
+// One page of visible reports across ALL roles at a company — the company page's
+// recent feed. Each item carries its own role (slug/name) so a cross-role card
+// can label + link itself. Filters honored: outcome (+ the generic facets);
+// level is intentionally NOT a company-page facet (it means different things per
+// role), but reportFilterConditions tolerates it if passed.
+export async function listReportsForCompany(
+  db: Db,
+  companyId: string,
+  opts: { limit: number; offset: number; filters?: CellReportFilters },
+): Promise<CellReportList> {
+  const where = sql.join(
+    [
+      sql`r.company_id = ${companyId}::uuid`,
+      ...VISIBLE,
+      ...reportFilterConditions(opts.filters),
+    ],
+    sql` AND `,
+  );
+  return runReportList(db, where, opts);
+}
+
+// Headline counts for the company page header: total visible reports + how many
+// distinct roles they span. One round-trip.
+export interface CompanyStats {
+  reportCount: number;
+  roleCount: number;
+}
+
+export async function getCompanyStats(
+  db: Db,
+  companyId: string,
+): Promise<CompanyStats> {
+  const rows = await db.execute<{ report_count: number | string; role_count: number | string }>(sql`
+    SELECT COUNT(*)::int AS report_count,
+           COUNT(DISTINCT r.canonical_role_id)::int AS role_count
+    FROM interview_reports r
+    WHERE r.company_id = ${companyId}::uuid
+      AND r.status = 'active'
+      AND r.deleted_at IS NULL
+  `);
+  return {
+    reportCount: rows[0] ? Number(rows[0].report_count) : 0,
+    roleCount: rows[0] ? Number(rows[0].role_count) : 0,
+  };
+}
+
+// Count VISIBLE reports for a (company, role) across ALL levels — the "role"
+// scope in the sparse-data ladder (packages/core/aggregation/scope). The wedge
+// page compares this against the exact-cell count to decide whether to broaden
+// and what the banner says. Same visibility filter as everything else.
+export async function countActiveReportsForCompanyRole(
+  db: Db,
+  companyId: string,
+  canonicalRoleId: string,
+): Promise<number> {
+  const rows = await db.execute<{ count: number | string }>(sql`
+    SELECT COUNT(*)::int AS count
+    FROM interview_reports r
+    WHERE r.company_id = ${companyId}::uuid
+      AND r.canonical_role_id = ${canonicalRoleId}::uuid
+      AND r.status = 'active'
+      AND r.deleted_at IS NULL
+  `);
+  return rows[0] ? Number(rows[0].count) : 0;
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Tag } from "./tag";
 import styles from "./report-card.module.css";
 
@@ -8,6 +9,10 @@ export type ReportCardProps = {
   level: string;
   title: string;             // editorial headline ("A two-week loop, in four acts")
   excerpt: string;
+  // Rich excerpt override (e.g. a search snippet with matched terms wrapped in
+  // <mark>). When set it replaces the plain `excerpt` text. Pass pre-built React
+  // nodes only — never raw HTML — so user prose can't inject markup.
+  excerptNode?: ReactNode;
   rounds: number;
   topics: string[];          // up to ~3 displayed
   verified?: boolean;        // work-email verified contributor
@@ -22,6 +27,7 @@ export function ReportCard({
   level,
   title,
   excerpt,
+  excerptNode,
   rounds,
   topics,
   verified = false,
@@ -52,7 +58,7 @@ export function ReportCard({
         </div>
 
         <h3 className={styles.report__title}>{title}</h3>
-        <p className={styles.report__excerpt}>{excerpt}</p>
+        <p className={styles.report__excerpt}>{excerptNode ?? excerpt}</p>
 
         <div className={styles.report__tags}>
           {topics.slice(0, 3).map((t) => (

@@ -1,0 +1,58 @@
+.banner {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-rule);
+}
+
+/* Left accent bar — the editorial "callout" tell. */
+.bar {
+  flex-shrink: 0;
+  width: 3px;
+  align-self: stretch;
+  background: var(--color-accent);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-accent-deep);
+  margin: 0;
+}
+
+.text {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--color-ink-2);
+}
+
+.text strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.link {
+  align-self: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-accent-deep);
+  text-decoration: none;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.link:hover {
+  color: var(--color-ink);
+}

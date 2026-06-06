@@ -45,6 +45,8 @@ export interface ReportIndexInput {
   createdAt: Date;
   // Distinct round types across the report's rounds (facet).
   roundTypes: string[];
+  // Total number of rounds (not deduped — the displayed "N rounds" count).
+  roundCount: number;
   // Distinct topic tags across all the report's questions (facets).
   topics: ReportIndexTopic[];
   // Full-text body: every round's experience prose + every question's prose,
@@ -145,6 +147,7 @@ export async function getReportForIndex(
     interviewMonth: head.report.interviewMonth,
     createdAt: head.report.createdAt,
     roundTypes,
+    roundCount: roundRows.length,
     topics: [...topicsById.values()],
     text: textParts.join("\n\n"),
   };

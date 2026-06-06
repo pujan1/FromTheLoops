@@ -43,13 +43,11 @@ export interface AggregateTopTopic {
   weighted_count: number;
 }
 
-// A single (company, role, level) aggregate row, shaped for app reads. Numeric
-// columns come back as strings over the wire (postgres NUMERIC → string), so we
-// normalize them to numbers here.
-export interface CompanyRoleLevelAggregate {
-  companyId: string;
-  canonicalRoleId: string;
-  level: string;
+// The grain-agnostic Position-Y payload — the fields both the level-grain and
+// the role-grain aggregates carry, and the only fields the AggregatePanel reads.
+// Numeric columns come back as strings over the wire (postgres NUMERIC →
+// string), so we normalize them to numbers here.
+export interface AggregateInsights {
   reportCount: number;
   outcome: {
     offer: number;
@@ -65,11 +63,31 @@ export interface CompanyRoleLevelAggregate {
   refreshedAt: Date;
 }
 
-// The key identifying one cell / "partition".
+// A single (company, role, level) aggregate row, shaped for app reads.
+export interface CompanyRoleLevelAggregate extends AggregateInsights {
+  companyId: string;
+  canonicalRoleId: string;
+  level: string;
+}
+
+// A single (company, role) aggregate row — the role page's primary Position-Y
+// source, spanning every level (incl. Unspecified). Same shape minus the level.
+export interface CompanyRoleAggregate extends AggregateInsights {
+  companyId: string;
+  canonicalRoleId: string;
+}
+
+// The key identifying one level cell / "partition".
 export interface AggregateCellKey {
   companyId: string;
   canonicalRoleId: string;
   level: string;
+}
+
+// The key identifying one role cell.
+export interface RoleCellKey {
+  companyId: string;
+  canonicalRoleId: string;
 }
 
 // Recompute and UPSERT a single cell. This is what the worker calls per
@@ -97,13 +115,32 @@ export async function refreshAggregateForEvent(
 ): Promise<RefreshEventResult> {
   const event = await getEventById(db, eventId);
   if (!event) return "missing";
+  // A write affects BOTH grains: the level cell it landed in AND the role cell
+  // above it. (A sentinel-level write is a no-op on the level grain — the SQL
+  // function drops it — but still moves the role cell.)
   await refreshAggregateCell(db, {
     companyId: event.companyId,
     canonicalRoleId: event.canonicalRoleId,
     level: event.level,
   });
+  await refreshRoleAggregate(db, {
+    companyId: event.companyId,
+    canonicalRoleId: event.canonicalRoleId,
+  });
   await markAggregateEventProcessed(db, eventId);
   return "refreshed";
+}
+
+// Recompute and UPSERT a single (company, role) role cell — the role-grain
+// analogue of refreshAggregateCell. Idempotent; drops the row when the role has
+// no live reports left.
+export async function refreshRoleAggregate(
+  db: Db,
+  cell: RoleCellKey,
+): Promise<void> {
+  await db.execute(
+    sql`SELECT refresh_aggregate_role(${cell.companyId}::uuid, ${cell.canonicalRoleId}::uuid)`,
+  );
 }
 
 // Full backfill / reconciliation. Returns the number of cells refreshed.
@@ -133,6 +170,26 @@ export async function getAggregate(
   return row ? mapAggregateRow(row) : null;
 }
 
+// Read one role cell's aggregate, or null if it has no live reports. The role
+// page's primary Position-Y read (spans every level incl. Unspecified).
+export async function getRoleAggregate(
+  db: Db,
+  cell: RoleCellKey,
+): Promise<CompanyRoleAggregate | null> {
+  const rows = await db.execute<Omit<AggregateRow, "level">>(sql`
+    SELECT company_id, canonical_role_id, report_count,
+           outcome_offer, outcome_reject, outcome_withdrew, outcome_ghosted, outcome_pending,
+           trust_weighted_count, median_round_count, mode_round_sequence, top_topics, refreshed_at
+    FROM aggregates_company_role
+    WHERE company_id = ${cell.companyId}::uuid
+      AND canonical_role_id = ${cell.canonicalRoleId}::uuid
+  `);
+  const row = rows[0];
+  return row
+    ? { companyId: row.company_id, canonicalRoleId: row.canonical_role_id, ...mapInsights(row) }
+    : null;
+}
+
 // Raw row shape as it comes back from postgres-js (NUMERIC → string, jsonb →
 // already-parsed object/array, text[] → string[]).
 // Type alias (not interface) so it satisfies db.execute's
@@ -154,11 +211,9 @@ type AggregateRow = {
   refreshed_at: string | Date;
 };
 
-function mapAggregateRow(row: AggregateRow): CompanyRoleLevelAggregate {
+// The grain-agnostic insight fields, shared by both aggregate mappers.
+function mapInsights(row: Omit<AggregateRow, "level">): AggregateInsights {
   return {
-    companyId: row.company_id,
-    canonicalRoleId: row.canonical_role_id,
-    level: row.level,
     reportCount: Number(row.report_count),
     outcome: {
       offer: Number(row.outcome_offer),
@@ -179,6 +234,15 @@ function mapAggregateRow(row: AggregateRow): CompanyRoleLevelAggregate {
       weighted_count: Number(t.weighted_count),
     })),
     refreshedAt: new Date(row.refreshed_at),
+  };
+}
+
+function mapAggregateRow(row: AggregateRow): CompanyRoleLevelAggregate {
+  return {
+    companyId: row.company_id,
+    canonicalRoleId: row.canonical_role_id,
+    level: row.level,
+    ...mapInsights(row),
   };
 }
 

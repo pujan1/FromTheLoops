@@ -16,8 +16,10 @@ import {
   createReport,
   getAggregate,
   getOrCreateUserByClerkId,
+  getRoleAggregate,
   refreshAggregateCell,
   refreshAllAggregates,
+  refreshRoleAggregate,
   type ReportWriteInput,
   softDeleteReport,
 } from "../src/index.js";
@@ -302,19 +304,97 @@ describe("company/role/level aggregates", () => {
     expect(agg!.reportCount).toBe(N);
   });
 
+  // Role grain (Sprint 4 role-primary amendment): a (company, role) aggregate
+  // spanning every level + the Unspecified sentinel.
+  describe("role grain", () => {
+    const roleCell = () => ({ companyId, canonicalRoleId: roleId });
+
+    it("aggregates a (company, role) across ALL levels", async () => {
+      await makeReport({ level: "L5", levelId, outcome: "offer" });
+      await makeReport({ level: "L6", levelId: null, outcome: "reject" });
+      await refreshRoleAggregate(db, roleCell());
+      const agg = await getRoleAggregate(db, roleCell());
+      expect(agg).not.toBeNull();
+      expect(agg!.reportCount).toBe(2); // both levels rolled up
+      expect(agg!.outcome.offer).toBe(1);
+      expect(agg!.outcome.reject).toBe(1);
+    });
+
+    it("includes Unspecified-level reports in the role grain", async () => {
+      await makeReport({ level: "L5", levelId, outcome: "offer" });
+      await makeReport({ level: "Unspecified", levelId: null, outcome: "reject" });
+      await refreshRoleAggregate(db, roleCell());
+      const agg = await getRoleAggregate(db, roleCell());
+      expect(agg!.reportCount).toBe(2);
+    });
+
+    it("drops the role row when its last report goes", async () => {
+      const id = await makeReport({ level: "L5", levelId });
+      await refreshRoleAggregate(db, roleCell());
+      expect(await getRoleAggregate(db, roleCell())).not.toBeNull();
+      await softDeleteReport(db, id, ownerId);
+      await refreshRoleAggregate(db, roleCell());
+      expect(await getRoleAggregate(db, roleCell())).toBeNull();
+    });
+  });
+
+  // The level grain must NEVER form a cell for the Unspecified/N/A sentinel —
+  // those reports live only in the role grain (no level page exists for them).
+  it("refresh_aggregate_cell refuses the Unspecified sentinel (no phantom cell)", async () => {
+    await makeReport({ level: "Unspecified", levelId: null, outcome: "offer" });
+    await refreshAggregateCell(db, {
+      companyId,
+      canonicalRoleId: roleId,
+      level: "Unspecified",
+    });
+    const cell = await getAggregate(db, {
+      companyId,
+      canonicalRoleId: roleId,
+      level: "Unspecified",
+    });
+    expect(cell).toBeNull();
+    // But the role grain DID pick it up.
+    await refreshRoleAggregate(db, { companyId, canonicalRoleId: roleId });
+    expect(
+      (await getRoleAggregate(db, { companyId, canonicalRoleId: roleId }))!
+        .reportCount,
+    ).toBe(1);
+  });
+
+  it("refresh_all_aggregates skips the sentinel level + populates the role grain", async () => {
+    await makeReport({ level: "L5", levelId, outcome: "offer" });
+    await makeReport({ level: "Unspecified", levelId: null, outcome: "reject" });
+    const levelCells = await refreshAllAggregates(db);
+    // Only the real L5 cell counts; the sentinel makes no level cell.
+    expect(levelCells).toBe(1);
+    expect(
+      await getAggregate(db, {
+        companyId,
+        canonicalRoleId: roleId,
+        level: "Unspecified",
+      }),
+    ).toBeNull();
+    // Role grain was refreshed in the same pass and spans both reports.
+    expect(
+      (await getRoleAggregate(db, { companyId, canonicalRoleId: roleId }))!
+        .reportCount,
+    ).toBe(2);
+  });
+
   // Guards against the migration and its readable source diverging. We compare
   // the executable statements (everything from the first CREATE on), normalized
   // for whitespace, so only header comments may differ.
-  it("keeps migration 0008 byte-identical to views/ source", () => {
+  it("keeps the aggregate migrations byte-identical to views/ source", () => {
     const exec = (path: string): string => {
       const raw = readFileSync(new URL(path, import.meta.url), "utf8");
       const fromFirstCreate = raw.slice(raw.search(/^CREATE/m));
       return fromFirstCreate.replace(/\s+/g, " ").trim();
     };
-    const migration = exec(
-      "../src/migrations/0008_aggregates_company_role_level.sql",
+    expect(
+      exec("../src/migrations/0008_aggregates_company_role_level.sql"),
+    ).toBe(exec("../views/aggregates_company_role_level.sql"));
+    expect(exec("../src/migrations/0011_aggregates_company_role.sql")).toBe(
+      exec("../views/aggregates_company_role.sql"),
     );
-    const view = exec("../views/aggregates_company_role_level.sql");
-    expect(migration).toBe(view);
   });
 });

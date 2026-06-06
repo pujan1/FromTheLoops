@@ -19,6 +19,7 @@ export interface ReportDoc {
   level: string;
   outcome?: string;
   round_types: string[];
+  round_count: number;
   topic_ids: string[];
   topic_slugs: string[];
   topic_names: string[];
@@ -43,6 +44,7 @@ export function buildReportDoc(input: ReportIndexInput): ReportDoc {
     // a pending interview simply carries no outcome facet.
     ...(input.outcome ? { outcome: input.outcome } : {}),
     round_types: input.roundTypes,
+    round_count: input.roundCount,
     topic_ids: input.topics.map((t) => t.id),
     topic_slugs: input.topics.map((t) => t.slug),
     topic_names: input.topics.map((t) => t.name),

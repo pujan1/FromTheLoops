@@ -78,6 +78,13 @@
       "when": 1780624970827,
       "tag": "0010_events_notify_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780711370827,
+      "tag": "0011_aggregates_company_role",
+      "breakpoints": true
     }
   ]
 }

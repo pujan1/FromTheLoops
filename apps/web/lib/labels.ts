@@ -51,3 +51,11 @@ export function outcomeLabel(outcome: string | null): string {
   if (!outcome) return "Outcome pending";
   return OUTCOME_LABEL[outcome as ReportOutcome] ?? outcome;
 }
+
+// Label a level for display. The skipped-level sentinel ("Unspecified", or the
+// legacy "N/A") renders as a clear "Unspecified" rather than a cryptic token; a
+// real level passes through. Keeps the level signal honest — we never relabel a
+// blank as a concrete level.
+export function levelLabel(level: string): string {
+  return level === "Unspecified" || level === "N/A" ? "Unspecified" : level;
+}

@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  decideLevelView,
   decideScope,
   SPARSE_REPORT_THRESHOLD,
   type ScopeReportCounts,
@@ -62,5 +63,29 @@ describe("decideScope", () => {
     expect(
       decideScope(counts({ exact: 12, role: 1000, tag: 100000 })).broadened,
     ).toBe(false);
+  });
+});
+
+// Role-primary amendment: a level view stands alone when dense, else broadens to
+// the role aggregate (no tag rung — the role grain is the floor).
+describe("decideLevelView", () => {
+  it("renders the level cell when it has ≥10 reports", () => {
+    const d = decideLevelView(15);
+    expect(d.view).toBe("level");
+    expect(d.broadened).toBe(false);
+  });
+
+  it("exactly at the threshold renders the level cell (≥, not >)", () => {
+    expect(decideLevelView(SPARSE_REPORT_THRESHOLD).view).toBe("level");
+  });
+
+  it("broadens to the role aggregate when the level cell is thin", () => {
+    const d = decideLevelView(9);
+    expect(d.view).toBe("role");
+    expect(d.broadened).toBe(true);
+  });
+
+  it("a level with no cell (0, e.g. the Unspecified sentinel) broadens", () => {
+    expect(decideLevelView(0).view).toBe("role");
   });
 });

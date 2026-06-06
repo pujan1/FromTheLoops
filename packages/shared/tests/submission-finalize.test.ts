@@ -84,10 +84,12 @@ describe("validateFinalSubmission", () => {
     expect(result.issues.month).toBe(false);
   });
 
-  it("treats level as optional, defaulting a missing level to N/A", () => {
+  it("treats level as optional, defaulting a missing level to the Unspecified sentinel", () => {
     const { level: _drop, ...noLevel } = validBasics();
     const data = expectOk(validateFinalSubmission({ ...noLevel, rounds: [] }));
-    expect(data.level).toEqual({ id: null, name: "N/A" });
+    // Honest sentinel — we don't assert a level we don't know. Excluded from the
+    // level grain; counts in the role grain. (See UNSPECIFIED_LEVEL.)
+    expect(data.level).toEqual({ id: null, name: "Unspecified" });
   });
 
   it("treats month as optional, defaulting a missing month to the current month", () => {

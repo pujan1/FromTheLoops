@@ -1,10 +1,12 @@
+import { UNSPECIFIED_LEVEL } from "@fromtheloop/shared";
 import type { CompanySelection, LevelSelection } from "@fromtheloop/shared";
 import type { ComboboxOption } from "@/components/ui";
 import type { LevelOption, LevelTier } from "./types";
 
 export const PENDING_PREFIX = "pending:";
 export const AUTOSAVE_DELAY_MS = 2000;
-export const NA_LEVEL: LevelSelection = { id: null, name: "N/A" };
+// Re-exported from shared so the form + finalize gate agree on the sentinel.
+export const NA_LEVEL: LevelSelection = UNSPECIFIED_LEVEL;
 
 // Seniority prefix a tier prepends to the role in the level dropdown. `mid` is
 // the baseline IC tier (no prefix); null tiers also get no prefix.

@@ -14,3 +14,6 @@ export * from "./provision.js";
 
 // Document builders + indexers (the worker's index-typesense job + backfill).
 export * from "./indexers/index.js";
+
+// Read side — faceted full-text search (apps/web wedge/search UI).
+export * from "./query/reports.js";

@@ -1,0 +1,116 @@
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper-2);
+}
+
+.card__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.card__lede {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+}
+
+.card__note {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.cta {
+  align-self: start;
+  margin-top: var(--space-2);
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-paper);
+  background: var(--color-ink);
+  text-decoration: none;
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.cta:hover {
+  background: var(--color-accent);
+}
+
+/* ---- Other levels ---- */
+
+.levels {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.level {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-rule);
+  text-decoration: none;
+  color: var(--color-ink);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.levels li:last-child .level {
+  border-bottom: none;
+}
+
+a.level:hover {
+  color: var(--color-accent);
+}
+
+.level__name {
+  font-size: var(--fs-small);
+}
+
+.level__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--color-muted-2);
+}
+
+.level--current {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.level--current .level__name::after {
+  content: " ·  you’re here";
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.level--nolink {
+  color: var(--color-muted);
+}

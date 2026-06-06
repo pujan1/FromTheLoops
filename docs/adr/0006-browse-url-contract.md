@@ -6,6 +6,14 @@ deciders: [pujan]
 
 # ADR-0006 — Canonical browse URL contract + slug→entity resolver
 
+> **Partially superseded by [ADR-0009](0009-role-primary-browse-grain.md).** The
+> URL shape, the path-builder/resolver split, and the 404/dual-audience rules
+> below all stand. What ADR-0009 changes: the **canonical aggregated unit** is
+> now `/companies/:company/:role` (the role page), not the
+> `…/:level` wedge page. The level page became a secondary, conditionally-
+> canonical *view* of the role page. Read "the canonical wedge page" below as
+> "a level view" accordingly.
+
 ## Context
 
 Sprint 4 turns the aggregation pipeline into the pages Google indexes: a

@@ -23,12 +23,27 @@ const TRUST_LABEL: Record<(typeof REPORT_TRUST_TIERS)[number], string> = {
   verified: "Verified",
 };
 
+// A selectable level for the level facet: the URL slug + its display name.
+export interface LevelChoice {
+  slug: string;
+  name: string;
+}
+
 export function FilterBar({
   basePath,
   filters,
+  levels,
+  showRound = true,
+  showTrust = true,
 }: {
   basePath: string;
   filters: ReportFilters;
+  // When provided, renders a Level facet (role page). Each chip sets ?level=slug
+  // and resets to page 1; the page resolves the slug and swaps Position Y.
+  levels?: LevelChoice[];
+  // The company feed wants outcome-only; the role page wants the full set.
+  showRound?: boolean;
+  showTrust?: boolean;
 }) {
   // Build the href for a filter state, always resetting to page 1.
   const href = (next: Partial<ReportFilters>) =>
@@ -47,7 +62,9 @@ export function FilterBar({
       <a
         className={`${styles.chip} ${active ? styles["chip--active"] : ""}`}
         href={href(target)}
-        aria-pressed={active}
+        // Link-based filter: the active chip is the current selection, so
+        // aria-current (valid on a link) rather than aria-pressed (button-only).
+        aria-current={active ? "true" : undefined}
       >
         {label}
       </a>
@@ -71,34 +88,55 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className={styles.facet}>
-        <span className={styles.facet__label}>Round</span>
-        <div className={styles.chips}>
-          <Chip label="All" active={!filters.roundType} target={{ roundType: undefined }} />
-          {ROUND_TYPES.map((rt) => (
-            <Chip
-              key={rt}
-              label={roundTypeLabel(rt)}
-              active={filters.roundType === rt}
-              target={{ roundType: rt }}
-            />
-          ))}
+      {levels && levels.length > 0 && (
+        <div className={styles.facet}>
+          <span className={styles.facet__label}>Level</span>
+          <div className={styles.chips}>
+            <Chip label="All" active={!filters.level} target={{ level: undefined }} />
+            {levels.map((lvl) => (
+              <Chip
+                key={lvl.slug}
+                label={lvl.name}
+                active={filters.level === lvl.slug}
+                target={{ level: lvl.slug }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className={styles.facet}>
-        <span className={styles.facet__label}>Trust</span>
-        <div className={styles.chips}>
-          {REPORT_TRUST_TIERS.map((t) => (
-            <Chip
-              key={t}
-              label={TRUST_LABEL[t]}
-              active={filters.trust === t}
-              target={{ trust: t }}
-            />
-          ))}
+      {showRound && (
+        <div className={styles.facet}>
+          <span className={styles.facet__label}>Round</span>
+          <div className={styles.chips}>
+            <Chip label="All" active={!filters.roundType} target={{ roundType: undefined }} />
+            {ROUND_TYPES.map((rt) => (
+              <Chip
+                key={rt}
+                label={roundTypeLabel(rt)}
+                active={filters.roundType === rt}
+                target={{ roundType: rt }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {showTrust && (
+        <div className={styles.facet}>
+          <span className={styles.facet__label}>Trust</span>
+          <div className={styles.chips}>
+            {REPORT_TRUST_TIERS.map((t) => (
+              <Chip
+                key={t}
+                label={TRUST_LABEL[t]}
+                active={filters.trust === t}
+                target={{ trust: t }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {filters.topics.length > 0 && (
         <div className={styles.facet}>

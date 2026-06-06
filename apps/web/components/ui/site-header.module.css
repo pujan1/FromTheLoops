@@ -36,6 +36,14 @@
   min-width: 0;
 }
 
+/* Search sits left of the nav, taking the slack between wordmark and nav. */
+.search {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: auto;
+  max-width: 22rem;
+}
+
 .nav {
   display: flex;
   align-items: center;
@@ -99,6 +107,13 @@
     grid-template-columns: minmax(0, 1fr) auto auto;
     justify-content: stretch;
     gap: var(--space-3);
+  }
+
+  /* Search gets its own full-width row above nav/auth/toggle. */
+  .search {
+    grid-column: 1 / -1;
+    max-width: none;
+    margin-right: 0;
   }
 
   .nav {

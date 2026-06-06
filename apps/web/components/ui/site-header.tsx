@@ -2,6 +2,7 @@ import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { routes } from "@/lib/routes";
 import { Container } from "./container";
+import { SearchBar } from "./search-bar";
 import styles from "./site-header.module.css";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -17,6 +18,9 @@ export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) {
           </Link>
 
           <div className={styles.actions}>
+            <div className={styles.search}>
+              <SearchBar />
+            </div>
             <nav className={styles.nav} aria-label="primary">
               <Link href={routes.reports}>Experiences</Link>
               <Link href={routes.companies}>Companies</Link>
