@@ -92,7 +92,15 @@ export const REPORT_SORTS = ["recent", "helpful", "relevant"] as const;
 export const reportSortSchema = z.enum(REPORT_SORTS);
 export type ReportSort = z.infer<typeof reportSortSchema>;
 
+// Trust-tier floor for the Position-X list. "all" is no constraint; "verified"
+// restricts to evidence-verified reports. A two-value enum (not a bare boolean)
+// so the URL reads `?trust=verified` and future tiers slot in cleanly.
+export const REPORT_TRUST_TIERS = ["all", "verified"] as const;
+export const reportTrustSchema = z.enum(REPORT_TRUST_TIERS);
+export type ReportTrustTier = z.infer<typeof reportTrustSchema>;
+
 export const DEFAULT_REPORT_SORT: ReportSort = "recent";
+export const DEFAULT_REPORT_TRUST: ReportTrustTier = "all";
 export const DEFAULT_PER_PAGE = 20;
 export const MAX_PER_PAGE = 100;
 
@@ -110,6 +118,7 @@ export const reportFiltersSchema = z.object({
   outcome: outcomeSchema.optional().catch(undefined),
   roundType: roundTypeSchema.optional().catch(undefined),
   topics: slugListSchema.default([]),
+  trust: reportTrustSchema.catch(DEFAULT_REPORT_TRUST).default(DEFAULT_REPORT_TRUST),
   sort: reportSortSchema.catch(DEFAULT_REPORT_SORT).default(DEFAULT_REPORT_SORT),
   page: z.coerce.number().int().min(1).catch(1).default(1),
   perPage: z.coerce
@@ -137,6 +146,7 @@ export function buildReportFiltersQuery(filters: ReportFilters): string {
     outcome: filters.outcome,
     roundType: filters.roundType,
     topics: filters.topics,
+    trust: filters.trust === DEFAULT_REPORT_TRUST ? undefined : filters.trust,
     sort: filters.sort === DEFAULT_REPORT_SORT ? undefined : filters.sort,
     page: filters.page > 1 ? filters.page : undefined,
     perPage: filters.perPage === DEFAULT_PER_PAGE ? undefined : filters.perPage,

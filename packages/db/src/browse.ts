@@ -205,9 +205,16 @@ export async function listLevelsForCompanyRoleWithReports(
 }
 
 // ---------------------------------------------------------------------------
-// Wedge cell report list (Position X). Day 2: paginated, unfiltered. Day 5
-// layers the filter predicates on top of this same read.
+// Wedge cell report list (Position X). Day 2 shipped paginated + unfiltered;
+// Day 4 added the per-report topic chips; Day 5 layers the filter predicates
+// (outcome / round-type / topics / trust-tier) on top of the same read.
 // ---------------------------------------------------------------------------
+
+// A topic shown as a chip on a report card. Slug links to /topics/[slug].
+export interface CellReportTopic {
+  slug: string;
+  name: string;
+}
 
 export interface CellReportListItem {
   id: string;
@@ -219,6 +226,9 @@ export interface CellReportListItem {
   // The author's display name when the report opted into attribution; null when
   // anonymous (the page renders "Anonymous").
   authorName: string | null;
+  // Distinct topics across the report's questions, name-sorted. The card slices
+  // the first few; the full set rides along for callers that want it.
+  topics: CellReportTopic[];
   createdAt: Date;
 }
 
@@ -233,6 +243,21 @@ export interface CellKey {
   level: string;
 }
 
+// The Position-X filters, mirroring the shared `reportFiltersSchema`
+// (packages/shared/url) minus the search-only fields. All optional; an absent
+// field is "no constraint", so an unfiltered call is the Day-2 behavior. The
+// types are the db's own enum-derived types — browse.ts stays free of a
+// @fromtheloop/shared dep (same rule as aggregates.ts).
+export interface CellReportFilters {
+  outcome?: schema.InterviewReport["outcome"];
+  roundType?: schema.Round["roundType"];
+  // Topic slugs; a report matches if it carries ANY of them (OR within the
+  // facet — friendlier than AND on sparse data; documented in ADR / sprint).
+  topics?: string[];
+  // Trust-tier floor: when true, only evidence-verified reports.
+  verifiedOnly?: boolean;
+}
+
 type CellReportSqlRow = {
   id: string;
   outcome: schema.InterviewReport["outcome"];
@@ -241,33 +266,86 @@ type CellReportSqlRow = {
   round_count: number | string;
   evidence_verified: boolean;
   author_name: string | null;
+  topics: CellReportTopic[] | null;
   created_at: string | Date;
   total: number | string;
 };
 
 // One page of visible reports for a (company, role, level) cell, newest first,
 // plus the window total (over() so it costs one query, not two). round_count is
-// a correlated COUNT over rounds. author_name is NULL unless the report opted
-// into display_name attribution.
+// a correlated COUNT over rounds; `topics` is a name-sorted distinct set built
+// via the rounds→questions→question_topics→topics path. author_name is NULL
+// unless the report opted into display_name attribution. Optional `filters`
+// narrow the result set (and the window total, so pagination reflects them).
 export async function listReportsForCell(
   db: Db,
   cell: CellKey,
-  opts: { limit: number; offset: number },
+  opts: { limit: number; offset: number; filters?: CellReportFilters },
 ): Promise<CellReportList> {
+  const { filters } = opts;
+
+  // Build the WHERE predicate from the always-on cell + visibility clauses plus
+  // any active filters, then AND them together. Topic / round-type filters are
+  // EXISTS sub-selects so a report is counted once regardless of how many of
+  // its rounds/questions match.
+  const conditions = [
+    sql`r.company_id = ${cell.companyId}::uuid`,
+    sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
+    sql`r.level = ${cell.level}`,
+    sql`r.status = 'active'`,
+    sql`r.deleted_at IS NULL`,
+  ];
+  if (filters?.outcome) {
+    conditions.push(sql`r.outcome = ${filters.outcome}`);
+  }
+  if (filters?.verifiedOnly) {
+    conditions.push(sql`r.evidence_verified = true`);
+  }
+  if (filters?.roundType) {
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM rounds rd
+      WHERE rd.report_id = r.id AND rd.round_type = ${filters.roundType}
+    )`);
+  }
+  if (filters?.topics && filters.topics.length > 0) {
+    // IN-list (one bound param per slug) rather than `= ANY($arr)` — drizzle's
+    // sql template binds a JS array as a scalar, which postgres rejects as a
+    // malformed array literal.
+    const slugList = sql.join(
+      filters.topics.map((slug) => sql`${slug}`),
+      sql`, `,
+    );
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM rounds rd
+      JOIN questions q ON q.round_id = rd.id
+      JOIN question_topics qt ON qt.question_id = q.id
+      JOIN topics t ON t.id = qt.topic_id
+      WHERE rd.report_id = r.id AND t.slug IN (${slugList})
+    )`);
+  }
+  const where = sql.join(conditions, sql` AND `);
+
   const rows = await db.execute<CellReportSqlRow>(sql`
     SELECT r.id, r.outcome, r.level, r.interview_month,
            (SELECT COUNT(*)::int FROM rounds rd WHERE rd.report_id = r.id) AS round_count,
            r.evidence_verified,
            CASE WHEN r.display_attribution = 'display_name' THEN u.display_name END AS author_name,
+           COALESCE((
+             SELECT jsonb_agg(jsonb_build_object('slug', sub.slug, 'name', sub.name) ORDER BY sub.name)
+             FROM (
+               SELECT DISTINCT t.slug, t.name
+               FROM rounds rd
+               JOIN questions q ON q.round_id = rd.id
+               JOIN question_topics qt ON qt.question_id = q.id
+               JOIN topics t ON t.id = qt.topic_id
+               WHERE rd.report_id = r.id
+             ) sub
+           ), '[]'::jsonb) AS topics,
            r.created_at,
            (COUNT(*) OVER ())::int AS total
     FROM interview_reports r
     JOIN users u ON u.id = r.created_by_user_id
-    WHERE r.company_id = ${cell.companyId}::uuid
-      AND r.canonical_role_id = ${cell.canonicalRoleId}::uuid
-      AND r.level = ${cell.level}
-      AND r.status = 'active'
-      AND r.deleted_at IS NULL
+    WHERE ${where}
     ORDER BY r.created_at DESC
     LIMIT ${opts.limit} OFFSET ${opts.offset}
   `);
@@ -280,6 +358,7 @@ export async function listReportsForCell(
       roundCount: Number(r.round_count),
       evidenceVerified: r.evidence_verified,
       authorName: r.author_name,
+      topics: r.topics ?? [],
       createdAt: new Date(r.created_at),
     })),
     total: rows[0] ? Number(rows[0].total) : 0,

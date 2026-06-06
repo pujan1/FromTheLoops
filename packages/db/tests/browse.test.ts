@@ -40,6 +40,7 @@ describe("public browse reads", () => {
   let feId: string;
   let l4Id: string;
   let topicId: string;
+  let topicBId: string;
 
   beforeAll(async () => {
     const { db: d, client } = makeTestClient();
@@ -99,6 +100,12 @@ describe("public browse reads", () => {
         .values({ slug: "browse-arrays", name: "Arrays", status: "active" })
         .returning({ id: topics.id })
     )[0]!.id;
+    topicBId = (
+      await db
+        .insert(topics)
+        .values({ slug: "browse-graphs", name: "Graphs", status: "active" })
+        .returning({ id: topics.id })
+    )[0]!.id;
   });
 
   afterAll(async () => {
@@ -109,6 +116,7 @@ describe("public browse reads", () => {
     await db.delete(roles).where(eq(roles.id, sweId));
     await db.delete(roles).where(eq(roles.id, feId));
     await db.delete(topics).where(eq(topics.id, topicId));
+    await db.delete(topics).where(eq(topics.id, topicBId));
     await db.delete(companies).where(eq(companies.id, companyAId));
     await db.delete(companies).where(eq(companies.id, companyBId));
     await db.delete(companies).where(eq(companies.id, pendingCompanyId));
@@ -223,6 +231,98 @@ describe("public browse reads", () => {
     );
     expect(named).toHaveLength(1);
     expect(anon).toHaveLength(2);
+  });
+
+  it("listReportsForCell returns each report's distinct topics, name-sorted", async () => {
+    // One report whose two rounds touch Arrays + Graphs (Graphs twice → still
+    // distinct once). Names sort A < G.
+    await makeReport({
+      rounds: [
+        {
+          roundType: "onsite-coding",
+          rating: "positive",
+          experienceProse: "Coding.",
+          questions: [{ prose: "Arrays Q.", topicIds: [topicId, topicBId] }],
+        },
+        {
+          roundType: "onsite-system-design",
+          rating: "mixed",
+          experienceProse: "Design.",
+          questions: [{ prose: "Graphs Q.", topicIds: [topicBId] }],
+        },
+      ],
+    });
+    const cell = { companyId: companyAId, canonicalRoleId: sweId, level: "L4" };
+    const { items } = await listReportsForCell(db, cell, { limit: 20, offset: 0 });
+    expect(items[0]!.topics).toEqual([
+      { slug: "browse-arrays", name: "Arrays" },
+      { slug: "browse-graphs", name: "Graphs" },
+    ]);
+  });
+
+  it("listReportsForCell filters by outcome, round-type, topic, and trust tier", async () => {
+    const cell = { companyId: companyAId, canonicalRoleId: sweId, level: "L4" };
+
+    // An offer with a take-home round tagged Graphs.
+    const offerId = await makeReport({
+      outcome: "offer",
+      rounds: [
+        {
+          roundType: "take-home",
+          rating: "positive",
+          experienceProse: "Take-home.",
+          questions: [{ prose: "Graph traversal.", topicIds: [topicBId] }],
+        },
+      ],
+    });
+    // A reject with an onsite-coding round tagged Arrays (makeReport default).
+    await makeReport({ outcome: "reject" });
+
+    // Outcome facet.
+    const offers = await listReportsForCell(db, cell, {
+      limit: 20,
+      offset: 0,
+      filters: { outcome: "offer" },
+    });
+    expect(offers.total).toBe(1);
+    expect(offers.items[0]!.id).toBe(offerId);
+
+    // Round-type facet (EXISTS over the report's rounds).
+    const takeHome = await listReportsForCell(db, cell, {
+      limit: 20,
+      offset: 0,
+      filters: { roundType: "take-home" },
+    });
+    expect(takeHome.items.map((i) => i.id)).toEqual([offerId]);
+
+    // Topic facet (ANY of the slugs).
+    const graphs = await listReportsForCell(db, cell, {
+      limit: 20,
+      offset: 0,
+      filters: { topics: ["browse-graphs"] },
+    });
+    expect(graphs.items.map((i) => i.id)).toEqual([offerId]);
+
+    // Trust tier: mark the offer evidence-verified, then require it.
+    await db
+      .update(interviewReports)
+      .set({ evidenceVerified: true })
+      .where(eq(interviewReports.id, offerId));
+    const verified = await listReportsForCell(db, cell, {
+      limit: 20,
+      offset: 0,
+      filters: { verifiedOnly: true },
+    });
+    expect(verified.items.map((i) => i.id)).toEqual([offerId]);
+
+    // Window total reflects the filter, so pagination is over the filtered set.
+    const none = await listReportsForCell(db, cell, {
+      limit: 20,
+      offset: 0,
+      filters: { outcome: "ghosted" },
+    });
+    expect(none.total).toBe(0);
+    expect(none.items).toHaveLength(0);
   });
 
   it("getPublicReportDetail returns active reports with their full tree", async () => {

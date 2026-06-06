@@ -13,6 +13,7 @@ describe("parseReportFilters", () => {
       outcome: undefined,
       roundType: undefined,
       topics: [],
+      trust: "all",
       sort: "recent",
       page: 1,
       perPage: 20,
@@ -40,15 +41,21 @@ describe("parseReportFilters", () => {
     const f = parseReportFilters({
       outcome: "not-an-outcome",
       roundType: "bogus",
+      trust: "platinum",
       sort: "sideways",
       page: "abc",
       perPage: "9999", // over MAX_PER_PAGE
     });
     expect(f.outcome).toBeUndefined();
     expect(f.roundType).toBeUndefined();
+    expect(f.trust).toBe("all");
     expect(f.sort).toBe("recent");
     expect(f.page).toBe(1);
     expect(f.perPage).toBe(20);
+  });
+
+  it("reads the trust-tier facet", () => {
+    expect(parseReportFilters({ trust: "verified" }).trust).toBe("verified");
   });
 
   it("accepts topics as repeated keys or a comma list, trimmed and de-duped", () => {
@@ -89,8 +96,21 @@ describe("buildReportFiltersQuery", () => {
     );
   });
 
+  it("emits trust only when not the default 'all'", () => {
+    expect(buildReportFiltersQuery(parseReportFilters({ trust: "all" }))).toBe("");
+    expect(buildReportFiltersQuery(parseReportFilters({ trust: "verified" }))).toBe(
+      "?trust=verified",
+    );
+  });
+
   it("round-trips: parse → build → parse is stable", () => {
-    const input = { q: "anthropic", outcome: "reject", page: "4", topics: "ml,writing" };
+    const input = {
+      q: "anthropic",
+      outcome: "reject",
+      trust: "verified",
+      page: "4",
+      topics: "ml,writing",
+    };
     const once = parseReportFilters(input);
     const twice = parseReportFilters(
       new URLSearchParams(buildReportFiltersQuery(once).replace(/^\?/, "")),
