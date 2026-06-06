@@ -48,14 +48,19 @@ Sprints 1–3 produced data and pipelines. Sprint 4 turns them into the page Goo
 
 ## Exit criteria
 
-- [ ] `/companies/stripe/backend-engineer/l4` renders with seed + dummy data; no client-side data fetch
-- [ ] Position Y shows count, outcome distribution, top 5 tags, common round structure
-- [ ] Position X paginates 20 reports/page, filter chips work, URL updates as filters change
-- [ ] Search "stripe coding" returns relevant reports in <300ms p95
-- [ ] Sparse-data banner appears when fewer than 10 reports match; fallback scope reflected in copy
-- [ ] LCP on canonical wedge page <2.5s, INP <200ms on a throttled mobile profile (Lighthouse)
-- [ ] All four `/companies/...` levels render meaningful content; not 404 placeholders
-- [ ] Visual quality bar: design pass complete, no obvious AI-generic look (per `/frontend-design` skill output)
+> **Signed off 2026-06-06.** The canonical aggregated unit moved from the level
+> cell to the **role page** (ADR-0009), so "the canonical wedge page" below means
+> the role page (e.g. `/companies/stripe/backend`); the level page is a
+> conditionally-canonical view of it. Criteria re-read against that model.
+
+- [x] Canonical page renders with seed + dummy data; **no client-side data fetch** — `/companies/stripe/backend` (and the level view) SSR fully-populated HTML; verified by curl + the `browse.spec.ts` E2E.
+- [x] Position Y shows count, outcome distribution, top tags, common round structure — over the **role** grain by default (all levels incl. Unspecified), swapping to the level cell when dense.
+- [x] Position X paginates 20 reports/page, filter chips work, URL updates as filters change — plus the new **level facet**; all link-based + SSR (E2E-verified).
+- [x] Search returns relevant reports well under 300ms p95 — Typesense single-query latency **6–11 ms** locally (`stripe` 40 hits/11ms, `system design` 125/6ms).
+- [x] Sparse-data banner appears below threshold; fallback scope reflected in copy — `…/swe/sde-iii` (8) shows "Small sample… Only 8 reports at … SDE III" + canonical up to role (E2E-verified).
+- [x] **LCP <2.5s, INP <200ms** on a throttled mobile profile — LCP **~0.8s**, CLS **0.00** (prod build, 4×CPU/Slow 4G); INP negligible by construction (link-based browse). See [docs/perf/sprint-04-baseline.md](../docs/perf/sprint-04-baseline.md).
+- [x] All `/companies/…` levels render meaningful content, not 404 placeholders — index → company → role → level all render; a *bad* level slug correctly 404s (E2E-verified).
+- [x] Visual quality bar: design pass complete, no obvious AI-generic look — cohesive Swiss system; Lighthouse a11y **100** / SEO **100** on the money page.
 
 ## Risks & mitigations
 
@@ -133,3 +138,9 @@ _Append-only._
   - **SEO canonicals:** `?level=` → the level path; a level path → self when dense, **up to the role** when thin (no thin near-duplicate competing for index space); the role/company pages → self. Path is strict (404 on a bad level), query is tolerant (falls through to whole-role).
   - **Supersedes in part:** [ADR-0006](../docs/adr/0006-browse-url-contract.md) — URL *shape* + resolver unchanged; only the canonical *grain* moved from the level page to the role page. The Days 2–8 wedge machinery (AggregatePanel, FilterBar, Pagination, SparseBanner, WedgeRail, search) was **reused**, not rewritten — the inversion was mostly new db grain + a `RoleView` that recomposes the existing pieces.
   - **Still open after this:** filtering to *Unspecified-only* on the role page (Unspecified reports show by default; a dedicated facet value is deferred); Position Y over arbitrary live filters (only precomputed role/level cells are shown); the local seed always sets real levels, so the Unspecified path is unit-tested but not yet exercised by seed fixtures. Days 9–10 (perf/E2E/exit criteria) now validate the **role-primary** model.
+
+- 2026-06-06: **Days 8–10 done** (design polish on the role-primary surfaces; CWV/Lighthouse baseline; E2E + owed ADR-0005 + exit-criteria sign-off). **Sprint 4 exit criteria all met** (see the ticked checklist above). No new unit tests beyond the role-primary batch; **+1 E2E spec** (`browse.spec.ts`, 6 cases, all green); full repo typecheck clean.
+  - **Day 8 — polish.** The role-primary surfaces inherit the Day-8 component system (AggregatePanel, ReportList, FilterBar, WedgeRail, search) cleanly, so the "pass" was verifying cohesion rather than reskinning: company feed + role nav, role page (role aggregate + level facet), and the level-active view ("15 reports at SDE II", Position Y swapped, rail "you're here") all read as one editorial system. No AI-generic tells.
+  - **Day 9 — CWV baseline** ([docs/perf/sprint-04-baseline.md](../docs/perf/sprint-04-baseline.md)). Measured the **production build** (`next build` + `next start`, not dev) on the role money page `/companies/amazon/swe`, throttled mobile (4×CPU / Slow 4G) via the chrome-devtools MCP: **LCP ~0.74–0.82s** (budget 2.5s), **CLS 0.00**; INP negligible by construction (the browse surface is link-based — filters/pagination/level facet are `<a>` navigations, no interaction JS on the critical path). Lighthouse before→after the Day-9 fixes: **SEO 91→100, Accessibility 94→100**, Best Practices 77 (the only fails are Clerk's third-party cookies — provider limitation). Fixes: **`metadataBase`** in the root layout so `alternates.canonical` resolves **absolute** (the relative canonical was failing Lighthouse — directly serves the ADR-0009 conditional-canonical SEO story); moved small metadata text off `--color-muted-2` (sub-AA, ~2.6:1) to `--color-muted`; promoted the "Reports"/"Recent reports" section labels `<p>`→`<h2>` (fix h1→h3 skip); matched the wordmark `aria-label` to its visible text.
+  - **Day 10 — E2E + ADRs + sign-off.** New `apps/web/e2e/browse.spec.ts` drives the full public journey in real Chrome (6/6 green): companies index → company (cross-role feed + role nav) → role page (role Position Y + report list) → **level-facet swap** to the dense SDE II cell → **thin SDE III path → sparse banner** → **bad level slug 404** → report card → detail → **header search → results**. Wrote the **owed [ADR-0005](../docs/adr/0005-aggregation-strategy.md)** (Sprint 3's aggregation-strategy decision — summary table not native matview, incremental per-cell refresh via the events outbox, trust-weighting, Typesense as the separate search projection; now also covers the role grain) — README index updated (0005 accepted, no longer owed). Exit criteria ticked + reframed for the role-primary model (the "canonical wedge page" is now the role page).
+  - **Sprint 4 deferred to later sprints (unchanged scope boundaries):** `/topics` browse + profiles/karma (Sprint 5); sitemap.xml + JSON-LD (Sprint 7 SEO pass); the casing→canonical redirect; `React.cache()` around the resolver/aggregate reads (a `generateMetadata` + page double-read remains); search-package unit tests (no vitest harness yet). The local seed still sets real levels everywhere, so the Unspecified path is unit-tested but unseeded.

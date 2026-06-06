@@ -15,7 +15,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   letter-spacing: var(--tracking-wide);
-  color: var(--color-muted-2);
+  color: var(--color-muted);
   padding-top: 6px;
 }
 

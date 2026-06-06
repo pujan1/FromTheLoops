@@ -13,7 +13,7 @@ export function FtlSiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) 
     <header className={styles.header}>
       <FtlContainer>
         <div className={styles.inner}>
-          <Link href={routes.home} className={styles.wordmark} aria-label="FromTheLoop">
+          <Link href={routes.home} className={styles.wordmark} aria-label="From the Loop">
             From <span className={styles.wordmark__italic}>the</span> Loop
           </Link>
 

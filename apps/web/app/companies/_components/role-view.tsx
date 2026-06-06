@@ -158,7 +158,7 @@ export async function RoleView({
       </div>
 
       <section className={styles.section}>
-        <p className={styles.sectionTitle}>Reports</p>
+        <h2 className={styles.sectionTitle}>Reports</h2>
         <FilterBar basePath={basePath} filters={filters} levels={levelChoices} />
         <ReportList
           items={reportPage.items}

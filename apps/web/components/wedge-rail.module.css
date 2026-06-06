@@ -93,7 +93,7 @@ a.level:hover {
 .level__meta {
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
-  color: var(--color-muted-2);
+  color: var(--color-muted);
 }
 
 .level--current {

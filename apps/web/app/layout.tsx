@@ -39,7 +39,14 @@ const themeInitScript = `
 })();
 `;
 
+// Base origin for resolving relative canonicals/OG URLs to absolute ones — the
+// `alternates.canonical` paths the browse pages set are relative, and a valid
+// rel=canonical must be absolute (Lighthouse SEO). Set NEXT_PUBLIC_APP_URL to
+// the deployed origin in prod; falls back to localhost for dev/build.
+const siteOrigin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin),
   title: "FromTheLoop — Interview experiences, from the loop",
   description:
     "Structured, taxonomy-aware interview experiences written by the people who took them.",

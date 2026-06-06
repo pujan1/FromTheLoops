@@ -116,7 +116,7 @@ export default async function CompanyPage({
           <FtlRule />
 
           <section className={styles.section}>
-            <p className={styles.sectionTitle}>Recent reports</p>
+            <h2 className={styles.sectionTitle}>Recent reports</h2>
             <FilterBar
               basePath={basePath}
               filters={filters}
