@@ -14,7 +14,7 @@ const hidden = {
   overflow: "hidden",
 } as const;
 
-export const Honeypot = forwardRef<HTMLInputElement>(function Honeypot(_, ref) {
+export const FtlHoneypot = forwardRef<HTMLInputElement>(function FtlHoneypot(_, ref) {
   const id = useId();
   return (
     <div style={hidden} aria-hidden="true">

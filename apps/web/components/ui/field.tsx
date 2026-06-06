@@ -30,7 +30,7 @@ type FieldProps = {
   children: ReactNode | ((id: string) => ReactNode);
 };
 
-export function Field({ label, required, error, className, children }: FieldProps) {
+export function FtlField({ label, required, error, className, children }: FieldProps) {
   const id = useId();
   return (
     <div className={cx(styles.field, className)}>
@@ -44,22 +44,22 @@ export function Field({ label, required, error, className, children }: FieldProp
   );
 }
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  function Input({ className, ...rest }, ref) {
+export const FtlInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function FtlInput({ className, ...rest }, ref) {
     return <input ref={ref} className={cx(styles.input, className)} {...rest} />;
   },
 );
 
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
-  function Select({ className, ...rest }, ref) {
+export const FtlSelect = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
+  function FtlSelect({ className, ...rest }, ref) {
     return <select ref={ref} className={cx(styles.select, className)} {...rest} />;
   },
 );
 
-export const Textarea = forwardRef<
+export const FtlTextarea = forwardRef<
   HTMLTextAreaElement,
   TextareaHTMLAttributes<HTMLTextAreaElement>
->(function Textarea({ className, ...rest }, ref) {
+>(function FtlTextarea({ className, ...rest }, ref) {
   return <textarea ref={ref} className={cx(styles.textarea, className)} {...rest} />;
 });
 
@@ -79,7 +79,7 @@ type ChoiceChipsProps<T extends string> = {
   clearLabel?: ReactNode;
 };
 
-export function ChoiceChips<T extends string>({
+export function FtlChoiceChips<T extends string>({
   legend,
   options,
   value,

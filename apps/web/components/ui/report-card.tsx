@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Tag } from "./tag";
+import { FtlTag } from "./tag";
 import styles from "./report-card.module.css";
 
 export type ReportCardProps = {
@@ -20,7 +20,7 @@ export type ReportCardProps = {
   href?: string;
 };
 
-export function ReportCard({
+export function FtlReportCard({
   index,
   company,
   role,
@@ -62,7 +62,7 @@ export function ReportCard({
 
         <div className={styles.report__tags}>
           {topics.slice(0, 3).map((t) => (
-            <Tag key={t} variant="ghost">{t}</Tag>
+            <FtlTag key={t} variant="ghost">{t}</FtlTag>
           ))}
         </div>
       </div>

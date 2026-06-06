@@ -13,7 +13,7 @@ type CommonProps = {
 
 /* ----------------------------- Display ----------------------------- */
 type DisplaySize = "lg" | "xl" | "2xl";
-export function Display({
+export function FtlDisplay({
   as = "h1",
   size = "xl",
   className,
@@ -35,7 +35,7 @@ export function Display({
 
 /* ----------------------------- Heading ----------------------------- */
 type HeadingLevel = 1 | 2 | 3;
-export function Heading({
+export function FtlHeading({
   level = 2,
   as,
   className,
@@ -56,7 +56,7 @@ export function Heading({
    `size` and `tone` are independent — you can be small AND muted.   */
 type BodySize = "default" | "small" | "lead";
 type BodyTone = "default" | "muted";
-export function Body({
+export function FtlBody({
   as = "p",
   size = "default",
   tone = "default",
@@ -84,7 +84,7 @@ export function Body({
 }
 
 /* ----------------------------- Eyebrow ----------------------------- */
-export function Eyebrow({
+export function FtlEyebrow({
   tone = "muted",
   bare = false,
   className,
@@ -112,7 +112,7 @@ export function Eyebrow({
 }
 
 /* ----------------------------- Mono inline ----------------------------- */
-export function Mono({
+export function FtlMono({
   className,
   style,
   children,
@@ -125,7 +125,7 @@ export function Mono({
 }
 
 /* ----------------------------- Caption ----------------------------- */
-export function Caption({
+export function FtlCaption({
   as = "p",
   className,
   style,

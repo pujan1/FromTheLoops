@@ -3,7 +3,7 @@ import styles from "./stat.module.css";
 
 const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ");
 
-export function Stat({
+export function FtlStat({
   label,
   value,
   hint,
@@ -27,6 +27,6 @@ export function Stat({
   );
 }
 
-export function StatGroup({ children, className }: { children: ReactNode; className?: string }) {
+export function FtlStatGroup({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cx(styles.stats, className)}>{children}</div>;
 }

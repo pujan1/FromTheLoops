@@ -10,7 +10,7 @@ type ContainerProps<T extends ElementType = "div"> = {
   children: ReactNode;
 };
 
-export function Container<T extends ElementType = "div">({
+export function FtlContainer<T extends ElementType = "div">({
   as,
   width = "default",
   className,

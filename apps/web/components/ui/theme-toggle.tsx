@@ -25,7 +25,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeToggle() {
+export function FtlThemeToggle() {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {

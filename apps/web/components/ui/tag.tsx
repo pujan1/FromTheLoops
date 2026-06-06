@@ -5,7 +5,7 @@ const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ")
 
 type TagVariant = "default" | "ink" | "accent" | "ghost";
 
-export function Tag({
+export function FtlTag({
   variant = "default",
   dot = false,
   className,

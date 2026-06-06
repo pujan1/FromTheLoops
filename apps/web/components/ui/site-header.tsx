@@ -1,17 +1,17 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { routes } from "@/lib/routes";
-import { Container } from "./container";
-import { SearchBar } from "./search-bar";
+import { FtlContainer } from "./container";
+import { FtlSearchBar } from "./search-bar";
 import styles from "./site-header.module.css";
-import { ThemeToggle } from "./theme-toggle";
+import { FtlThemeToggle } from "./theme-toggle";
 
-export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) {
+export function FtlSiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) {
   void issue;
 
   return (
     <header className={styles.header}>
-      <Container>
+      <FtlContainer>
         <div className={styles.inner}>
           <Link href={routes.home} className={styles.wordmark} aria-label="FromTheLoop">
             From <span className={styles.wordmark__italic}>the</span> Loop
@@ -19,7 +19,7 @@ export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) {
 
           <div className={styles.actions}>
             <div className={styles.search}>
-              <SearchBar />
+              <FtlSearchBar />
             </div>
             <nav className={styles.nav} aria-label="primary">
               <Link href={routes.reports}>Experiences</Link>
@@ -47,10 +47,10 @@ export function SiteHeader({ issue = "ISSUE 001" }: { issue?: string } = {}) {
                 <UserButton />
               </Show>
             </div>
-            <ThemeToggle />
+            <FtlThemeToggle />
           </div>
         </div>
-      </Container>
+      </FtlContainer>
     </header>
   );
 }

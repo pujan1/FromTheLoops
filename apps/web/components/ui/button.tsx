@@ -14,7 +14,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
 };
 
-export function Button({
+export function FtlButton({
   variant = "primary",
   size = "md",
   trailingArrow = false,
@@ -47,7 +47,7 @@ type LinkButtonProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
   children: ReactNode;
 };
 
-export function LinkButton({
+export function FtlLinkButton({
   variant = "primary",
   size = "md",
   trailingArrow = false,

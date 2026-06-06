@@ -15,7 +15,7 @@ const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ")
 // `onDismiss` to render a close affordance for notices the user can clear.
 export type NoticeTone = "info" | "success" | "warning" | "danger";
 
-export function Notice({
+export function FtlNotice({
   tone = "info",
   title,
   onDismiss,

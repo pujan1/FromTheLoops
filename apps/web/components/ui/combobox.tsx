@@ -57,7 +57,7 @@ export interface ComboboxProps {
 
 // Special activeIndex value: the synthetic suggest-new row sits after the
 // options, addressed as `options.length`.
-export function Combobox({
+export function FtlCombobox({
   label,
   value,
   onChange,

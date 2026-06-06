@@ -15,7 +15,7 @@ type CardProps = {
   children: ReactNode;
 };
 
-export function Card({
+export function FtlCard({
   as = "article",
   variant = "default",
   inset = false,

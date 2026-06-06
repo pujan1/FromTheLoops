@@ -6,7 +6,7 @@ import styles from "./search-bar.module.css";
 // (?q=…). Reused in the header (compact) and atop the /search page (large,
 // pre-filled with the active query). Server component.
 
-export function SearchBar({
+export function FtlSearchBar({
   defaultValue = "",
   size = "compact",
   autoFocus = false,

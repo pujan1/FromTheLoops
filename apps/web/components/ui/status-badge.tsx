@@ -15,7 +15,7 @@ export type BadgeStatus =
   | "info"
   | "neutral";
 
-export function StatusBadge({
+export function FtlStatusBadge({
   status = "neutral",
   dot = true,
   className,
