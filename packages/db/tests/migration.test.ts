@@ -143,4 +143,43 @@ describe("migrations", () => {
       expect(names, `index ${expected} missing`).toContain(expected);
     }
   });
+
+  it("creates the topic category enum and nullable topics.category column", async () => {
+    const enumRows = await db.execute<{ enumlabel: string }>(sql`
+      SELECT e.enumlabel
+      FROM pg_enum e
+      JOIN pg_type t ON t.oid = e.enumtypid
+      JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public' AND t.typname = 'topic_category'
+      ORDER BY e.enumsortorder
+    `);
+    expect(enumRows.map((r) => r.enumlabel)).toEqual([
+      "algorithms",
+      "system-design",
+      "fundamentals",
+      "machine-learning",
+      "data-engineering",
+      "infrastructure",
+      "behavioral",
+    ]);
+
+    const columnRows = await db.execute<{
+      data_type: string;
+      is_nullable: "YES" | "NO";
+      udt_name: string;
+    }>(sql`
+      SELECT data_type, is_nullable, udt_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'topics'
+        AND column_name = 'category'
+    `);
+    expect(columnRows).toEqual([
+      {
+        data_type: "USER-DEFINED",
+        is_nullable: "YES",
+        udt_name: "topic_category",
+      },
+    ]);
+  });
 });

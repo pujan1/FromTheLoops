@@ -14,6 +14,7 @@ import {
   getReportForEdit,
   getOrCreateUserByClerkId,
   isReportEditable,
+  listOwnReports,
   PII_RETENTION_MS,
   purgeDeletedReportPii,
   type ReportWriteInput,
@@ -376,5 +377,50 @@ describe("interview reports", () => {
 
     // Scoped to the user.
     expect(await countVerifiedReportsForUser(db, otherId)).toBe(0);
+  });
+
+  it("listOwnReports returns the owner's non-deleted reports, newest first, with company/role + status", async () => {
+    // active + pending + anonymous + attributed all belong on the private list;
+    // only deleted and other-user rows are excluded.
+    const older = await createReport(
+      db,
+      fullInput({ status: "active", interviewMonth: "2026-01" }),
+    );
+    // Nudge createdAt back so ORDER BY created_at DESC is deterministic.
+    await db
+      .update(interviewReports)
+      .set({ createdAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(interviewReports.id, older.id));
+    const newer = await createReport(
+      db,
+      fullInput({
+        status: "pending_moderation",
+        displayAttribution: "display_name",
+      }),
+    );
+    const deleted = await createReport(db, fullInput({ status: "active" }));
+    await softDeleteReport(db, deleted.id, ownerId);
+    await createReport(db, fullInput({ createdByUserId: otherId, status: "active" }));
+
+    const rows = await listOwnReports(db, ownerId);
+
+    expect(rows.map((r) => r.id)).toEqual([newer.id, older.id]);
+    const [first, second] = rows;
+    expect(first?.status).toBe("pending_moderation");
+    expect(first?.displayAttribution).toBe("display_name");
+    expect(first?.companyName).toBe("Acme");
+    expect(first?.companySlug).toBe("acme");
+    expect(first?.roleName).toBe("Software Engineer");
+    expect(first?.level).toBe("L4");
+    expect(first?.outcome).toBe("offer");
+    // The edit window rides along so the dashboard can label editable vs locked.
+    expect(first?.lockedAt.getTime()).toBe(
+      first!.createdAt.getTime() + EDIT_WINDOW_MS,
+    );
+    expect(second?.status).toBe("active");
+  });
+
+  it("listOwnReports returns an empty array for a user with no reports", async () => {
+    expect(await listOwnReports(db, otherId)).toEqual([]);
   });
 });

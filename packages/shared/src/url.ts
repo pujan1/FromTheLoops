@@ -226,3 +226,10 @@ export function topicCompanyPath(
 ): string {
   return `/topics/${enc(topicSlug)}/${enc(companySlug)}`;
 }
+
+// Public user profile (Sprint 5). `username` is users.username — the stable,
+// public handle (distinct from the internal UUID and the Clerk id). The profile
+// shows only the user's *attributed* reports; anonymous ones never surface here.
+export function userPath(username: string): string {
+  return `/u/${enc(username)}`;
+}

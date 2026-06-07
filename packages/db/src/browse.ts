@@ -221,6 +221,11 @@ export interface CellReportListItem {
   id: string;
   outcome: schema.InterviewReport["outcome"];
   level: string;
+  // The report's company — carried per-row so a cross-company feed (the user
+  // profile) can label + link each card; constant on the company/role/level
+  // pages (which pass `companyName` to ReportList once).
+  companySlug: string;
+  companyName: string;
   // The report's canonical role — carried per-row so a cross-role feed (the
   // company page) can label + link each card; constant on the role/level pages.
   roleSlug: string;
@@ -271,6 +276,8 @@ type CellReportSqlRow = {
   id: string;
   outcome: schema.InterviewReport["outcome"];
   level: string;
+  company_slug: string;
+  company_name: string;
   role_slug: string;
   role_name: string;
   interview_month: string;
@@ -331,6 +338,7 @@ async function runReportList(
 ): Promise<CellReportList> {
   const rows = await db.execute<CellReportSqlRow>(sql`
     SELECT r.id, r.outcome, r.level, r.interview_month,
+           c.slug AS company_slug, c.name AS company_name,
            ro.slug AS role_slug, ro.name AS role_name,
            (SELECT COUNT(*)::int FROM rounds rd WHERE rd.report_id = r.id) AS round_count,
            r.evidence_verified,
@@ -350,6 +358,7 @@ async function runReportList(
            (COUNT(*) OVER ())::int AS total
     FROM interview_reports r
     JOIN users u ON u.id = r.created_by_user_id
+    JOIN companies c ON c.id = r.company_id
     JOIN roles ro ON ro.id = r.canonical_role_id
     WHERE ${where}
     ORDER BY r.created_at DESC
@@ -360,6 +369,8 @@ async function runReportList(
       id: r.id,
       outcome: r.outcome,
       level: r.level,
+      companySlug: r.company_slug,
+      companyName: r.company_name,
       roleSlug: r.role_slug,
       roleName: r.role_name,
       interviewMonth: r.interview_month,
@@ -409,6 +420,30 @@ export async function listReportsForRole(
     [
       sql`r.company_id = ${cell.companyId}::uuid`,
       sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
+      ...VISIBLE,
+      ...reportFilterConditions(opts.filters),
+    ],
+    sql` AND `,
+  );
+  return runReportList(db, where, opts);
+}
+
+// One page of a user's VISIBLE, *attributed* reports across all companies — the
+// /u/[username] profile feed. The display_attribution='display_name' predicate
+// is the privacy boundary: a report the author posted anonymously never appears
+// on their public profile, even though they earn karma for it (anonymity is
+// account-bound, not contribution-bound — see PLAN.md §Anonymity). Each item
+// carries its own company AND role (the profile spans both axes), so the shared
+// ReportList renders them with per-row company/role. Newest first.
+export async function listReportsForUser(
+  db: Db,
+  userId: string,
+  opts: { limit: number; offset: number; filters?: CellReportFilters },
+): Promise<CellReportList> {
+  const where = sql.join(
+    [
+      sql`r.created_by_user_id = ${userId}::uuid`,
+      sql`r.display_attribution = 'display_name'`,
       ...VISIBLE,
       ...reportFilterConditions(opts.filters),
     ],

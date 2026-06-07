@@ -5,6 +5,7 @@
   "description": "Next.js 15 App Router frontend + route handlers.",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "pnpm --filter @fromtheloop/db migrate",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

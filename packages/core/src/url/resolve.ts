@@ -17,7 +17,9 @@ import {
   getCompanyLevelBySlug,
   getRoleBySlug,
   getTopicBySlug,
+  getUserByUsername,
   type TaxonomyRef,
+  type User,
 } from "@fromtheloop/db";
 
 export interface ResolvedCompany {
@@ -116,4 +118,24 @@ export async function resolveTopicCompany(
   const company = await getCompanyBySlug(db, companySlug);
   if (!company) return null;
   return { topic, company };
+}
+
+// ---------------------------------------------------------------------------
+// User profile resolver (Sprint 5) — /u/:username. Same null→404 contract as
+// the browse resolvers, but the key is a public handle (users.username), not a
+// taxonomy slug. The full User row rides along: the page needs the internal id
+// (to read reports + stats) plus display_name / created_at for the header.
+// ---------------------------------------------------------------------------
+
+export interface ResolvedUser {
+  user: User;
+}
+
+// /u/:username
+export async function resolveUser(
+  db: Database,
+  username: string,
+): Promise<ResolvedUser | null> {
+  const user = await getUserByUsername(db, username);
+  return user ? { user } : null;
 }

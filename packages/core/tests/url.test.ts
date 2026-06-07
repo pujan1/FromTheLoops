@@ -13,6 +13,7 @@ import {
   resolveCompanyRole,
   resolveTopic,
   resolveTopicCompany,
+  resolveUser,
   resolveWedge,
 } from "../src/index.js";
 import {
@@ -23,15 +24,18 @@ import {
   topicCompanyPath,
   topicPath,
   topicsPath,
+  userPath,
   wedgePath,
 } from "@fromtheloop/shared";
 import {
   companies,
   companyLevels,
   type Database,
+  getOrCreateUserByClerkId,
   roles,
   schema,
   topics,
+  users,
 } from "@fromtheloop/db";
 
 describe("url path builders (pure)", () => {
@@ -46,6 +50,7 @@ describe("url path builders (pure)", () => {
     expect(topicCompanyPath("rate-limiting", "stripe")).toBe(
       "/topics/rate-limiting/stripe",
     );
+    expect(userPath("alice_loops")).toBe("/u/alice_loops");
   });
 
   it("encode path segments defensively", () => {
@@ -61,6 +66,7 @@ describe("url resolvers (db-backed)", () => {
   let client: ReturnType<typeof postgres>;
   let companyId: string;
   let roleId: string;
+  let userId: string;
 
   beforeAll(async () => {
     client = postgres(inject("databaseUrl"), {
@@ -69,6 +75,12 @@ describe("url resolvers (db-backed)", () => {
       onnotice: () => {},
     });
     db = drizzle(client, { schema });
+
+    userId = (await getOrCreateUserByClerkId(db, { clerkId: "clerk_url_user" })).id;
+    await db
+      .update(users)
+      .set({ username: "urluser", displayName: "Url User" })
+      .where(eq(users.id, userId));
 
     companyId = (
       await db
@@ -105,6 +117,7 @@ describe("url resolvers (db-backed)", () => {
     await db.delete(roles).where(eq(roles.id, roleId));
     await db.delete(topics).where(eq(topics.slug, "urltopic"));
     await db.delete(topics).where(eq(topics.slug, "urltopic-pending"));
+    await db.delete(users).where(eq(users.id, userId));
     await client.end({ timeout: 5 });
   });
 
@@ -149,5 +162,12 @@ describe("url resolvers (db-backed)", () => {
     expect(await resolveTopicCompany(db, "no-topic", "urlco")).toBeNull();
     // A pending company isn't a public page even with a valid topic.
     expect(await resolveTopicCompany(db, "urltopic", "urlco-pending")).toBeNull();
+  });
+
+  it("resolveUser resolves a known handle, nulls on an unknown one", async () => {
+    const ok = await resolveUser(db, "urluser");
+    expect(ok?.user.id).toBe(userId);
+    expect(ok?.user.displayName).toBe("Url User");
+    expect(await resolveUser(db, "ghost")).toBeNull();
   });
 });

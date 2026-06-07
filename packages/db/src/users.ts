@@ -54,3 +54,59 @@ export async function getUserById(db: Db, id: string): Promise<User | null> {
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return rows[0] ?? null;
 }
+
+// Fetch by public handle. Drives the /u/[username] profile resolve — the
+// username is the URL key (never the internal UUID or Clerk id). Exact match
+// on the unique index (users_username_uq); a non-matching handle returns null,
+// which the route turns into a 404. null usernames (rows that never set a
+// handle) are never returned because the predicate is an equality on a value.
+export async function getUserByUsername(
+  db: Db,
+  username: string,
+): Promise<User | null> {
+  const rows = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+// Header stats for the public profile. `publicReportCount` counts only the
+// user's VISIBLE, *attributed* reports — the same display_attribution filter
+// the report list applies, so the headline never promises more cards than the
+// page shows (anonymous reports stay invisible here, preserving the
+// anonymous-by-default contract). `verifiedAtCompanyCount` is the number of
+// distinct companies the user holds a verification for (user_verifications) —
+// the source of the "verified contributor" badge. Karma is intentionally
+// absent: the column lands on Day 7; the profile slots it in then.
+export interface UserProfileStats {
+  publicReportCount: number;
+  verifiedAtCompanyCount: number;
+}
+
+export async function getUserProfileStats(
+  db: Db,
+  userId: string,
+): Promise<UserProfileStats> {
+  const rows = await db.execute<{
+    public_report_count: number | string;
+    verified_company_count: number | string;
+  }>(sql`
+    SELECT
+      (SELECT COUNT(*)::int
+         FROM interview_reports r
+        WHERE r.created_by_user_id = ${userId}::uuid
+          AND r.display_attribution = 'display_name'
+          AND r.status = 'active'
+          AND r.deleted_at IS NULL) AS public_report_count,
+      (SELECT COUNT(DISTINCT v.company_id)::int
+         FROM user_verifications v
+        WHERE v.user_id = ${userId}::uuid) AS verified_company_count
+  `);
+  const row = rows[0];
+  return {
+    publicReportCount: row ? Number(row.public_report_count) : 0,
+    verifiedAtCompanyCount: row ? Number(row.verified_company_count) : 0,
+  };
+}

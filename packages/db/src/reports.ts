@@ -14,7 +14,7 @@
 // rounds — and re-inserting, leaving created_at / locked_at untouched so an
 // edit never extends the window.
 
-import { and, asc, eq, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { emitReportEvent } from "./events.js";
 import {
@@ -422,6 +422,74 @@ export function isReportEditable(
   now: Date = new Date(),
 ): boolean {
   return report.status !== "deleted" && now.getTime() < report.lockedAt.getTime();
+}
+
+// One row of the private dashboard's "your reports" list. Unlike the public
+// browse reads (which only ever surface VISIBLE, often anonymized rows), this
+// is the owner's own view: it carries the moderation `status` and the
+// `lockedAt` boundary so the dashboard can label each report's edit-window
+// state (editable vs locked) and whether it's still awaiting moderation.
+// Attribution rides along so the owner sees how each report appears publicly.
+export interface OwnReportListItem {
+  id: string;
+  companySlug: string;
+  companyName: string;
+  roleName: string;
+  level: string;
+  outcome: InterviewReport["outcome"];
+  interviewMonth: string;
+  status: InterviewReport["status"];
+  displayAttribution: NonNullable<InterviewReport["displayAttribution"]>;
+  createdAt: Date;
+  lockedAt: Date;
+}
+
+// A user's submitted reports, newest first, for the private dashboard. Excludes
+// soft-deleted rows (the owner deleted them on purpose; they shouldn't clutter
+// the list) but KEEPS pending_moderation ones — the author should see a report
+// they just submitted even before a mod clears it. Not ownership-leaky: it's
+// only ever called with the signed-in user's own internal id.
+export async function listOwnReports(
+  db: Db,
+  userId: string,
+): Promise<OwnReportListItem[]> {
+  const rows = await db.execute<{
+    id: string;
+    company_slug: string;
+    company_name: string;
+    role_name: string;
+    level: string;
+    outcome: InterviewReport["outcome"];
+    interview_month: string;
+    status: InterviewReport["status"];
+    display_attribution: NonNullable<InterviewReport["displayAttribution"]>;
+    created_at: string | Date;
+    locked_at: string | Date;
+  }>(sql`
+    SELECT r.id, r.level, r.outcome, r.interview_month, r.status,
+           r.display_attribution, r.created_at, r.locked_at,
+           c.slug AS company_slug, c.name AS company_name,
+           ro.name AS role_name
+    FROM interview_reports r
+    JOIN companies c ON c.id = r.company_id
+    JOIN roles ro ON ro.id = r.canonical_role_id
+    WHERE r.created_by_user_id = ${userId}::uuid
+      AND r.status <> 'deleted'
+    ORDER BY r.created_at DESC
+  `);
+  return rows.map((r) => ({
+    id: r.id,
+    companySlug: r.company_slug,
+    companyName: r.company_name,
+    roleName: r.role_name,
+    level: r.level,
+    outcome: r.outcome,
+    interviewMonth: r.interview_month,
+    status: r.status,
+    displayAttribution: r.display_attribution,
+    createdAt: new Date(r.created_at),
+    lockedAt: new Date(r.locked_at),
+  }));
 }
 
 // The fully-joined report the edit flow rehydrates into a form. Plain shape

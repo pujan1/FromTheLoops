@@ -12,6 +12,7 @@ import {
   reportPath,
   topicCompanyPath,
   topicPath,
+  userPath,
   wedgePath,
 } from "@fromtheloop/shared";
 
@@ -43,6 +44,8 @@ export const routes = {
   // A single report's public detail page (also the owner's post-submit landing
   // + edit entry when they own it).
   report: (id: string) => reportPath(id),
+  // A contributor's public profile (their attributed reports only).
+  user: (username: string) => userPath(username),
 
   submit: "/submit",
   // The basics screen, optionally resuming a draft (used by "Back to basics"
