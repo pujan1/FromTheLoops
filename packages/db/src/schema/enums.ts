@@ -12,7 +12,7 @@
 // If you add a value here:
 //   1. Regenerate the migration (`pnpm --filter @fromtheloop/db generate`)
 //   2. Update the matching union in tests/types.test.ts
-//   3. Update PLAN.md §Data model if this is a wedge-relevant enum
+//   3. Update docs/data-model.md if this changes a persisted model contract.
 
 import { pgEnum } from "drizzle-orm/pg-core";
 
@@ -71,6 +71,22 @@ export const levelTier = pgEnum("level_tier", [
   "staff",
   "senior_staff",
   "principal",
+]);
+
+// Curated grouping a topic belongs to, driving the /topics index's
+// "grouped by category" sections (Sprint 5). The value set mirrors the comment
+// groups in seed/curated.ts CURATED_TOPICS. Nullable on the column: a
+// user-suggested pending tag has no category until a mod assigns one, and falls
+// into the index's "Other" bucket. Display labels + section order live in app
+// code (lib/topic-categories.ts), keyed on these stable slugs.
+export const topicCategory = pgEnum("topic_category", [
+  "algorithms",
+  "system-design",
+  "fundamentals",
+  "machine-learning",
+  "data-engineering",
+  "infrastructure",
+  "behavioral",
 ]);
 
 export const roundType = pgEnum("round_type", [

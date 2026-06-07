@@ -16,6 +16,7 @@ import {
   getCompanyBySlug,
   getCompanyLevelBySlug,
   getRoleBySlug,
+  getTopicBySlug,
   type TaxonomyRef,
 } from "@fromtheloop/db";
 
@@ -79,4 +80,40 @@ export async function resolveWedge(
       level: level.name,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Topic browse resolvers (Sprint 5) — the second discovery axis. Same
+// composition pattern: resolve each slug to an active taxonomy row, failing
+// fast (null → 404) at the first miss.
+// ---------------------------------------------------------------------------
+
+export interface ResolvedTopic {
+  topic: TaxonomyRef;
+}
+
+export interface ResolvedTopicCompany extends ResolvedTopic {
+  company: TaxonomyRef;
+}
+
+// /topics/:topic
+export async function resolveTopic(
+  db: Database,
+  topicSlug: string,
+): Promise<ResolvedTopic | null> {
+  const topic = await getTopicBySlug(db, topicSlug);
+  return topic ? { topic } : null;
+}
+
+// /topics/:topic/:company
+export async function resolveTopicCompany(
+  db: Database,
+  topicSlug: string,
+  companySlug: string,
+): Promise<ResolvedTopicCompany | null> {
+  const topic = await getTopicBySlug(db, topicSlug);
+  if (!topic) return null;
+  const company = await getCompanyBySlug(db, companySlug);
+  if (!company) return null;
+  return { topic, company };
 }

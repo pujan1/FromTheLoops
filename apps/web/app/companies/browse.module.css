@@ -141,6 +141,20 @@ a.level:hover {
   color: var(--color-muted);
 }
 
+/* Company page: top-topics tag row (Sprint 5). A labeled chip row under the
+ * role nav; each chip links to the topic×company leaf. */
+.tagSection {
+  margin-top: var(--space-5);
+}
+
+.tagSection .sectionTitle {
+  margin-bottom: var(--space-3);
+}
+
+.tagSection .roleNav {
+  margin-top: 0;
+}
+
 /* Wedge page: Position Y + right rail, two columns on desktop. The rail is
  * fixed-ish width; Position Y takes the rest. Collapses to one column (rail
  * below Y) under 1024px, matching the wireframe's mobile stack. */

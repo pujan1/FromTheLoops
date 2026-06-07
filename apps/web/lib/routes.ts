@@ -10,6 +10,8 @@ import {
   companyPath,
   companyRolePath,
   reportPath,
+  topicCompanyPath,
+  topicPath,
   wedgePath,
 } from "@fromtheloop/shared";
 
@@ -29,8 +31,10 @@ export const routes = {
   // builder pre-fills a query (e.g. linking a topic into search).
   search: "/search",
   searchFor: (q: string) => (q ? `/search?q=${encodeURIComponent(q)}` : "/search"),
-  topic: (slug: string) => `/topics/${slug}`,
   // Canonical browse paths.
+  topic: (topicSlug: string) => topicPath(topicSlug),
+  topicCompany: (topicSlug: string, companySlug: string) =>
+    topicCompanyPath(topicSlug, companySlug),
   company: (companySlug: string) => companyPath(companySlug),
   companyRole: (companySlug: string, roleSlug: string) =>
     companyRolePath(companySlug, roleSlug),

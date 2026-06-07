@@ -14,7 +14,7 @@ import {
   FtlSiteHeader,
 } from "@/components/ui";
 import { routes } from "@/lib/routes";
-import { Breadcrumb } from "../../../_components/breadcrumb";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { RoleView } from "../../../_components/role-view";
 import styles from "../../../browse.module.css";
 

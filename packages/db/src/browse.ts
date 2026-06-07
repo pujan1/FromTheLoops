@@ -17,7 +17,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql, type SQL } from "drizzle-orm";
 import type { RoleCellKey } from "./aggregates.js";
 import * as schema from "./schema/index.js";
-import { companies, companyLevels, roles } from "./schema/index.js";
+import { companies, companyLevels, roles, topics } from "./schema/index.js";
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -481,4 +481,286 @@ export async function countActiveReportsForCompanyRole(
       AND r.deleted_at IS NULL
   `);
   return rows[0] ? Number(rows[0].count) : 0;
+}
+
+// ===========================================================================
+// Topic browse reads (Sprint 5) — the question-first discovery axis. Powers
+// /topics (index, grouped by category), /topics/[topic] (questions aggregated
+// across every company), and /topics/[topic]/[company] (filtered to one
+// company, with the same sparse-data fallback the wedge page uses).
+//
+// Grain note: unlike the company/role surfaces (report-grain), the topic pages
+// are QUESTION-grain — PLAN.md §URL: "topic pages aggregate questions". A topic
+// page lists individual questions, each carrying its source report's company /
+// role / outcome so the card links back to /reports/[id]. The "is this cell
+// thin?" decision, though, counts distinct REPORTS (matching the wedge's
+// <10-reports rule) so a topic with many questions from one report still reads
+// as a small sample.
+//
+// Visibility filter is identical everywhere else: a question only surfaces when
+// its report is status='active' AND deleted_at IS NULL.
+// ===========================================================================
+
+// Active-topic slug lookup — the resolver primitive for the topic routes,
+// mirroring getCompanyBySlug/getRoleBySlug. Pending/merged tags aren't public
+// pages.
+export async function getTopicBySlug(
+  db: Db,
+  slug: string,
+): Promise<TaxonomyRef | null> {
+  const rows = await db
+    .select({ id: topics.id, slug: topics.slug, name: topics.name })
+    .from(topics)
+    .where(and(eq(topics.slug, slug), eq(topics.status, "active")))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+// One topic row for the /topics index. `category` is the curated grouping the
+// page renders sections from (null → the "Other" bucket). Counts are over
+// VISIBLE reports only: questionCount = distinct tagged questions, reportCount =
+// distinct reports those questions live in (the count badge the page shows).
+export interface TopicBrowseRow {
+  id: string;
+  slug: string;
+  name: string;
+  category: schema.Topic["category"];
+  questionCount: number;
+  reportCount: number;
+}
+
+type TopicBrowseSqlRow = {
+  id: string;
+  slug: string;
+  name: string;
+  category: schema.Topic["category"];
+  question_count: number | string;
+  report_count: number | string;
+};
+
+// Every active topic with its visible question/report counts, name-sorted. The
+// index page groups these by `category` in app code (category order is a
+// presentation concern). Topics with zero reports ARE included — the curated
+// taxonomy is the index's content, and a count of 0 reads honestly.
+export async function listTopicsForIndex(db: Db): Promise<TopicBrowseRow[]> {
+  const rows = await db.execute<TopicBrowseSqlRow>(sql`
+    SELECT t.id, t.slug, t.name, t.category,
+           COUNT(DISTINCT q.id) FILTER (
+             WHERE r.status = 'active' AND r.deleted_at IS NULL
+           )::int AS question_count,
+           COUNT(DISTINCT r.id) FILTER (
+             WHERE r.status = 'active' AND r.deleted_at IS NULL
+           )::int AS report_count
+    FROM topics t
+    LEFT JOIN question_topics qt ON qt.topic_id = t.id
+    LEFT JOIN questions q ON q.id = qt.question_id
+    LEFT JOIN rounds rd ON rd.id = q.round_id
+    LEFT JOIN interview_reports r ON r.id = rd.report_id
+    WHERE t.status = 'active'
+    GROUP BY t.id, t.slug, t.name, t.category
+    ORDER BY t.name ASC
+  `);
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    category: r.category,
+    questionCount: Number(r.question_count),
+    reportCount: Number(r.report_count),
+  }));
+}
+
+// Companies that have ≥1 visible report touching a topic, busiest first. Drives
+// the company chips on /topics/[topic] (each links to /topics/[topic]/[company])
+// — the topic-page analogue of the role nav on the company page.
+export async function listCompaniesForTopic(
+  db: Db,
+  topicId: string,
+): Promise<CompanyBrowseRow[]> {
+  const rows = await db.execute<CompanyBrowseSqlRow>(sql`
+    SELECT c.id, c.slug, c.name, COUNT(DISTINCT r.id)::int AS report_count
+    FROM companies c
+    JOIN interview_reports r
+      ON r.company_id = c.id
+     AND r.status = 'active'
+     AND r.deleted_at IS NULL
+    WHERE c.status = 'active'
+      AND EXISTS (
+        SELECT 1 FROM rounds rd
+        JOIN questions q ON q.round_id = rd.id
+        JOIN question_topics qt ON qt.question_id = q.id
+        WHERE rd.report_id = r.id AND qt.topic_id = ${topicId}::uuid
+      )
+    GROUP BY c.id, c.slug, c.name
+    HAVING COUNT(DISTINCT r.id) > 0
+    ORDER BY report_count DESC, c.name ASC
+  `);
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    reportCount: Number(r.report_count),
+  }));
+}
+
+// One question in a topic's question list. Carries its source report's
+// company / role / level / outcome so the card can label itself and link to
+// /reports/[reportId]. (Question-grain: the same report contributes one row per
+// tagged question.)
+export interface TopicQuestionListItem {
+  questionId: string;
+  prose: string;
+  reportId: string;
+  companySlug: string;
+  companyName: string;
+  roleSlug: string;
+  roleName: string;
+  level: string;
+  outcome: schema.InterviewReport["outcome"];
+  interviewMonth: string;
+  evidenceVerified: boolean;
+  createdAt: Date;
+}
+
+export interface TopicQuestionList {
+  items: TopicQuestionListItem[];
+  total: number;
+}
+
+type TopicQuestionSqlRow = {
+  question_id: string;
+  prose: string;
+  report_id: string;
+  company_slug: string;
+  company_name: string;
+  role_slug: string;
+  role_name: string;
+  level: string;
+  outcome: schema.InterviewReport["outcome"];
+  interview_month: string;
+  evidence_verified: boolean;
+  created_at: string | Date;
+  total: number | string;
+};
+
+// One page of visible questions tagged with a topic, newest report first. With
+// `companyId` set, narrowed to that company (the /topics/[topic]/[company]
+// view); absent, every company. The window total rides along (over()) so
+// pagination costs one query.
+export async function listQuestionsForTopic(
+  db: Db,
+  topicId: string,
+  opts: { limit: number; offset: number; companyId?: string },
+): Promise<TopicQuestionList> {
+  const scope = opts.companyId
+    ? sql`AND r.company_id = ${opts.companyId}::uuid`
+    : sql``;
+  const rows = await db.execute<TopicQuestionSqlRow>(sql`
+    SELECT q.id AS question_id, q.question_prose AS prose,
+           r.id AS report_id, r.level, r.outcome, r.interview_month,
+           r.evidence_verified, r.created_at,
+           c.slug AS company_slug, c.name AS company_name,
+           ro.slug AS role_slug, ro.name AS role_name,
+           (COUNT(*) OVER ())::int AS total
+    FROM questions q
+    JOIN rounds rd ON rd.id = q.round_id
+    JOIN interview_reports r ON r.id = rd.report_id
+    JOIN companies c ON c.id = r.company_id
+    JOIN roles ro ON ro.id = r.canonical_role_id
+    WHERE r.status = 'active'
+      AND r.deleted_at IS NULL
+      ${scope}
+      AND EXISTS (
+        SELECT 1 FROM question_topics qt
+        WHERE qt.question_id = q.id AND qt.topic_id = ${topicId}::uuid
+      )
+    ORDER BY r.created_at DESC, r.id, rd.order_index, q.order_index
+    LIMIT ${opts.limit} OFFSET ${opts.offset}
+  `);
+  return {
+    items: rows.map((r) => ({
+      questionId: r.question_id,
+      prose: r.prose,
+      reportId: r.report_id,
+      companySlug: r.company_slug,
+      companyName: r.company_name,
+      roleSlug: r.role_slug,
+      roleName: r.role_name,
+      level: r.level,
+      outcome: r.outcome,
+      interviewMonth: r.interview_month,
+      evidenceVerified: r.evidence_verified,
+      createdAt: new Date(r.created_at),
+    })),
+    total: rows[0] ? Number(rows[0].total) : 0,
+  };
+}
+
+// Count VISIBLE reports touching a topic, optionally scoped to one company.
+// This is the "cell density" the topic×company page feeds into the sparse-data
+// decision (decideScope): topic×company is the exact cell, topic-only the
+// broader corpus. Distinct reports (not questions) to match the wedge's
+// <10-reports threshold.
+export async function countReportsForTopic(
+  db: Db,
+  topicId: string,
+  companyId?: string,
+): Promise<number> {
+  const scope = companyId ? sql`AND r.company_id = ${companyId}::uuid` : sql``;
+  const rows = await db.execute<{ count: number | string }>(sql`
+    SELECT COUNT(DISTINCT r.id)::int AS count
+    FROM interview_reports r
+    WHERE r.status = 'active'
+      AND r.deleted_at IS NULL
+      ${scope}
+      AND EXISTS (
+        SELECT 1 FROM rounds rd
+        JOIN questions q ON q.round_id = rd.id
+        JOIN question_topics qt ON qt.question_id = q.id
+        WHERE rd.report_id = r.id AND qt.topic_id = ${topicId}::uuid
+      )
+  `);
+  return rows[0] ? Number(rows[0].count) : 0;
+}
+
+// Top topics across a company's visible reports, busiest first — the "top tags"
+// section the Sprint 5 company rollup adds. Each row links to
+// /topics/[topic]/[company]. reportCount = distinct reports at the company whose
+// questions carry the topic; capped by the caller's `limit`.
+export interface CompanyTopicRow {
+  slug: string;
+  name: string;
+  reportCount: number;
+}
+
+export async function listTopTopicsForCompany(
+  db: Db,
+  companyId: string,
+  limit: number,
+): Promise<CompanyTopicRow[]> {
+  const rows = await db.execute<{
+    slug: string;
+    name: string;
+    report_count: number | string;
+  }>(sql`
+    SELECT t.slug, t.name, COUNT(DISTINCT r.id)::int AS report_count
+    FROM topics t
+    JOIN question_topics qt ON qt.topic_id = t.id
+    JOIN questions q ON q.id = qt.question_id
+    JOIN rounds rd ON rd.id = q.round_id
+    JOIN interview_reports r ON r.id = rd.report_id
+    WHERE r.company_id = ${companyId}::uuid
+      AND r.status = 'active'
+      AND r.deleted_at IS NULL
+      AND t.status = 'active'
+    GROUP BY t.slug, t.name
+    HAVING COUNT(DISTINCT r.id) > 0
+    ORDER BY report_count DESC, t.name ASC
+    LIMIT ${limit}
+  `);
+  return rows.map((r) => ({
+    slug: r.slug,
+    name: r.name,
+    reportCount: Number(r.report_count),
+  }));
 }

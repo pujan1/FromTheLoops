@@ -84,17 +84,17 @@ Full table of choices: [PLAN.md §Architecture & stack](PLAN.md#architecture--st
 
 ## Data model
 
-Five top-level entities; see [PLAN.md §Data model](PLAN.md#data-model) for full schema.
+Full current reference: [docs/data-model.md](docs/data-model.md). The executable
+schema source is the Drizzle barrel at
+[packages/db/src/schema/index.ts](packages/db/src/schema/index.ts).
 
-| Entity | Purpose |
+| Domain | Models |
 |---|---|
-| `interview_report` | One person's experience at one company/role/level |
-| `round` | Belongs-to report; recruiter-screen → onsite → exec-final |
-| `question` | Belongs-to round; required ≥1 topic tag from curated set |
-| `user_verification` | Trust evidence per (user, company) — work email, LinkedIn, manual |
-| `mod_action_log` | Append-only audit trail for every moderation action |
-
-Curated entities (mod-controlled): `companies`, `canonical_roles`, `topic_tags`, `level` enums (per-company).
+| Core content | `interview_reports`, `rounds`, `questions`, `question_topics` |
+| Taxonomy | `companies`, `roles`, `topics`, `company_levels` |
+| Trust and moderation | `user_verifications`, `mod_action_logs` |
+| Workflow | `submission_drafts`, `events` |
+| Derived reads | `aggregates_company_role`, `aggregates_company_role_level`, Typesense collections |
 
 ---
 

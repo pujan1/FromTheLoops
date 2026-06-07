@@ -1,0 +1,2 @@
+CREATE TYPE "public"."topic_category" AS ENUM('algorithms', 'system-design', 'fundamentals', 'machine-learning', 'data-engineering', 'infrastructure', 'behavioral');--> statement-breakpoint
+ALTER TABLE "topics" ADD COLUMN "category" "topic_category";

@@ -1,0 +1,171 @@
+.page {
+  padding-block: var(--space-6) var(--space-8);
+}
+
+/* ── /topics index — category sections of topic chips ───────────────────── */
+
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  margin-top: var(--space-6);
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.categoryTitle {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A topic chip — name + a count badge of how many reports touch it. Muted +
+ * non-interactive-looking when the topic has no reports yet (count 0), but still
+ * a link (the curated taxonomy page is valid even when empty). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md, 8px);
+  text-decoration: none;
+  color: var(--color-ink);
+  font-size: var(--fs-small);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.chip:hover {
+  border-color: var(--color-ink);
+}
+
+.chip--empty {
+  color: var(--color-muted);
+  border-style: dashed;
+}
+
+.chip__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--color-muted);
+}
+
+/* ── /topics/[topic] — company nav + question list ──────────────────────── */
+
+/* Company chips: which companies have asked about this topic. Mirrors the role
+ * nav on the company page. */
+.companyNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.companyNav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-rule);
+  text-decoration: none;
+  color: var(--color-ink);
+  font-size: var(--fs-small);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.companyNav__item:hover {
+  border-color: var(--color-ink);
+}
+
+.companyNav__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--color-muted);
+}
+
+.section {
+  margin-top: var(--space-6);
+}
+
+.sectionTitle {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-3);
+}
+
+.questionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* One question card — the question prose, then a source line linking to the
+ * report it came from (company chip + role/level/outcome). */
+.questionCard {
+  display: block;
+  padding: var(--space-4);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md, 8px);
+  text-decoration: none;
+  color: var(--color-ink);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.questionCard:hover {
+  border-color: var(--color-ink);
+}
+
+.questionCard__prose {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.questionCard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--color-muted);
+}
+
+.questionCard__company {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.questionCard__sep {
+  opacity: 0.5;
+}
+
+.listFoot {
+  margin-top: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--color-muted);
+}
+
+.empty {
+  color: var(--color-muted);
+}

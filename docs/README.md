@@ -1,9 +1,13 @@
 # docs/
 
-Long-form documentation that lives with the code. Four folders, four purposes:
+Long-form documentation that lives with the code. Root-level references cover
+cross-cutting topics; folders group docs by lifecycle.
 
-| Folder | What goes here | Lifecycle |
+| Location | What goes here | Lifecycle |
 |---|---|---|
+| [data-model.md](data-model.md) | Single human-readable map of persisted, derived, search, and shared application models. | Living |
+| [architecture.md](architecture.md) | Stack and system architecture reference. | Living |
+| [scaling.md](scaling.md) | Traffic and infrastructure scaling path. | Living |
 | [adr/](adr/) | **Architecture Decision Records.** Short, dated. Captures *why* a choice was made and what the alternatives were. Immutable once accepted — supersede with a new ADR rather than editing. | Forever |
 | [rfc/](rfc/) | **Request For Comments.** Longer proposals for non-trivial changes that need to be thought through before coding. RFCs become ADRs when accepted, or get archived if rejected. | Until accepted/rejected |
 | [runbooks/](runbooks/) | **Operational guides.** "What to do when X happens" — incident response, daily mod cycle, backup restore, deploys. Living docs; edit freely. | Living |
@@ -27,5 +31,5 @@ Long-form documentation that lives with the code. Four folders, four purposes:
 - Filenames: `NNNN-kebab-case-title.md` for ADRs/RFCs (zero-padded 4 digits). Runbooks: `kebab-case-title.md`.
 - ADR statuses: `proposed`, `accepted`, `superseded by ADR-NNNN`, `rejected`.
 - Every ADR/RFC has a date in frontmatter. Don't rely on git history alone — the doc should be readable in isolation.
-- Cross-link by relative path: `[ADR-0001](../adr/0001-stack-choice.md)`.
+- Cross-link by relative path: `[ADR-0001](adr/0001-stack-choice.md)`.
 - PLAN.md remains the single source of truth for **product/scope** decisions. ADRs cover **technical** decisions. When they overlap, ADR links back to PLAN.md.

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   decideLevelView,
   decideScope,
+  decideTopicCompanyView,
   SPARSE_REPORT_THRESHOLD,
   type ScopeReportCounts,
 } from "../src/index.js";
@@ -87,5 +88,34 @@ describe("decideLevelView", () => {
 
   it("a level with no cell (0, e.g. the Unspecified sentinel) broadens", () => {
     expect(decideLevelView(0).view).toBe("role");
+  });
+});
+
+// Topic-axis analogue: a topic×company leaf stands alone when the company cell
+// is dense, else broadens to the topic across all companies (canonical up).
+describe("decideTopicCompanyView", () => {
+  it("renders the company view when the cell has ≥10 reports", () => {
+    const d = decideTopicCompanyView(11);
+    expect(d.view).toBe("company");
+    expect(d.broadened).toBe(false);
+  });
+
+  it("exactly at the threshold renders the company view (≥, not >)", () => {
+    expect(decideTopicCompanyView(SPARSE_REPORT_THRESHOLD).view).toBe("company");
+  });
+
+  it("broadens to the topic when the company cell is thin", () => {
+    const d = decideTopicCompanyView(9);
+    expect(d.view).toBe("topic");
+    expect(d.broadened).toBe(true);
+  });
+
+  it("a topic with no reports at the company (0) broadens", () => {
+    expect(decideTopicCompanyView(0).view).toBe("topic");
+  });
+
+  it("honours a custom threshold", () => {
+    expect(decideTopicCompanyView(5, 3).view).toBe("company");
+    expect(decideTopicCompanyView(5).view).toBe("topic");
   });
 });

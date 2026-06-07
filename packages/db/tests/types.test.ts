@@ -132,6 +132,19 @@ describe("schema types", () => {
     expectTypeOf<Topic["suggestedByUserId"]>().toEqualTypeOf<string | null>();
   });
 
+  it("Topic.category is the nullable topic_category union", () => {
+    expectTypeOf<Topic["category"]>().toEqualTypeOf<
+      | "algorithms"
+      | "system-design"
+      | "fundamentals"
+      | "machine-learning"
+      | "data-engineering"
+      | "infrastructure"
+      | "behavioral"
+      | null
+    >();
+  });
+
   it("Company.aliases is a non-null string[]; domain + suggestedBy are nullable", () => {
     expectTypeOf<Company["aliases"]>().toEqualTypeOf<string[]>();
     expectTypeOf<Company["domain"]>().toEqualTypeOf<string | null>();

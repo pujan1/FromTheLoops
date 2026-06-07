@@ -4,6 +4,7 @@ import {
   getDb,
   listReportsForCompany,
   listRolesForCompanyWithReports,
+  listTopTopicsForCompany,
 } from "@fromtheloop/db";
 import { parseReportFilters } from "@fromtheloop/shared";
 import type { Metadata } from "next";
@@ -19,7 +20,7 @@ import {
   FtlSiteHeader,
 } from "@/components/ui";
 import { routes } from "@/lib/routes";
-import { Breadcrumb } from "../_components/breadcrumb";
+import { Breadcrumb } from "@/components/breadcrumb";
 import styles from "../browse.module.css";
 
 type Params = Promise<{ company: string }>;
@@ -60,9 +61,12 @@ export default async function CompanyPage({
   const filters = parseReportFilters(await searchParams);
   const basePath = routes.company(resolved.company.slug);
 
-  const [stats, rolesList, feed] = await Promise.all([
+  const [stats, rolesList, topTopics, feed] = await Promise.all([
     getCompanyStats(db, resolved.company.id),
     listRolesForCompanyWithReports(db, resolved.company.id),
+    // Top tags at this company — the Sprint 5 rollup content; each links to the
+    // topic×company leaf. Capped at a single chip row's worth.
+    listTopTopicsForCompany(db, resolved.company.id, 12),
     listReportsForCompany(db, resolved.company.id, {
       limit: filters.perPage,
       offset: (filters.page - 1) * filters.perPage,
@@ -111,6 +115,26 @@ export default async function CompanyPage({
                 </Link>
               ))}
             </nav>
+          )}
+
+          {topTopics.length > 0 && (
+            <div className={styles.tagSection}>
+              <h2 className={styles.sectionTitle}>Top topics</h2>
+              <nav className={styles.roleNav} aria-label="Top topics">
+                {topTopics.map((t) => (
+                  <Link
+                    key={t.slug}
+                    className={styles.roleNav__item}
+                    href={routes.topicCompany(t.slug, resolved.company.slug)}
+                  >
+                    {t.name}
+                    <span className={styles.roleNav__count}>
+                      {t.reportCount}
+                    </span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
           )}
 
           <FtlRule />

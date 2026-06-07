@@ -85,6 +85,13 @@
       "when": 1780711370827,
       "tag": "0011_aggregates_company_role",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1780790076861,
+      "tag": "0012_topics_category",
+      "breakpoints": true
     }
   ]
 }

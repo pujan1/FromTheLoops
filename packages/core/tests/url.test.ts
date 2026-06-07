@@ -11,6 +11,8 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import {
   resolveCompany,
   resolveCompanyRole,
+  resolveTopic,
+  resolveTopicCompany,
   resolveWedge,
 } from "../src/index.js";
 import {
@@ -18,6 +20,9 @@ import {
   companyPath,
   companyRolePath,
   reportPath,
+  topicCompanyPath,
+  topicPath,
+  topicsPath,
   wedgePath,
 } from "@fromtheloop/shared";
 import {
@@ -26,6 +31,7 @@ import {
   type Database,
   roles,
   schema,
+  topics,
 } from "@fromtheloop/db";
 
 describe("url path builders (pure)", () => {
@@ -35,12 +41,18 @@ describe("url path builders (pure)", () => {
     expect(companyRolePath("stripe", "backend")).toBe("/companies/stripe/backend");
     expect(wedgePath("stripe", "backend", "l4")).toBe("/companies/stripe/backend/l4");
     expect(reportPath("abc-123")).toBe("/reports/abc-123");
+    expect(topicsPath()).toBe("/topics");
+    expect(topicPath("rate-limiting")).toBe("/topics/rate-limiting");
+    expect(topicCompanyPath("rate-limiting", "stripe")).toBe(
+      "/topics/rate-limiting/stripe",
+    );
   });
 
   it("encode path segments defensively", () => {
     expect(wedgePath("stripe", "backend", "sde ii")).toBe(
       "/companies/stripe/backend/sde%20ii",
     );
+    expect(topicCompanyPath("a/b", "c d")).toBe("/topics/a%2Fb/c%20d");
   });
 });
 
@@ -77,6 +89,13 @@ describe("url resolvers (db-backed)", () => {
         .values({ slug: "urlswe", name: "Url SWE", status: "active" })
         .returning({ id: roles.id })
     )[0]!.id;
+    await db
+      .insert(topics)
+      .values({ slug: "urltopic", name: "Url Topic", status: "active" });
+    // A pending topic is not a public, resolvable page.
+    await db
+      .insert(topics)
+      .values({ slug: "urltopic-pending", name: "PendTopic", status: "pending" });
   });
 
   afterAll(async () => {
@@ -84,6 +103,8 @@ describe("url resolvers (db-backed)", () => {
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.delete(companies).where(eq(companies.slug, "urlco-pending"));
     await db.delete(roles).where(eq(roles.id, roleId));
+    await db.delete(topics).where(eq(topics.slug, "urltopic"));
+    await db.delete(topics).where(eq(topics.slug, "urltopic-pending"));
     await client.end({ timeout: 5 });
   });
 
@@ -112,5 +133,21 @@ describe("url resolvers (db-backed)", () => {
     });
     // Unknown level slug → 404 source.
     expect(await resolveWedge(db, "urlco", "urlswe", "l99")).toBeNull();
+  });
+
+  it("resolveTopic resolves active, nulls on missing/pending", async () => {
+    expect((await resolveTopic(db, "urltopic"))?.topic.slug).toBe("urltopic");
+    expect(await resolveTopic(db, "urltopic-pending")).toBeNull();
+    expect(await resolveTopic(db, "nope")).toBeNull();
+  });
+
+  it("resolveTopicCompany fails fast on a bad topic or company", async () => {
+    const ok = await resolveTopicCompany(db, "urltopic", "urlco");
+    expect(ok?.topic.slug).toBe("urltopic");
+    expect(ok?.company.id).toBe(companyId);
+    expect(await resolveTopicCompany(db, "urltopic", "no-co")).toBeNull();
+    expect(await resolveTopicCompany(db, "no-topic", "urlco")).toBeNull();
+    // A pending company isn't a public page even with a valid topic.
+    expect(await resolveTopicCompany(db, "urltopic", "urlco-pending")).toBeNull();
   });
 });

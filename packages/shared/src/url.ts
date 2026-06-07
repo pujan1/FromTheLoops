@@ -208,3 +208,21 @@ export function wedgePath(
 export function reportPath(reportId: string): string {
   return `/reports/${enc(reportId)}`;
 }
+
+// Topic browse paths (Sprint 5). `topicSlug` is topics.slug; `companySlug` is
+// companies.slug. /topics/[topic]/[company] is the topic-filtered-to-a-company
+// surface (the second discovery axis' programmatic-SEO leaf).
+export function topicsPath(): string {
+  return "/topics";
+}
+
+export function topicPath(topicSlug: string): string {
+  return `/topics/${enc(topicSlug)}`;
+}
+
+export function topicCompanyPath(
+  topicSlug: string,
+  companySlug: string,
+): string {
+  return `/topics/${enc(topicSlug)}/${enc(companySlug)}`;
+}

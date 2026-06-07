@@ -44,6 +44,10 @@
 
 ## Data model
 
+Current implementation reference: [docs/data-model.md](docs/data-model.md).
+This section is the original product model sketch; use the data-model doc and
+Drizzle schema for current fields, relationships, and derived models.
+
 ```text
 interview_report {
   id, source ('seed_dummy' | 'seed_curated' | 'user_submitted' | 'imported'),

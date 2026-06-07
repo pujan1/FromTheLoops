@@ -8,11 +8,16 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { levelTier, taxonomySource, taxonomyStatus } from "./enums.js";
+import {
+  levelTier,
+  taxonomySource,
+  taxonomyStatus,
+  topicCategory,
+} from "./enums.js";
 import { users } from "./users.js";
 
 // Curated taxonomy: companies, roles, topics, per-company levels. FK
-// targets for reports/questions/verifications. See PLAN.md §Data model.
+// targets for reports/questions/verifications. See docs/data-model.md.
 //
 // Curation model (PLAN.md §Taxonomy curation):
 //   - companies + levels: inline "create pending" allowed; mod approves later.
@@ -73,7 +78,7 @@ export const roles = pgTable(
 );
 
 // Topic tags — the curated taxonomy a question is tagged with (≥1 active
-// tag required per question; PLAN.md §Data model). Unlike `roles`, topics
+// tag required per question; see docs/data-model.md). Unlike `roles`, topics
 // DO allow inline "suggest new → pending" (same affordance as companies):
 // a user can propose a tag the curated set is missing, landing it as
 // status='pending' until a mod promotes it. Pending tags don't satisfy the
@@ -90,6 +95,10 @@ export const topics = pgTable(
     name: text("name").notNull(),
     // Alternate names, matched alongside `name` by fuzzy search.
     aliases: text("aliases").array().notNull().default(sql`'{}'`),
+    // Curated grouping for the /topics index's category sections (Sprint 5).
+    // Nullable: user-suggested pending tags have no category until a mod
+    // assigns one — they render in the index's "Other" bucket.
+    category: topicCategory("category"),
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),
     // Who suggested a pending tag (null for seed rows).

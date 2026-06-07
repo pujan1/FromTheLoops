@@ -80,13 +80,17 @@ describe("curated seed", () => {
     expect(rows.every((r) => r.status === "active")).toBe(true);
   });
 
-  it("inserts every curated topic as active + seed_curated", async () => {
+  it("inserts every curated topic as active + seed_curated, with a category", async () => {
     const rows = await db
       .select()
       .from(topics)
       .where(eq(topics.source, "seed_curated"));
     expect(rows).toHaveLength(CURATED_TOPICS.length);
     expect(rows.every((r) => r.status === "active")).toBe(true);
+    // Every curated topic carries a (non-null) category that drives the
+    // /topics index grouping — only user-suggested pending tags are uncategorized.
+    expect(CURATED_TOPICS.every((t) => t.category != null)).toBe(true);
+    expect(rows.every((r) => r.category != null)).toBe(true);
   });
 
   it("gives every curated company an ordered, dense-from-0 level ladder", async () => {

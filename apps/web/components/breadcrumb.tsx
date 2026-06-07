@@ -1,13 +1,14 @@
 import Link from "next/link";
-import styles from "../browse.module.css";
+import styles from "./breadcrumb.module.css";
 
 export interface Crumb {
   label: string;
   href?: string; // omit for the current (last) crumb
 }
 
-// Breadcrumb trail for the browse hierarchy (Companies › Company › Role ›
-// Level). The last crumb is the current page (no link).
+// Breadcrumb trail for the browse hierarchies — Companies › Company › Role ›
+// Level, and Topics › Topic › Company. The last crumb is the current page (no
+// link). Shared across the /companies and /topics surfaces (Sprint 5).
 export function Breadcrumb({ items }: { items: Crumb[] }) {
   return (
     <nav className={styles.breadcrumb} aria-label="Breadcrumb">

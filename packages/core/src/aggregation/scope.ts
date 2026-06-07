@@ -94,3 +94,36 @@ export function decideLevelView(
   if (levelCount >= threshold) return { view: "level", broadened: false };
   return { view: "role", broadened: true };
 }
+
+// ---------------------------------------------------------------------------
+// Topic×company view decision (Sprint 5). The /topics/[topic]/[company] leaf is
+// the topic analogue of the wedge: a thin per-company cell shouldn't masquerade
+// as a confident signal, so when it's sparse the page broadens to the topic
+// across ALL companies (+ a banner) and canonicalizes UP to /topics/[topic]
+// (thin near-duplicate company leaves shouldn't compete for index space). Same
+// single-rung shape as decideLevelView — stand alone, or broaden to the parent.
+// ---------------------------------------------------------------------------
+
+export type TopicCompanyView = "company" | "topic";
+
+export interface TopicCompanyViewDecision {
+  // Which corpus the question list shows: just this company, or the topic
+  // across every company.
+  view: TopicCompanyView;
+  // True when we broadened to the topic — the page shows a sparse banner and
+  // canonicalizes up to /topics/[topic].
+  broadened: boolean;
+}
+
+// `companyReportCount` is the distinct VISIBLE reports at the company whose
+// questions carry the topic. Dense → the company-filtered view; else broaden to
+// the topic across all companies.
+export function decideTopicCompanyView(
+  companyReportCount: number,
+  threshold: number = SPARSE_REPORT_THRESHOLD,
+): TopicCompanyViewDecision {
+  if (companyReportCount >= threshold) {
+    return { view: "company", broadened: false };
+  }
+  return { view: "topic", broadened: true };
+}

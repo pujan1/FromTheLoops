@@ -2,6 +2,9 @@
 
 The only package that talks to Postgres. Everything else imports query helpers from here.
 
+Data model reference: [docs/data-model.md](../../docs/data-model.md). The
+executable schema source is [`src/schema/index.ts`](src/schema/index.ts).
+
 ## Stack
 
 - **Drizzle ORM** — TypeScript-first, SQL-shaped. See [ADR-0002](../../docs/adr/0002-orm-drizzle.md).
@@ -23,9 +26,11 @@ src/
 │   ├── questions.ts    # questions + question_topics join
 │   ├── verifications.ts
 │   ├── moderation.ts
+│   ├── events.ts
 │   └── index.ts        # barrel — drizzle-kit reads this
-├── migrations/         # generated SQL — committed
+├── migrations/         # generated/applied SQL — committed
 └── seed/               # seed_dummy + seed_curated fixtures
+views/                  # annotated aggregate SQL mirrored into migrations
 ```
 
 ## Scripts
@@ -42,6 +47,6 @@ All scripts read `DATABASE_URL` from `.env.local` at the repo root, then `.env`,
 ## Sprint 0 deliverable status
 
 - [x] Drizzle wired with `drizzle-kit`; first migration generated
-- [x] Schema for the five top-level entities + supporting taxonomy committed (pulled forward from Sprint 2)
+- [x] Schema for the core entities + supporting taxonomy committed
 - [x] `pnpm db:migrate` runs against local docker-compose Postgres
 - [x] `pnpm db:seed` inserts at least one trivial row

@@ -18,7 +18,7 @@ import { users } from "./users.js";
 
 // `interview_reports` — *the* top-level entity. One row = one submitted
 // interview experience. Children: rounds[] → questions[] → question_topics[].
-// See PLAN.md §Data model for the canonical field list.
+// See docs/data-model.md for the human-readable model map.
 //
 // Indexes worth knowing about:
 //   - reports_company_role_level_idx (company_id, canonical_role_id, level)
