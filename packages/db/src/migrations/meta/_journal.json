@@ -92,6 +92,13 @@
       "when": 1780790076861,
       "tag": "0012_topics_category",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780906644850,
+      "tag": "0013_user_settings_columns",
+      "breakpoints": true
     }
   ]
 }

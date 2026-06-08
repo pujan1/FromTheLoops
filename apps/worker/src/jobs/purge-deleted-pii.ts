@@ -1,18 +1,25 @@
 // 90-day PII purge — the worker side of soft delete.
 //
-// Soft-deleting a report (web: softDeleteReportAction) only flips status to
-// 'deleted' and stamps deleted_at; the user's free text lives on so an
-// appeal/audit window exists. This job is what finally scrubs it: once a
-// report has been deleted for PII_RETENTION_MS (90 days), its round
-// experience prose and question prose are cleared (see purgeDeletedReportPii).
+// Soft-deleting a report (web: softDeleteReportAction) or an account
+// (web: deleteAccountAction) only stamps deleted_at; the free text / PII lives
+// on so an appeal/audit window exists. This job is what finally scrubs both,
+// once they've been deleted for the retention window (90 days):
+//   - reports: round experience prose + question prose (purgeDeletedReportPii)
+//   - accounts: email, username, display name, clerk id (purgeDeletedUserPii)
 //
 // It runs on a daily cron registered as a BullMQ JobScheduler (see index.ts),
-// not on demand — there's no per-report trigger, just a steady sweep. The DB
+// not on demand — there's no per-row trigger, just a steady sweep. The DB
 // query is the source of truth for "what's due"; the job carries no data and
 // is safe to run as often as the schedule fires (idempotent: already-purged
 // rows are skipped via pii_purged_at).
 
-import { getDb, PII_RETENTION_MS, purgeDeletedReportPii } from "@fromtheloop/db";
+import {
+  getDb,
+  PII_RETENTION_MS,
+  purgeDeletedReportPii,
+  purgeDeletedUserPii,
+  USER_PII_RETENTION_MS,
+} from "@fromtheloop/db";
 import type { Job } from "bullmq";
 
 export const PURGE_PII_QUEUE = "purge-deleted-pii";
@@ -27,9 +34,14 @@ export const PURGE_PII_JOB = "purge";
 export const PURGE_PII_CRON = "17 3 * * *";
 
 export async function processPurgeDeletedPii(job: Job): Promise<void> {
-  const cutoff = new Date(Date.now() - PII_RETENTION_MS);
-  const { reportsPurged } = await purgeDeletedReportPii(getDb(), cutoff);
+  const db = getDb();
+  const reportCutoff = new Date(Date.now() - PII_RETENTION_MS);
+  const userCutoff = new Date(Date.now() - USER_PII_RETENTION_MS);
+  const { reportsPurged } = await purgeDeletedReportPii(db, reportCutoff);
+  const { usersPurged } = await purgeDeletedUserPii(db, userCutoff);
   console.log(
-    `[purge-deleted-pii] job ${job.id}: purged ${reportsPurged} report(s) deleted before ${cutoff.toISOString()}`,
+    `[purge-deleted-pii] job ${job.id}: purged ${reportsPurged} report(s) ` +
+      `(deleted before ${reportCutoff.toISOString()}) and ${usersPurged} ` +
+      `account(s) (deleted before ${userCutoff.toISOString()})`,
   );
 }

@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
+  "/settings(.*)",
   "/submit(.*)",
   "/drafts(.*)",
   // /admin requires a session here; requireAdmin() (lib/admin.ts) then checks

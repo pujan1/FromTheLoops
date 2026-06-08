@@ -22,6 +22,13 @@ export const routes = {
   signIn: "/sign-in",
   signUp: "/sign-up",
   dashboard: "/dashboard",
+  settings: "/settings",
+  // The account-delete confirmation screen (its own page so the destructive
+  // form is deliberate, never a stray click on /settings).
+  settingsDelete: "/settings/delete",
+  // "Export my data" — a GET route handler that streams a JSON dump as a
+  // download (Content-Disposition: attachment). Not a page.
+  exportData: "/api/export",
   styleguide: "/styleguide",
 
   companies: "/companies",

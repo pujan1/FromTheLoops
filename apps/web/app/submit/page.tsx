@@ -1,4 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
+import { getDb, getOrCreateUserByClerkId } from "@fromtheloop/db";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import {
@@ -18,10 +19,18 @@ import { SubmitForm } from "./submit-form";
 // enforced in middleware — the redirect here is a belt-and-suspenders for
 // direct RSC hits.
 export default async function SubmitPage() {
-  const { userId } = await auth();
-  if (!userId) redirect(routes.signIn);
+  const user = await currentUser();
+  if (!user) redirect(routes.signIn);
 
   const t = await getTranslations("submit");
+
+  // Seed the form's attribution from the user's saved default (settings). The
+  // form still lets them flip it per report.
+  const db = getDb();
+  const internal = await getOrCreateUserByClerkId(db, {
+    clerkId: user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? null,
+  });
 
   return (
     <>
@@ -36,7 +45,7 @@ export default async function SubmitPage() {
             {t("lede")}
           </FtlBody>
           <FtlRule />
-          <SubmitForm />
+          <SubmitForm defaultAttribution={internal.defaultDisplayAttribution} />
         </FtlContainer>
       </main>
     </>

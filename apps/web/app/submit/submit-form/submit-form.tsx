@@ -40,7 +40,11 @@ import {
 } from "./helpers";
 import type { FieldErrors, LevelOption, SubmitFormProps } from "./types";
 
-export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
+export function SubmitForm({
+  initialDraftId,
+  initialData,
+  defaultAttribution,
+}: SubmitFormProps) {
   const t = useTranslations("submit");
   const router = useRouter();
 
@@ -64,7 +68,7 @@ export function SubmitForm({ initialDraftId, initialData }: SubmitFormProps) {
     initialData?.month ?? currentMonth(),
   );
   const [attribution, setAttribution] = useState<DisplayAttribution>(
-    initialData?.attribution ?? "anonymous",
+    initialData?.attribution ?? defaultAttribution ?? "anonymous",
   );
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);

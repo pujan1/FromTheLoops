@@ -24,4 +24,8 @@ export type FieldErrors = Partial<
 export interface SubmitFormProps {
   initialDraftId?: string;
   initialData?: SubmissionDraft | null;
+  // The user's saved attribution default (settings → "Default attribution for
+  // new reports"). Used as the starting value only when the draft doesn't
+  // already carry one; falls back to "anonymous" when unset.
+  defaultAttribution?: SubmissionDraft["attribution"];
 }
