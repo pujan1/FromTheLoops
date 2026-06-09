@@ -11,10 +11,13 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 import {
   claimUnprocessedAggregateEvents,
+  claimUnprocessedKarmaEvents,
   countUnprocessedAggregateEvents,
+  countUnprocessedKarmaEvents,
   createReport,
   getAggregate,
   getOrCreateUserByClerkId,
+  markKarmaEventProcessed,
   refreshAggregateForEvent,
   type ReportWriteInput,
   softDeleteReport,
@@ -208,6 +211,28 @@ describe("event outbox + aggregate consumer", () => {
     } finally {
       await listener.end({ timeout: 5 });
     }
+  });
+
+  it("the karma consumer drains the same log on an independent marker", async () => {
+    await createReport(db, input("L5", l5Id));
+    // One event, pending for ALL consumers at first.
+    const pendingKarma = await claimUnprocessedKarmaEvents(db);
+    expect(pendingKarma).toHaveLength(1);
+    expect(pendingKarma[0]!.karmaProcessedAt).toBeNull();
+    expect(await countUnprocessedKarmaEvents(db)).toBe(1);
+
+    const eventId = pendingKarma[0]!.id;
+    expect(await markKarmaEventProcessed(db, eventId)).toBe(true);
+
+    // Karma marker flipped → no longer pending for karma, lag zero.
+    expect(await claimUnprocessedKarmaEvents(db)).toHaveLength(0);
+    expect(await countUnprocessedKarmaEvents(db)).toBe(0);
+    // A second mark is a harmless no-op (guarded on still-null).
+    expect(await markKarmaEventProcessed(db, eventId)).toBe(false);
+
+    // The aggregate consumer is untouched — markers are independent.
+    expect(await claimUnprocessedAggregateEvents(db)).toHaveLength(1);
+    expect(await countUnprocessedAggregateEvents(db)).toBe(1);
   });
 
   it("treats a missing event id as a no-op", async () => {

@@ -239,6 +239,10 @@ export interface CellReportListItem {
   // Distinct topics across the report's questions, name-sorted. The card slices
   // the first few; the full set rides along for callers that want it.
   topics: CellReportTopic[];
+  // How many readers flagged this report helpful (verified, non-self flaggers
+  // only — the same population that earns the author karma). Surfaced on the
+  // card and the input to the list's karma-weighted ordering (see runReportList).
+  helpfulCount: number;
   createdAt: Date;
 }
 
@@ -285,6 +289,7 @@ type CellReportSqlRow = {
   evidence_verified: boolean;
   author_name: string | null;
   topics: CellReportTopic[] | null;
+  helpful_count: number | string;
   created_at: string | Date;
   total: number | string;
 };
@@ -354,14 +359,36 @@ async function runReportList(
                WHERE rd.report_id = r.id
              ) sub
            ), '[]'::jsonb) AS topics,
+           hflag.cnt AS helpful_count,
            r.created_at,
            (COUNT(*) OVER ())::int AS total
     FROM interview_reports r
     JOIN users u ON u.id = r.created_by_user_id
     JOIN companies c ON c.id = r.company_id
     JOIN roles ro ON ro.id = r.canonical_role_id
+    -- Helpful-flag signal per report (PLAN.md §Karma "helpful-flag-weighted
+    -- aggregation ranking"). cnt = how many readers flagged it (display); score
+    -- = karma-weighted sum, weighting each VALID flag by the FLAGGER's karma
+    -- (GREATEST(.,1) so every flag counts ≥1 and a heavier flagger lifts more).
+    -- We weight by the flagger, never the submitter — "no submitter-rank boost"
+    -- (the rich-get-richer trap PLAN.md deliberately avoids). Self-flags and
+    -- unverified flaggers are excluded, matching the karma earn rule.
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*)::int AS cnt,
+             COALESCE(SUM(GREATEST(fu.karma, 1)), 0)::int AS score
+      FROM helpful_flags hf
+      JOIN users fu ON fu.id = hf.flagger_user_id
+      WHERE hf.report_id = r.id
+        AND fu.id <> r.created_by_user_id
+        AND EXISTS (
+          SELECT 1 FROM user_verifications v WHERE v.user_id = hf.flagger_user_id
+        )
+    ) hflag ON true
     WHERE ${where}
-    ORDER BY r.created_at DESC
+    -- Karma-weighted helpful signal first, recency as the tiebreak. Unflagged
+    -- reports all score 0, so they keep the newest-first order — the signal only
+    -- lifts reports readers have endorsed.
+    ORDER BY hflag.score DESC, r.created_at DESC
     LIMIT ${opts.limit} OFFSET ${opts.offset}
   `);
   return {
@@ -378,6 +405,7 @@ async function runReportList(
       evidenceVerified: r.evidence_verified,
       authorName: r.author_name,
       topics: r.topics ?? [],
+      helpfulCount: Number(r.helpful_count),
       createdAt: new Date(r.created_at),
     })),
     total: rows[0] ? Number(rows[0].total) : 0,

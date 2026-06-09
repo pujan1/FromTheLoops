@@ -78,6 +78,12 @@ export * from "./reports.js";
 // Internal event outbox: emit (in report-write txns) + drain (worker).
 export * from "./events.js";
 
+// Karma earn rule + per-user recompute (Sprint 5 Day 7).
+export * from "./karma.js";
+
+// Helpful-flags: toggle, counts, and the verified/rate guards (Sprint 5 Day 8).
+export * from "./helpful-flags.js";
+
 // Per-(company, role, level) aggregate refresh + reads (Sprint 3).
 export * from "./aggregates.js";
 

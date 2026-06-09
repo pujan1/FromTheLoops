@@ -1,13 +1,16 @@
 import { currentUser } from "@clerk/nextjs/server";
 import {
+  countHelpfulFlags,
   EDIT_WINDOW_MS,
   getDb,
   getOrCreateUserByClerkId,
   getPublicReportDetail,
   getReportForEdit,
   getUserById,
+  hasUserFlaggedReport,
   isReportEditable,
   type ReportDetail,
+  userIsVerified,
 } from "@fromtheloop/db";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -24,6 +27,7 @@ import {
 } from "@/components/ui";
 import { startReportEdit } from "./actions";
 import { DeleteReportButton } from "./delete-report-button";
+import { HelpfulFlagButton } from "./helpful-flag-button";
 import styles from "./reports.module.css";
 
 // A single interview report.
@@ -99,6 +103,29 @@ export default async function ReportPage({
     const author = await getUserById(db, detail.report.createdByUserId);
     const name = author?.displayName ?? author?.username;
     if (name) attribution = t("detail.by", { name });
+  }
+
+  // Helpful-flag state (Day 8). Only meaningful on a public (active) report —
+  // not a pending/own-only or deleted one. The count is public; the interactive
+  // control needs a signed-in, verified, non-author viewer. An author, or an
+  // unverified/signed-out reader, sees the count with a hint instead.
+  const showHelpful = !isDeleted && detail.report.status === "active";
+  let helpfulCount = 0;
+  let viewerFlagged = false;
+  let canFlag = false;
+  let flagReason: "signIn" | "verify" | "author" | undefined;
+  if (showHelpful) {
+    helpfulCount = await countHelpfulFlags(db, detail.report.id);
+    if (!viewerId) {
+      flagReason = "signIn";
+    } else if (viewerIsAuthor) {
+      flagReason = "author";
+    } else {
+      viewerFlagged = await hasUserFlaggedReport(db, detail.report.id, viewerId);
+      // Already-flagged readers can always un-flag; otherwise verified-only.
+      canFlag = viewerFlagged || (await userIsVerified(db, viewerId));
+      if (!canFlag) flagReason = "verify";
+    }
   }
 
   return (
@@ -190,6 +217,21 @@ export default async function ReportPage({
                   </section>
                 ))}
               </div>
+            </>
+          )}
+
+          {/* Helpful-flag: count + (for an eligible viewer) the toggle. Public
+              readers see the count and a hint to sign in / verify. */}
+          {showHelpful && (
+            <>
+              <FtlRule />
+              <HelpfulFlagButton
+                reportId={detail.report.id}
+                initialFlagged={viewerFlagged}
+                initialCount={helpfulCount}
+                canFlag={canFlag}
+                reason={flagReason}
+              />
             </>
           )}
 

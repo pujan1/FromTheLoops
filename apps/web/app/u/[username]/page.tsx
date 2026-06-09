@@ -1,4 +1,4 @@
-import { resolveUser } from "@fromtheloop/core";
+import { karmaTier, resolveUser } from "@fromtheloop/core";
 import {
   getDb,
   getUserProfileStats,
@@ -57,8 +57,11 @@ export async function generateMetadata({
 // badges, and the reports they chose to ATTRIBUTE. Reports posted anonymously
 // never appear here (listReportsForUser filters on display_attribution): karma
 // is account-bound, but visibility is per-report, so an anonymous submission
-// stays anonymous everywhere public. Karma + tier badges slot into the header
-// once the karma column lands (Sprint 5 Day 7). Fully SSR.
+// stays anonymous everywhere public — yet its karma still counts toward the
+// account-wide total shown here (PLAN.md §Anonymity). The karma figure (Sprint 5
+// Day 7) reads straight off the user row, kept current by the recompute-karma
+// worker; the 10/100/1000 tier badge (Day 8) is derived from it via karmaTier.
+// Fully SSR.
 export default async function UserProfilePage({
   params,
   searchParams,
@@ -87,6 +90,8 @@ export default async function UserProfilePage({
   const name = authorName(user.displayName, username);
   const startIndex = (filters.page - 1) * filters.perPage;
   const isVerified = stats.verifiedAtCompanyCount > 0;
+  // The 10/100/1000 vanity rung, if reached (Day 8).
+  const tier = karmaTier(user.karma);
 
   return (
     <>
@@ -103,6 +108,14 @@ export default async function UserProfilePage({
             {isVerified && (
               <FtlStatusBadge status="success">
                 Verified contributor
+              </FtlStatusBadge>
+            )}
+            <FtlStatusBadge status="info" dot={false}>
+              {user.karma.toLocaleString()} karma
+            </FtlStatusBadge>
+            {tier && (
+              <FtlStatusBadge status="success" dot={false}>
+                {tier.label}
               </FtlStatusBadge>
             )}
             <FtlStatusBadge status="neutral" dot={false}>

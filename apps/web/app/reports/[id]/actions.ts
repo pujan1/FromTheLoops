@@ -13,11 +13,15 @@ import { currentUser } from "@clerk/nextjs/server";
 import { reportDetailToDraft } from "@fromtheloop/core";
 import {
   createDraft,
+  type FlagRefusal,
+  flagReportHelpful,
   getDb,
   getOrCreateUserByClerkId,
   getReportForEdit,
+  hasUserFlaggedReport,
   isReportEditable,
   softDeleteReport,
+  unflagReportHelpful,
 } from "@fromtheloop/db";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
@@ -83,4 +87,55 @@ export async function softDeleteReportAction(
   // away — the user sees their delete took effect.
   revalidatePath(routes.report(reportId));
   redirect(routes.report(reportId));
+}
+
+// The state the helpful-flag button renders, threaded through useActionState:
+// the viewer's current flag state, the live count, and a refusal reason to
+// surface (e.g. rate-limited) — null when the last toggle succeeded.
+export interface HelpfulFlagState {
+  flagged: boolean;
+  count: number;
+  error: FlagRefusal | "not_signed_in" | null;
+}
+
+// Toggle the viewer's helpful-flag on a report. Decides flag-vs-unflag from the
+// DB truth (not the client's claimed state), so a double-submit or a stale page
+// can't desync. Every guard (auth, self-flag, verified, rate limit) is enforced
+// in the db layer; this action just resolves the viewer and surfaces the
+// outcome. revalidatePath refreshes the SSR count for the next load while
+// useActionState updates the button in place now.
+export async function toggleHelpfulFlagAction(
+  _prev: HelpfulFlagState,
+  formData: FormData,
+): Promise<HelpfulFlagState> {
+  const reportId = String(formData.get("reportId") ?? "");
+  const count = Number(formData.get("count") ?? 0);
+  const flagged = formData.get("flagged") === "1";
+  if (!reportId) return { flagged, count, error: "not_found" };
+
+  const user = await currentUser();
+  if (!user) return { flagged, count, error: "not_signed_in" };
+
+  const db = getDb();
+  const internal = await getOrCreateUserByClerkId(db, {
+    clerkId: user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? null,
+  });
+
+  if (await hasUserFlaggedReport(db, reportId, internal.id)) {
+    const res = await unflagReportHelpful(db, {
+      reportId,
+      flaggerUserId: internal.id,
+    });
+    revalidatePath(routes.report(reportId));
+    return { flagged: false, count: res.count, error: null };
+  }
+
+  const res = await flagReportHelpful(db, {
+    reportId,
+    flaggerUserId: internal.id,
+  });
+  revalidatePath(routes.report(reportId));
+  if (res.ok) return { flagged: true, count: res.count, error: null };
+  return { flagged, count, error: res.reason };
 }

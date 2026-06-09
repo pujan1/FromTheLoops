@@ -39,7 +39,12 @@ export function ReportList({
           role={r.roleName}
           level={levelLabel(r.level)}
           title={outcomeLabel(r.outcome)}
-          excerpt={`${r.authorName ?? "Anonymous"} · interviewed ${r.interviewMonth}`}
+          excerpt={
+            `${r.authorName ?? "Anonymous"} · interviewed ${r.interviewMonth}` +
+            (r.helpfulCount > 0
+              ? ` · ${r.helpfulCount} found helpful`
+              : "")
+          }
           rounds={r.roundCount}
           topics={r.topics.map((t) => t.name)}
           verified={r.evidenceVerified}

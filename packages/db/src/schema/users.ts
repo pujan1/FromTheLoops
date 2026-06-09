@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -26,7 +27,16 @@ import { displayAttribution } from "./enums.js";
 // stamped by the worker's 90-day sweep once a deleted account's PII (email,
 // handle, display name, clerk id) has been scrubbed.
 //
-// Future fields (deferred): karma (Day 7), role (RBAC).
+// Karma (Sprint 5 Day 7): account-bound reputation, recomputed-from-scratch by
+// the worker's recompute-karma job whenever a relevant event lands (a report
+// write today; helpful-flags from Day 8). It is a DENORMALIZED cache — the
+// source of truth is the user's reports (+ later helpful-flags) — so the column
+// can always be rebuilt by re-running the recompute. NOT NULL default 0 so a
+// fresh account reads as 0 karma before its first recompute. See karma.ts for
+// the earn rule and docs/adr/0005-karma-design.md (Day 9) for the non-goals
+// (notably: karma never boosts the submitter's own search ranking).
+//
+// Future fields (deferred): role (RBAC).
 export const users = pgTable(
   "users",
   {
@@ -42,6 +52,9 @@ export const users = pgTable(
     defaultDisplayAttribution: displayAttribution("default_display_attribution")
       .notNull()
       .default("anonymous"),
+    // Denormalized reputation cache; rebuilt by the recompute-karma worker job.
+    // Never written by a read path — only the recompute sets it. See karma.ts.
+    karma: integer("karma").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

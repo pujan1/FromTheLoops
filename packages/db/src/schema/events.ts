@@ -11,11 +11,11 @@ import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 // within milliseconds — but the row is the source of truth, and a fallback
 // poller sweeps any events a dropped NOTIFY missed.
 //
-// Two independent consumers fan out from one event, each retried on its own
-// (PLAN/sprint risk table): the aggregate refresh (Day 4) and the Typesense
-// indexer (Day 6). They track their own progress via separate *_processed_at
-// columns so a Typesense outage can't stall aggregate refreshes and vice-versa.
-// An event is fully drained once both are non-null.
+// Three independent consumers fan out from one event, each retried on its own
+// (PLAN/sprint risk table): the aggregate refresh (Day 4), the Typesense
+// indexer (Day 6), and the karma recompute (Sprint 5 Day 7). They track their
+// own progress via separate *_processed_at columns so one consumer's outage
+// can't stall the others. An event is fully drained once all three are non-null.
 //
 // No FKs: this is an append-only log that must survive even a report hard-delete
 // (the cell columns are denormalized onto the row precisely so a delete event
@@ -43,6 +43,9 @@ export const events = pgTable(
       withTimezone: true,
     }),
     searchProcessedAt: timestamp("search_processed_at", { withTimezone: true }),
+    // Day 7: the karma consumer's drain marker. The recompute job resolves the
+    // event's report → author and rebuilds that user's karma.
+    karmaProcessedAt: timestamp("karma_processed_at", { withTimezone: true }),
   },
   (t) => [
     // Partial indexes that keep each consumer's "what's still pending?" sweep
@@ -53,6 +56,9 @@ export const events = pgTable(
     index("events_search_pending_idx")
       .on(t.createdAt)
       .where(sql`${t.searchProcessedAt} IS NULL`),
+    index("events_karma_pending_idx")
+      .on(t.createdAt)
+      .where(sql`${t.karmaProcessedAt} IS NULL`),
   ],
 );
 

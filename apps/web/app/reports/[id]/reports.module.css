@@ -114,3 +114,29 @@
   color: var(--color-muted);
   margin-bottom: var(--space-4);
 }
+
+/* Helpful-flag block: heading, live count, then the toggle (or a hint). */
+.helpful {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.helpful__heading {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.helpful__count {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.helpful__hint {
+  margin-top: var(--space-2);
+}

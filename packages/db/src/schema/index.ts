@@ -15,5 +15,6 @@ export * from "./reports.js";
 export * from "./rounds.js";
 export * from "./questions.js";
 export * from "./verifications.js";
+export * from "./helpful-flags.js";
 export * from "./moderation.js";
 export * from "./events.js";

@@ -14,3 +14,6 @@ export * from "./aggregation/scope.js";
 
 // Canonical URL contract: pure path builders + db-backed slug→entity resolvers.
 export * from "./url/index.js";
+
+// Karma tier badges (10/100/1000) — pure presentation mapping.
+export * from "./karma/tier.js";

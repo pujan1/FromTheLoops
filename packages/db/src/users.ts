@@ -125,6 +125,22 @@ export async function getUserProfileStats(
   };
 }
 
+// Is this user "verified-pro" — do they hold at least one user_verifications
+// row (Layer 2 trust, PLAN.md §Trust)? Gates who may cast a helpful-flag (Day 8
+// anti-sock-puppet) and mirrors the live check the karma helpful-flag earn
+// makes. A single EXISTS — cheap, rides verifications_user_idx.
+export async function userIsVerified(
+  db: Db,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ one: sql<number>`1` })
+    .from(userVerifications)
+    .where(eq(userVerifications.userId, userId))
+    .limit(1);
+  return rows.length > 0;
+}
+
 // The fields a user can change from /settings. Both optional so a partial
 // update touches only what was sent; an undefined field is left as-is.
 //   - displayName: the public name on attributed reports / their profile.

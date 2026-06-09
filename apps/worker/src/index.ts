@@ -36,6 +36,16 @@ import {
   INDEX_TYPESENSE_QUEUE,
   processIndexTypesense,
 } from "./jobs/index-typesense.js";
+import {
+  karmaEventJobId,
+  KARMA_EVENT_JOB,
+  KARMA_EVENT_JOB_OPTS,
+  KARMA_SWEEP_EVERY_MS,
+  KARMA_SWEEP_JOB,
+  KARMA_SWEEP_SCHEDULER,
+  makeProcessRecomputeKarma,
+  RECOMPUTE_KARMA_QUEUE,
+} from "./jobs/recompute-karma.js";
 import { ensureCollections } from "@fromtheloop/search";
 import { startEventListener } from "./listen.js";
 
@@ -106,6 +116,24 @@ await indexTypesenseQueue.upsertJobScheduler(
   { name: INDEX_SWEEP_JOB },
 );
 
+// Karma recompute: the third consumer of the events outbox (Sprint 5 Day 7).
+// Same fast-path + sweep shape, but two-stage and debounced per user — the
+// processor enqueues per-user recompute jobs onto its OWN queue, so it's built
+// via a factory closing over that queue handle.
+const recomputeKarmaQueue = new Queue(RECOMPUTE_KARMA_QUEUE, {
+  connection: redisConnection,
+});
+const recomputeKarmaWorker = new Worker(
+  RECOMPUTE_KARMA_QUEUE,
+  makeProcessRecomputeKarma(recomputeKarmaQueue),
+  { connection: redisConnection, concurrency },
+);
+await recomputeKarmaQueue.upsertJobScheduler(
+  KARMA_SWEEP_SCHEDULER,
+  { every: KARMA_SWEEP_EVERY_MS },
+  { name: KARMA_SWEEP_JOB },
+);
+
 // Self-provision Typesense collections on boot (idempotent — create-if-missing),
 // the same way we upsert job schedulers above. So a fresh Hetzner deploy stands
 // the collections up without a manual provision step. Best-effort: a Typesense
@@ -139,6 +167,13 @@ const eventListener = await startEventListener([
     jobOpts: INDEX_EVENT_JOB_OPTS,
     label: "index-typesense",
   },
+  {
+    queue: recomputeKarmaQueue,
+    jobName: KARMA_EVENT_JOB,
+    jobId: karmaEventJobId,
+    jobOpts: KARMA_EVENT_JOB_OPTS,
+    label: "recompute-karma",
+  },
 ]);
 
 const workers = [
@@ -147,6 +182,7 @@ const workers = [
   notificationsWorker,
   refreshAggregateWorker,
   indexTypesenseWorker,
+  recomputeKarmaWorker,
 ];
 
 helloWorker.on("ready", () =>
@@ -170,6 +206,11 @@ indexTypesenseWorker.on("ready", () =>
     `[worker] ready — queue=${INDEX_TYPESENSE_QUEUE} sweep=${INDEX_SWEEP_EVERY_MS}ms`,
   ),
 );
+recomputeKarmaWorker.on("ready", () =>
+  console.log(
+    `[worker] ready — queue=${RECOMPUTE_KARMA_QUEUE} sweep=${KARMA_SWEEP_EVERY_MS}ms`,
+  ),
+);
 for (const w of workers) {
   w.on("completed", (job) => console.log(`[worker] completed ${job.id}`));
   w.on("failed", (job, err) => {
@@ -190,6 +231,7 @@ const shutdown = async (signal: string) => {
     purgeQueue.close(),
     refreshAggregateQueue.close(),
     indexTypesenseQueue.close(),
+    recomputeKarmaQueue.close(),
   ]);
   // Release the shared Postgres pool the jobs opened via getDb().
   await closeDb();

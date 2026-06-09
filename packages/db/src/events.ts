@@ -140,3 +140,46 @@ export async function countUnprocessedSearchEvents(db: Db): Promise<number> {
   );
   return Number(rows[0]?.n ?? 0);
 }
+
+// ── karma consumer (Sprint 5 Day 7) ─────────────────────────────────────────
+// The third drain of the same event log, against karma_processed_at. The karma
+// recompute resolves each event's report → author and rebuilds that user's
+// karma; it drains on its own clock so a slow recompute never stalls the
+// aggregate refresh or the search indexer (and vice-versa).
+
+// The fallback poller's read for the KARMA consumer: oldest-first events it
+// hasn't drained. Rides the events_karma_pending_idx partial index.
+export async function claimUnprocessedKarmaEvents(
+  db: Db,
+  limit = 100,
+): Promise<ReportEventRow[]> {
+  return db
+    .select()
+    .from(events)
+    .where(isNull(events.karmaProcessedAt))
+    .orderBy(asc(events.createdAt))
+    .limit(limit);
+}
+
+// Mark an event drained by the karma consumer. Guarded on still-null so a
+// concurrent double-process is a harmless no-op. Returns true if it flipped.
+export async function markKarmaEventProcessed(
+  db: Db,
+  id: string,
+): Promise<boolean> {
+  const rows = await db
+    .update(events)
+    .set({ karmaProcessedAt: new Date() })
+    .where(and(eq(events.id, id), isNull(events.karmaProcessedAt)))
+    .returning({ id: events.id });
+  return rows.length > 0;
+}
+
+// Karma-recompute lag for /admin/health (Day 8): how many events the karma
+// consumer still owes.
+export async function countUnprocessedKarmaEvents(db: Db): Promise<number> {
+  const rows = await db.execute<{ n: number }>(
+    sql`SELECT count(*)::int AS n FROM events WHERE karma_processed_at IS NULL`,
+  );
+  return Number(rows[0]?.n ?? 0);
+}

@@ -19,7 +19,7 @@ Short, dated, append-only records of technical decisions. Format: [Michael Nygar
 | [0004](0004-validation-and-soft-delete.md) | Submission validation, soft delete, and submission anti-abuse | accepted | 2026-06-03 | 2 |
 | [0005](0005-aggregation-strategy.md) | Aggregation strategy — summary table + Typesense facets | accepted | 2026-06-06 | 3 |
 | [0006](0006-browse-url-contract.md) | Canonical browse URL contract + slug→entity resolver | accepted (grain superseded by 0009) | 2026-06-05 | 4 |
-| 0007 | Karma design — earn rules, non-goals | _planned_ | — | 5 |
+| [0007](0007-karma-design.md) | Karma design — recompute earn, flagger-weighted ranking, no submitter boost | accepted | 2026-06-08 | 5 |
 | 0008 | RBAC, evidence storage, audit log | _planned_ | — | 6 |
 | [0009](0009-role-primary-browse-grain.md) | Role-primary browse grain (level → filter) | accepted | 2026-06-06 | 4 |
 

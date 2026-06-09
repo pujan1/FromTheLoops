@@ -395,6 +395,23 @@ export async function countVerifiedReportsForUser(
   return rows.length;
 }
 
+// Resolve a report id to its author's internal user id. The karma consumer
+// (recompute-karma worker) needs this: the events outbox carries the report's
+// cell (company/role/level) but not the author, and karma is per-USER. Returns
+// null for an unknown id. Reads regardless of status — a 'deleted' event still
+// names a live (soft-deleted) row whose author's karma must be recomputed.
+export async function getReportAuthorId(
+  db: Db,
+  reportId: string,
+): Promise<string | null> {
+  const rows = await db
+    .select({ userId: interviewReports.createdByUserId })
+    .from(interviewReports)
+    .where(eq(interviewReports.id, reportId))
+    .limit(1);
+  return rows[0]?.userId ?? null;
+}
+
 // Ownership-scoped fetch (mirrors getDraft): returns the report row or null
 // if it doesn't exist OR belongs to another user — no existence oracle.
 export async function getReport(

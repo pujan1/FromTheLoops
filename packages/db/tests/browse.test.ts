@@ -17,6 +17,7 @@ import {
   getPublicReportDetail,
   getOrCreateUserByClerkId,
   getRoleBySlug,
+  helpfulFlags,
   interviewReports,
   listCompaniesWithReports,
   listLevelsForCompanyRoleWithReports,
@@ -28,6 +29,7 @@ import {
   roles,
   topics,
   users,
+  userVerifications,
 } from "../src/index.js";
 import { makeTestClient, type TestDb } from "./helpers.js";
 
@@ -298,6 +300,43 @@ describe("public browse reads", () => {
     );
     expect(named).toHaveLength(1);
     expect(anon).toHaveLength(2);
+  });
+
+  it("ranks a helpful-flagged report above a newer un-flagged one (karma-weighted)", async () => {
+    // Two reports in the same cell; the SECOND is newer, so by recency it would
+    // lead. A verified reader flags the OLDER one → its karma-weighted signal
+    // lifts it to the top. helpfulCount rides on the row.
+    const older = await makeReport();
+    const newer = await makeReport();
+
+    // A verified flagger, distinct from the author (ownerId).
+    const flaggerId = (
+      await getOrCreateUserByClerkId(db, { clerkId: "clerk_browse_flagger" })
+    ).id;
+    await db
+      .update(users)
+      .set({ karma: 40 })
+      .where(eq(users.id, flaggerId));
+    await db.insert(userVerifications).values({
+      userId: flaggerId,
+      companyId: companyAId,
+      verifiedVia: "work_email",
+      evidenceTokenHash: "hash-browse-flagger",
+    });
+    await db.insert(helpfulFlags).values({ reportId: older, flaggerUserId: flaggerId });
+
+    try {
+      const cell = { companyId: companyAId, canonicalRoleId: sweId, level: "L4" };
+      const { items } = await listReportsForCell(db, cell, { limit: 10, offset: 0 });
+      expect(items.map((i) => i.id)).toEqual([older, newer]); // flagged first
+      expect(items[0]!.helpfulCount).toBe(1);
+      expect(items[1]!.helpfulCount).toBe(0);
+    } finally {
+      // The verification has ON DELETE RESTRICT on the company; clear it (and the
+      // flagger) so afterAll can drop companyA. Flags cascade with the reports.
+      await db.delete(userVerifications).where(eq(userVerifications.userId, flaggerId));
+      await db.delete(users).where(eq(users.id, flaggerId));
+    }
   });
 
   it("listReportsForCell returns each report's distinct topics, name-sorted", async () => {
