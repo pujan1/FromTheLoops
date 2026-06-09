@@ -10,6 +10,7 @@ import {
   hasUserFlaggedReport,
   isReportEditable,
   type ReportDetail,
+  toReportDetailView,
   userIsVerified,
 } from "@fromtheloop/db";
 import { getTranslations } from "next-intl/server";
@@ -18,16 +19,14 @@ import {
   FtlBody,
   FtlButton,
   FtlContainer,
-  FtlDisplay,
-  FtlEyebrow,
   FtlNotice,
   FtlRule,
   FtlSiteHeader,
-  FtlTag,
 } from "@/components/ui";
 import { startReportEdit } from "./actions";
 import { DeleteReportButton } from "./delete-report-button";
 import { HelpfulFlagButton } from "./helpful-flag-button";
+import { ReportDetailBody } from "./report-detail-body";
 import styles from "./reports.module.css";
 
 // A single interview report.
@@ -75,16 +74,9 @@ export default async function ReportPage({
     viewerId !== null && detail.report.createdByUserId === viewerId;
 
   const t = await getTranslations("report");
-  const tRounds = await getTranslations("rounds");
-  const tOutcome = await getTranslations("submit");
 
   const isDeleted = detail.report.status === "deleted";
   const editable = viewerIsAuthor && isReportEditable(detail.report);
-  const roundCount = detail.rounds.length;
-  const questionCount = detail.rounds.reduce(
-    (sum, r) => sum + r.questions.length,
-    0,
-  );
   // Whole hours left in the window, rounded up so "0 hours" never shows while
   // still editable. Bounded by the window size as a guard against clock skew.
   const msLeft = Math.min(
@@ -92,9 +84,6 @@ export default async function ReportPage({
     detail.report.lockedAt.getTime() - Date.now(),
   );
   const hoursLeft = Math.max(1, Math.ceil(msLeft / (60 * 60 * 1000)));
-  const outcomeLabel = detail.report.outcome
-    ? tOutcome(`outcome.${detail.report.outcome}`)
-    : t("outcome.none");
 
   // Attribution line: a display_name report shows the author's name; anonymous
   // reports stay anonymous. (One extra lookup, only when attributed.)
@@ -133,92 +122,18 @@ export default async function ReportPage({
       <FtlSiteHeader />
       <main className={styles.page}>
         <FtlContainer width="prose">
-          <FtlEyebrow tone="accent">
-            {viewerIsAuthor ? t("eyebrow") : t("detail.publicEyebrow")}
-          </FtlEyebrow>
-          <FtlDisplay as="h1" size="lg" style={{ marginTop: 24 }}>
-            {detail.company.name} · {detail.role.name}
-          </FtlDisplay>
-          <FtlBody size="lead" tone="muted" style={{ marginTop: 16 }}>
-            {viewerIsAuthor ? t(`status.${detail.report.status}`) : attribution}
-          </FtlBody>
-          <FtlRule />
-
-          <dl className={styles.summary}>
-            <div className={styles.row}>
-              <dt>{t("summary.level")}</dt>
-              <dd>{detail.level.name}</dd>
-            </div>
-            <div className={styles.row}>
-              <dt>{t("summary.month")}</dt>
-              <dd>{detail.interviewMonth}</dd>
-            </div>
-            <div className={styles.row}>
-              <dt>{t("summary.outcome")}</dt>
-              <dd>{outcomeLabel}</dd>
-            </div>
-            <div className={styles.row}>
-              <dt>{t("summary.detail")}</dt>
-              <dd>
-                {t("summary.rounds", { count: roundCount })} ·{" "}
-                {t("summary.questions", { count: questionCount })}
-              </dd>
-            </div>
-            {detail.report.evidenceVerified && (
-              <div className={styles.row}>
-                <dt>{t("detail.verified")}</dt>
-                <dd>●</dd>
-              </div>
-            )}
-          </dl>
-
-          {/* The report content: rounds → questions → topics. Hidden for a
-              soft-deleted report (the owner sees only the deleted notice). */}
-          {!isDeleted && roundCount > 0 && (
-            <>
-              <FtlRule />
-              <p className={styles.sectionHeading}>
-                {t("detail.roundsHeading")}
-              </p>
-              <div className={styles.rounds}>
-                {detail.rounds.map((round, i) => (
-                  <section key={i} className={styles.round}>
-                    <div className={styles.round__head}>
-                      <span className={styles.round__type}>
-                        {tRounds(`type.${round.roundType}`)}
-                      </span>
-                      <span className={styles.round__rating}>
-                        {tRounds(`rating.${round.rating}`)}
-                      </span>
-                    </div>
-                    {round.experienceProse && (
-                      <p className={styles.round__experience}>
-                        {round.experienceProse}
-                      </p>
-                    )}
-                    {round.questions.length > 0 && (
-                      <ul className={styles.questions}>
-                        {round.questions.map((q, qi) => (
-                          <li key={qi}>
-                            <p className={styles.question__prose}>{q.prose}</p>
-                            {q.topics.length > 0 && (
-                              <div className={styles.question__topics}>
-                                {q.topics.map((topic) => (
-                                  <FtlTag key={topic.id} variant="ghost">
-                                    {topic.name}
-                                  </FtlTag>
-                                ))}
-                              </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                ))}
-              </div>
-            </>
-          )}
+          {/* Title · summary · rounds tree — the single shared rendering, also
+              used by the client triage pane (ADR-0010). Viewer-specific eyebrow
+              and byline are resolved here and passed in; the owner of a deleted
+              report sees the summary but not the rounds (hideRounds). */}
+          <ReportDetailBody
+            detail={toReportDetailView(detail)}
+            eyebrow={viewerIsAuthor ? t("eyebrow") : t("detail.publicEyebrow")}
+            byline={
+              viewerIsAuthor ? t(`status.${detail.report.status}`) : attribution
+            }
+            hideRounds={isDeleted}
+          />
 
           {/* Helpful-flag: count + (for an eligible viewer) the toggle. Public
               readers see the count and a hint to sign in / verify. */}

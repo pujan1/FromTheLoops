@@ -16,6 +16,7 @@ export function ReportList({
   companyName,
   startIndex = 0,
   emptyMessage = "No reports match these filters.",
+  activeId,
 }: {
   items: CellReportListItem[];
   // Constant company label for single-company surfaces. Omit on cross-company
@@ -24,6 +25,9 @@ export function ReportList({
   // 0-based index of the first item on this page, for the card's running number.
   startIndex?: number;
   emptyMessage?: string;
+  // ADR-0010: the id of the report open in the triage pane (when this list is the
+  // master). Highlights that row. Undefined on the plain SSR surfaces — no change.
+  activeId?: string;
 }) {
   if (items.length === 0) {
     return <p className={styles.empty}>{emptyMessage}</p>;
@@ -50,6 +54,7 @@ export function ReportList({
           verified={r.evidenceVerified}
           postedAt={r.interviewMonth}
           href={routes.report(r.id)}
+          active={r.id === activeId}
         />
       ))}
     </div>

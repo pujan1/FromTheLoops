@@ -5,16 +5,22 @@ import {
   getDb,
   getRoleAggregate,
   type LevelBrowseRow,
+  listReportIdsForRole,
   listReportsForRole,
 } from "@fromtheloop/db";
 import type { ReportFilters } from "@fromtheloop/shared";
 import { AggregatePanel } from "@/components/aggregate";
-import { FilterBar, Pagination, ReportList } from "@/components/reports";
+import { FilterBar } from "@/components/reports";
 import { SparseBanner } from "@/components/sparse-banner";
 import { FtlBody, FtlRule } from "@/components/ui";
 import { WedgeRail } from "@/components/wedge-rail";
 import { routes } from "@/lib/routes";
 import styles from "../browse.module.css";
+import { ReportTriage } from "./report-triage";
+
+// Cap on the ordered-ID list shipped to the triage pane. KB-scale even at the
+// ceiling; past it, the pane's "next" stops gracefully (page-bounded fallback).
+const TRIAGE_ID_CAP = 1500;
 
 export interface ResolvedRole {
   company: { id: string; slug: string; name: string };
@@ -66,12 +72,15 @@ export async function RoleView({
   };
 
   // Role aggregate (always), the active level cell (only when a level is
-  // active), and the filtered report page — in parallel.
-  const [roleAgg, levelCell, reportPage] = await Promise.all([
-    getRoleAggregate(db, {
-      companyId: resolved.company.id,
-      canonicalRoleId: resolved.role.id,
-    }),
+  // active), the filtered report page, and the full ordered ID list for the
+  // triage pane (same scope + filters, so the pane walks the SAME set the page
+  // paginates) — in parallel.
+  const roleCell = {
+    companyId: resolved.company.id,
+    canonicalRoleId: resolved.role.id,
+  };
+  const [roleAgg, levelCell, reportPage, orderedIds] = await Promise.all([
+    getRoleAggregate(db, roleCell),
     activeLevelName
       ? getAggregate(db, {
           companyId: resolved.company.id,
@@ -79,15 +88,15 @@ export async function RoleView({
           level: activeLevelName,
         })
       : Promise.resolve(null),
-    listReportsForRole(
-      db,
-      { companyId: resolved.company.id, canonicalRoleId: resolved.role.id },
-      {
-        limit: filters.perPage,
-        offset: (filters.page - 1) * filters.perPage,
-        filters: cellFilters,
-      },
-    ),
+    listReportsForRole(db, roleCell, {
+      limit: filters.perPage,
+      offset: (filters.page - 1) * filters.perPage,
+      filters: cellFilters,
+    }),
+    listReportIdsForRole(db, roleCell, {
+      filters: cellFilters,
+      cap: TRIAGE_ID_CAP,
+    }),
   ]);
 
   // Decide which precomputed aggregate Position Y shows. With a level active and
@@ -160,18 +169,18 @@ export async function RoleView({
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Reports</h2>
         <FilterBar basePath={basePath} filters={filters} levels={levelChoices} />
-        <ReportList
+        {/* Master-detail triage pane (ADR-0010) wraps the list + pager. On
+            desktop a row click previews in-pane; below 1024px and with no JS it
+            renders the plain list with real per-report links, unchanged. */}
+        <ReportTriage
           items={reportPage.items}
+          orderedIds={orderedIds}
           companyName={resolved.company.name}
           startIndex={startIndex}
+          basePath={basePath}
+          filters={filters}
+          total={reportPage.total}
         />
-        {reportPage.total > 0 && (
-          <p className={styles.listFoot}>
-            Showing {startIndex + 1}–{startIndex + reportPage.items.length} of{" "}
-            {reportPage.total}
-          </p>
-        )}
-        <Pagination basePath={basePath} filters={filters} total={reportPage.total} />
       </section>
     </>
   );

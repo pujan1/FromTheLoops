@@ -330,6 +330,32 @@ function reportFilterConditions(filters?: CellReportFilters): SQL[] {
   return conditions;
 }
 
+// Helpful-flag signal per report (PLAN.md §Karma "helpful-flag-weighted
+// aggregation ranking"), shared verbatim by the paginated list read and the
+// ordered-ID provider so the two can NEVER disagree on ordering. cnt = how many
+// readers flagged it (display); score = karma-weighted sum, weighting each VALID
+// flag by the FLAGGER's karma (GREATEST(.,1) so every flag counts ≥1 and a
+// heavier flagger lifts more). We weight by the flagger, never the submitter —
+// "no submitter-rank boost" (the rich-get-richer trap PLAN.md avoids). Self-flags
+// and unverified flaggers are excluded, matching the karma earn rule.
+const HELPFUL_FLAG_LATERAL = sql`
+  LEFT JOIN LATERAL (
+    SELECT COUNT(*)::int AS cnt,
+           COALESCE(SUM(GREATEST(fu.karma, 1)), 0)::int AS score
+    FROM helpful_flags hf
+    JOIN users fu ON fu.id = hf.flagger_user_id
+    WHERE hf.report_id = r.id
+      AND fu.id <> r.created_by_user_id
+      AND EXISTS (
+        SELECT 1 FROM user_verifications v WHERE v.user_id = hf.flagger_user_id
+      )
+  ) hflag ON true`;
+
+// Karma-weighted helpful signal first, recency as the tiebreak. Unflagged
+// reports all score 0, so they keep newest-first order — the signal only lifts
+// reports readers have endorsed. Consumed by both reads below.
+const REPORT_LIST_ORDER = sql`ORDER BY hflag.score DESC, r.created_at DESC`;
+
 // The one report-list query. Takes the already-built WHERE (scope + filters),
 // runs the paginated, newest-first read with the window total, and maps rows.
 // Every list surface (cell / role / company) funnels through here so the SELECT
@@ -366,29 +392,9 @@ async function runReportList(
     JOIN users u ON u.id = r.created_by_user_id
     JOIN companies c ON c.id = r.company_id
     JOIN roles ro ON ro.id = r.canonical_role_id
-    -- Helpful-flag signal per report (PLAN.md §Karma "helpful-flag-weighted
-    -- aggregation ranking"). cnt = how many readers flagged it (display); score
-    -- = karma-weighted sum, weighting each VALID flag by the FLAGGER's karma
-    -- (GREATEST(.,1) so every flag counts ≥1 and a heavier flagger lifts more).
-    -- We weight by the flagger, never the submitter — "no submitter-rank boost"
-    -- (the rich-get-richer trap PLAN.md deliberately avoids). Self-flags and
-    -- unverified flaggers are excluded, matching the karma earn rule.
-    LEFT JOIN LATERAL (
-      SELECT COUNT(*)::int AS cnt,
-             COALESCE(SUM(GREATEST(fu.karma, 1)), 0)::int AS score
-      FROM helpful_flags hf
-      JOIN users fu ON fu.id = hf.flagger_user_id
-      WHERE hf.report_id = r.id
-        AND fu.id <> r.created_by_user_id
-        AND EXISTS (
-          SELECT 1 FROM user_verifications v WHERE v.user_id = hf.flagger_user_id
-        )
-    ) hflag ON true
+    ${HELPFUL_FLAG_LATERAL}
     WHERE ${where}
-    -- Karma-weighted helpful signal first, recency as the tiebreak. Unflagged
-    -- reports all score 0, so they keep the newest-first order — the signal only
-    -- lifts reports readers have endorsed.
-    ORDER BY hflag.score DESC, r.created_at DESC
+    ${REPORT_LIST_ORDER}
     LIMIT ${opts.limit} OFFSET ${opts.offset}
   `);
   return {
@@ -444,16 +450,55 @@ export async function listReportsForRole(
   cell: RoleCellKey,
   opts: { limit: number; offset: number; filters?: CellReportFilters },
 ): Promise<CellReportList> {
-  const where = sql.join(
+  return runReportList(db, roleReportWhere(cell, opts.filters), opts);
+}
+
+// The (company, role) scope + filter WHERE, shared by the paginated list read
+// and the ordered-ID provider so the pane walks the SAME set the list paginates.
+function roleReportWhere(cell: RoleCellKey, filters?: CellReportFilters): SQL {
+  return sql.join(
     [
       sql`r.company_id = ${cell.companyId}::uuid`,
       sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
       ...VISIBLE,
-      ...reportFilterConditions(opts.filters),
+      ...reportFilterConditions(filters),
     ],
     sql` AND `,
   );
-  return runReportList(db, where, opts);
+}
+
+// The full, ordered ID list for a (company, role) under the active filter —
+// capped. This is the ADR-0010 "ordered-ID provider": it feeds the client triage
+// pane's prev/next engine, which walks the WHOLE filtered result set (not just
+// the visible page). Reuses roleReportWhere + the shared HELPFUL_FLAG_LATERAL /
+// REPORT_LIST_ORDER, so IDs come back in the exact order listReportsForRole
+// paginates them. `cap` bounds pathological filters (a heavy filter that matches
+// everything): past the cap, "next" simply stops — a page-bounded fallback, not a
+// correctness hole. The pane underneath still has its real `?page=` URLs.
+export async function listReportIdsForRole(
+  db: Db,
+  cell: RoleCellKey,
+  opts: { filters?: CellReportFilters; cap: number },
+): Promise<string[]> {
+  return runReportIdList(db, roleReportWhere(cell, opts.filters), opts.cap);
+}
+
+// The ordered-ID read. Same FROM/LATERAL/ORDER as runReportList, selecting only
+// `r.id` — so the order is identical by construction, never by coincidence.
+async function runReportIdList(
+  db: Db,
+  where: SQL,
+  cap: number,
+): Promise<string[]> {
+  const rows = await db.execute<{ id: string }>(sql`
+    SELECT r.id
+    FROM interview_reports r
+    ${HELPFUL_FLAG_LATERAL}
+    WHERE ${where}
+    ${REPORT_LIST_ORDER}
+    LIMIT ${cap}
+  `);
+  return rows.map((r) => r.id);
 }
 
 // One page of a user's VISIBLE, *attributed* reports across all companies — the

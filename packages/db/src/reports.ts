@@ -542,6 +542,41 @@ export interface ReportDetail {
   rounds: ReportRoundDetail[];
 }
 
+// The JSON-safe, presentational slice of a ReportDetail — what crosses the wire
+// to the client triage pane and feeds the shared <ReportDetailBody>. Deliberately
+// content-only: no `Date` fields (ReportDetail.report carries lockedAt/createdAt/
+// deletedAt, none of which serialize cleanly or belong on a public preview), and
+// no viewer-specific chrome (attribution byline, eyebrow, owner controls, helpful
+// state) — those stay the caller's, resolved per-viewer. The rounds tree is
+// already plain (ReportRoundDetail/Question/Topic hold no Dates), so it rides
+// through unchanged.
+export interface ReportDetailView {
+  id: string;
+  companyName: string;
+  roleName: string;
+  levelName: string;
+  interviewMonth: string;
+  outcome: InterviewReport["outcome"];
+  evidenceVerified: boolean;
+  rounds: ReportRoundDetail[];
+}
+
+// Map a deep ReportDetail down to its wire-safe presentational view. The
+// attributed author name is resolved separately by the caller (it needs a users
+// lookup the deep read doesn't do) and travels alongside, never inside the view.
+export function toReportDetailView(detail: ReportDetail): ReportDetailView {
+  return {
+    id: detail.report.id,
+    companyName: detail.company.name,
+    roleName: detail.role.name,
+    levelName: detail.level.name,
+    interviewMonth: detail.interviewMonth,
+    outcome: detail.report.outcome,
+    evidenceVerified: detail.report.evidenceVerified,
+    rounds: detail.rounds,
+  };
+}
+
 // Ownership-scoped deep read for the edit screen. Returns the report plus its
 // company / role names and the full rounds→questions→topics tree, ordered the
 // way it was submitted. null if not found or not owned.

@@ -21,6 +21,7 @@ import {
   interviewReports,
   listCompaniesWithReports,
   listLevelsForCompanyRoleWithReports,
+  listReportIdsForRole,
   listReportsForCell,
   listReportsForCompany,
   listReportsForRole,
@@ -334,6 +335,44 @@ describe("public browse reads", () => {
     } finally {
       // The verification has ON DELETE RESTRICT on the company; clear it (and the
       // flagger) so afterAll can drop companyA. Flags cascade with the reports.
+      await db.delete(userVerifications).where(eq(userVerifications.userId, flaggerId));
+      await db.delete(users).where(eq(users.id, flaggerId));
+    }
+  });
+
+  it("listReportIdsForRole returns the SAME order the role list paginates (ADR-0010)", async () => {
+    // The triage pane walks this ID list; if its order drifted from the list's,
+    // prev/next would jump around. Flag the oldest so the karma-weighted order is
+    // non-trivial (not merely newest-first), proving the provider reuses the
+    // list's ORDER rather than re-deriving it.
+    const a = await makeReport();
+    await makeReport();
+    await makeReport();
+
+    const flaggerId = (
+      await getOrCreateUserByClerkId(db, { clerkId: "clerk_browse_idflagger" })
+    ).id;
+    await db.update(users).set({ karma: 40 }).where(eq(users.id, flaggerId));
+    await db.insert(userVerifications).values({
+      userId: flaggerId,
+      companyId: companyAId,
+      verifiedVia: "work_email",
+      evidenceTokenHash: "hash-browse-idflagger",
+    });
+    await db.insert(helpfulFlags).values({ reportId: a, flaggerUserId: flaggerId });
+
+    try {
+      const cell = { companyId: companyAId, canonicalRoleId: sweId };
+      const page = await listReportsForRole(db, cell, { limit: 50, offset: 0 });
+      const ids = await listReportIdsForRole(db, cell, { cap: 1000 });
+      // Same set, SAME order — the flagged report leads, then newest-first.
+      expect(ids).toEqual(page.items.map((i) => i.id));
+      expect(ids[0]).toBe(a);
+
+      // The cap truncates to the first N OF THAT ORDER (page-bounded fallback).
+      const capped = await listReportIdsForRole(db, cell, { cap: 2 });
+      expect(capped).toEqual(ids.slice(0, 2));
+    } finally {
       await db.delete(userVerifications).where(eq(userVerifications.userId, flaggerId));
       await db.delete(users).where(eq(users.id, flaggerId));
     }

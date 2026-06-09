@@ -18,6 +18,9 @@ export type ReportCardProps = {
   verified?: boolean;        // work-email verified contributor
   postedAt: string;          // already-formatted display string ("2 days ago")
   href?: string;
+  // ADR-0010: marks the row currently open in the triage preview pane, so the
+  // master list shows which report the pane reflects. Purely presentational.
+  active?: boolean;
 };
 
 export function FtlReportCard({
@@ -33,9 +36,14 @@ export function FtlReportCard({
   verified = false,
   postedAt,
   href = "#",
+  active = false,
 }: ReportCardProps) {
   return (
-    <a className={styles.report} href={href}>
+    <a
+      className={`${styles.report} ${active ? styles["report--active"] : ""}`}
+      href={href}
+      aria-current={active ? "true" : undefined}
+    >
       {index && <span className={styles.report__index}>{index}</span>}
 
       <div className={styles.report__body}>

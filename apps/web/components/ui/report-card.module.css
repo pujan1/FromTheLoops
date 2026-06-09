@@ -11,6 +11,14 @@
 .report:hover .report__title { color: var(--color-accent); }
 .report:hover .report__chev { transform: translateX(4px); color: var(--color-accent); }
 
+/* ADR-0010: the row currently open in the triage pane. A left accent rail +
+   tinted ground so the selection reads at a glance against unselected rows. */
+.report--active {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  box-shadow: inset 3px 0 0 0 var(--color-accent);
+}
+.report--active .report__title { color: var(--color-accent); }
+
 .report__index {
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
