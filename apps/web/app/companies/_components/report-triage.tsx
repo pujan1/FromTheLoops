@@ -15,8 +15,12 @@
 // replace on every step, so Back exits to the list rather than walking the peek
 // chain.
 //
-// Below 1024px the pane is hidden (CSS) and the list behaves exactly as today —
-// the mobile bottom sheet is a fast-follow (ADR-0010 §Deferred).
+// Desktop (≥1024px) renders a right-hand sticky pane; below 1024px the SAME
+// selection drives a bottom sheet (slides up ~85%, drag-down dismisses, a
+// horizontal swipe steps prev/next as a secondary affordance). Both surfaces are
+// pure presentation over one engine — only the wrapper + gestures differ. The
+// active viewport is tagged onto the track() events (`surface`) so the
+// device-split the ADR calls unmeasured falls straight out of the data.
 
 import type { CellReportListItem, ReportDetailView } from "@fromtheloop/db";
 import type { ReportFilters } from "@fromtheloop/shared";
@@ -52,14 +56,19 @@ export function ReportTriage({
   basePath,
   filters,
   total,
+  emptyMessage,
 }: {
   items: CellReportListItem[];
   orderedIds: string[];
-  companyName: string;
+  // Constant company label for single-company surfaces (role, company feed).
+  // Omit on the cross-company profile feed — each row carries its own company.
+  companyName?: string;
   startIndex: number;
   basePath: string;
   filters: ReportFilters;
   total: number;
+  // Passthrough to the underlying list for surface-specific empty copy.
+  emptyMessage?: string;
 }) {
   const t = useTranslations("report");
 
@@ -70,8 +79,14 @@ export function ReportTriage({
   // selectedRef mirrors selectedId for use inside event handlers / async tails
   // without re-binding listeners on every selection.
   const selectedRef = useRef<string | null>(null);
-  const dwell = useRef<{ id: string; at: number } | null>(null);
+  const dwell = useRef<{ id: string; at: number; surface: string } | null>(
+    null,
+  );
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bottom-sheet gesture state: the sheet element (transformed directly during a
+  // drag, bypassing React for smoothness) and the pointer-down origin.
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [peek, setPeek] = useState<Peek | null>(null);
@@ -111,6 +126,7 @@ export function ReportTriage({
       track("peek_dwell", {
         id: dwell.current.id,
         ms: Date.now() - dwell.current.at,
+        surface: dwell.current.surface,
       });
       dwell.current = null;
     }
@@ -136,8 +152,13 @@ export function ReportTriage({
       else if (opts.history === "replace")
         window.history.replaceState(null, "", url);
 
-      track(opts.step ? "peek_step" : "peek_open", { id });
-      dwell.current = { id, at: Date.now() };
+      // Which surface is live decides how to read the event later (the ADR's
+      // device split). matchMedia mirrors the 1024px CSS breakpoint exactly.
+      const surface = window.matchMedia("(min-width: 1024px)").matches
+        ? "pane"
+        : "sheet";
+      track(opts.step ? "peek_step" : "peek_open", { id, surface });
+      dwell.current = { id, at: Date.now(), surface };
 
       const data = cached ?? (await fetchDetail(id));
       // Drop a stale resolve: the user stepped on while this was in flight.
@@ -176,6 +197,47 @@ export function ReportTriage({
     window.history.back();
   }, []);
 
+  // Bottom-sheet gestures (mobile). A drag that starts on the sheet's grab
+  // region (handle + header chrome, never a button/link) either pulls the sheet
+  // down to dismiss or flicks horizontally to step. The sheet follows the finger
+  // live via a direct transform; on release we either commit (close / step) or
+  // let the CSS transition snap it back.
+  const onSheetPointerDown = useCallback((e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button,a")) return;
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const onSheetPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragStart.current || !sheetRef.current) return;
+    const dy = e.clientY - dragStart.current.y;
+    // Only follow a downward pull; upward/horizontal intent gets no rubber-band.
+    if (dy > 0) {
+      sheetRef.current.style.transition = "none";
+      sheetRef.current.style.transform = `translateY(${dy}px)`;
+    }
+  }, []);
+
+  const onSheetPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const start = dragStart.current;
+      dragStart.current = null;
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "";
+        sheetRef.current.style.transform = "";
+      }
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (dy > 110 && dy > Math.abs(dx)) {
+        close(); // pulled down far enough → dismiss to the list
+      } else if (Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy)) {
+        step(dx < 0 ? 1 : -1); // swipe left = next, right = prev
+      }
+    },
+    [close, step],
+  );
+
   // Back/forward sync: a /reports/:id in the URL re-opens it (no extra history);
   // the list URL closes the pane.
   useEffect(() => {
@@ -207,6 +269,19 @@ export function ReportTriage({
 
   // Flush any pending dwell when the user leaves the page entirely.
   useEffect(() => flushDwell, [flushDwell]);
+
+  // Lock the page behind the bottom sheet (mobile only) so a drag/scroll inside
+  // the sheet never bleeds into the list underneath. No-op on desktop, where the
+  // sheet isn't rendered and the sticky pane scrolls the page normally.
+  useEffect(() => {
+    if (selectedId == null) return;
+    if (!window.matchMedia("(max-width: 1023.98px)").matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [selectedId]);
 
   // Intercept a plain left-click on a report row → open in the pane. Modified
   // clicks (new tab), middle-click (fires auxclick, not click), and the no-JS
@@ -253,6 +328,71 @@ export function ReportTriage({
   const hasPrev = idx > 0;
   const hasNext = idx >= 0 && idx < orderedIds.length - 1;
 
+  // Prev / next / counter — shared chrome for the desktop pane and the sheet.
+  const stepControls = (
+    <div className={styles.stepGroup}>
+      <FtlButton
+        size="sm"
+        variant="ghost"
+        disabled={!hasPrev}
+        onClick={() => step(-1)}
+        aria-label="Previous report"
+      >
+        ←
+      </FtlButton>
+      <FtlButton
+        size="sm"
+        variant="ghost"
+        disabled={!hasNext}
+        onClick={() => step(1)}
+        aria-label="Next report"
+      >
+        →
+      </FtlButton>
+      {idx >= 0 && (
+        <span className={styles.counter}>
+          {idx + 1} / {orderedIds.length}
+        </span>
+      )}
+    </div>
+  );
+
+  // The report itself — one representation, rendered identically in pane + sheet.
+  const peekBody = peek ? (
+    <>
+      <ReportDetailBody
+        detail={peek.detail}
+        eyebrow={t("detail.publicEyebrow")}
+        byline={
+          peek.authorName
+            ? t("detail.by", { name: peek.authorName })
+            : t("detail.anonymous")
+        }
+      />
+      <p className={styles.helpfulCount}>
+        {t("helpful.count", { count: peek.helpfulCount })}
+      </p>
+      {/* Real navigation (no preventDefault) → the canonical SSR page, where
+          flagging + owner controls live. The commit step. */}
+      <a
+        className={styles.openFull}
+        href={routes.report(peek.detail.id)}
+        onClick={() => track("open_full", { id: peek.detail.id })}
+      >
+        Open full report ↗
+      </a>
+    </>
+  ) : loading ? (
+    <FtlBody tone="muted">Loading…</FtlBody>
+  ) : (
+    selectedId && (
+      <FtlBody tone="muted">
+        Couldn’t load this preview.{" "}
+        <a href={routes.report(selectedId)}>Open it directly ↗</a>
+      </FtlBody>
+    )
+  );
+
   return (
     <div className={styles.split}>
       {/* Master — the unchanged list, plus its foot + real-link pager. */}
@@ -267,6 +407,7 @@ export function ReportTriage({
           companyName={companyName}
           startIndex={startIndex}
           activeId={selectedId ?? undefined}
+          emptyMessage={emptyMessage}
         />
         {total > 0 && (
           <p className={styles.foot}>
@@ -276,8 +417,8 @@ export function ReportTriage({
         <Pagination basePath={basePath} filters={filters} total={total} />
       </div>
 
-      {/* Detail pane — hidden below 1024px (CSS). Empty until a row is opened,
-          keeping the bare list URL honest as the canonical list address. */}
+      {/* Desktop detail pane — hidden below 1024px (CSS). Empty until a row is
+          opened, keeping the bare list URL honest as the canonical list. */}
       <aside className={styles.detail}>
         {selectedId == null ? (
           <div className={styles.placeholder}>
@@ -288,31 +429,7 @@ export function ReportTriage({
         ) : (
           <div className={styles.pane} aria-live="polite">
             <div className={styles.paneBar}>
-              <div className={styles.stepGroup}>
-                <FtlButton
-                  size="sm"
-                  variant="ghost"
-                  disabled={!hasPrev}
-                  onClick={() => step(-1)}
-                  aria-label="Previous report"
-                >
-                  ←
-                </FtlButton>
-                <FtlButton
-                  size="sm"
-                  variant="ghost"
-                  disabled={!hasNext}
-                  onClick={() => step(1)}
-                  aria-label="Next report"
-                >
-                  →
-                </FtlButton>
-                {idx >= 0 && (
-                  <span className={styles.counter}>
-                    {idx + 1} / {orderedIds.length}
-                  </span>
-                )}
-              </div>
+              {stepControls}
               <FtlButton
                 size="sm"
                 variant="ghost"
@@ -322,42 +439,54 @@ export function ReportTriage({
                 Esc ✕
               </FtlButton>
             </div>
-
-            {peek ? (
-              <>
-                <ReportDetailBody
-                  detail={peek.detail}
-                  eyebrow={t("detail.publicEyebrow")}
-                  byline={
-                    peek.authorName
-                      ? t("detail.by", { name: peek.authorName })
-                      : t("detail.anonymous")
-                  }
-                />
-                <p className={styles.helpfulCount}>
-                  {t("helpful.count", { count: peek.helpfulCount })}
-                </p>
-                {/* Real navigation (no preventDefault) → the canonical SSR page,
-                    where flagging + owner controls live. The commit step. */}
-                <a
-                  className={styles.openFull}
-                  href={routes.report(peek.detail.id)}
-                  onClick={() => track("open_full", { id: peek.detail.id })}
-                >
-                  Open full report ↗
-                </a>
-              </>
-            ) : loading ? (
-              <FtlBody tone="muted">Loading…</FtlBody>
-            ) : (
-              <FtlBody tone="muted">
-                Couldn’t load this preview.{" "}
-                <a href={routes.report(selectedId)}>Open it directly ↗</a>
-              </FtlBody>
-            )}
+            {peekBody}
           </div>
         )}
       </aside>
+
+      {/* Mobile bottom sheet — hidden ≥1024px (CSS), and only mounted once a row
+          is opened. Same engine, same body; a drag on the header dismisses or
+          steps. Backdrop tap closes. */}
+      {selectedId != null && (
+        <div
+          className={styles.backdrop}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) close();
+          }}
+        >
+          <div
+            ref={sheetRef}
+            className={styles.sheet}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Report preview"
+          >
+            <div
+              className={styles.sheetHeader}
+              onPointerDown={onSheetPointerDown}
+              onPointerMove={onSheetPointerMove}
+              onPointerUp={onSheetPointerUp}
+              onPointerCancel={onSheetPointerUp}
+            >
+              <div className={styles.handle} aria-hidden="true" />
+              <div className={styles.sheetBar}>
+                {stepControls}
+                <FtlButton
+                  size="sm"
+                  variant="ghost"
+                  onClick={close}
+                  aria-label="Close preview"
+                >
+                  ✕
+                </FtlButton>
+              </div>
+            </div>
+            <div className={styles.sheetBody} aria-live="polite">
+              {peekBody}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

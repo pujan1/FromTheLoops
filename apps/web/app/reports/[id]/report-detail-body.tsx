@@ -3,7 +3,14 @@
 import type { ReportDetailView } from "@fromtheloop/db";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { FtlBody, FtlDisplay, FtlEyebrow, FtlRule, FtlTag } from "@/components/ui";
+import {
+  FtlBody,
+  FtlDisplay,
+  FtlEyebrow,
+  FtlStatusBadge,
+  FtlTag,
+  type BadgeStatus,
+} from "@/components/ui";
 import styles from "./reports.module.css";
 
 // ADR-0010 keystone — the single presentational rendering of a report's content
@@ -47,61 +54,85 @@ export function ReportDetailBody({
     ? tOutcome(`outcome.${detail.outcome}`)
     : t("outcome.none");
 
+  // Semantic colour for the outcome and per-round sentiment, so a reader can
+  // scan the result at a glance instead of parsing a word.
+  const outcomeTone: BadgeStatus =
+    detail.outcome === "offer" ? "success"
+    : detail.outcome === "reject" ? "danger"
+    : detail.outcome === "ghosted" ? "warning"
+    : detail.outcome === "pending" ? "pending"
+    : "neutral"; // withdrew / unspecified
+  const ratingTone = (rating: string): BadgeStatus =>
+    rating === "positive" ? "success"
+    : rating === "negative" ? "danger"
+    : "warning"; // mixed
+
   return (
     <>
       <FtlEyebrow tone="accent">{eyebrow}</FtlEyebrow>
-      <FtlDisplay as="h1" size="lg" style={{ marginTop: 24 }}>
+      <FtlDisplay as="h1" size="lg" style={{ marginTop: 20 }}>
         {detail.companyName} · {detail.roleName}
       </FtlDisplay>
-      <FtlBody size="lead" tone="muted" style={{ marginTop: 16 }}>
+      <FtlBody size="lead" tone="muted" style={{ marginTop: 12 }}>
         {byline}
       </FtlBody>
-      <FtlRule />
 
-      <dl className={styles.summary}>
-        <div className={styles.row}>
-          <dt>{t("summary.level")}</dt>
-          <dd>{detail.levelName}</dd>
+      {/* Summary card: the result is the lead, then the at-a-glance facts. */}
+      <div className={styles.summaryCard}>
+        <div className={styles.summaryCard__lead}>
+          <span
+            className={styles.outcome}
+            data-tone={outcomeTone}
+          >
+            {outcomeLabel}
+          </span>
+          {detail.evidenceVerified && (
+            <span className={styles.verified}>
+              <span aria-hidden="true">✓</span> {t("detail.verified")}
+            </span>
+          )}
         </div>
-        <div className={styles.row}>
-          <dt>{t("summary.month")}</dt>
-          <dd>{detail.interviewMonth}</dd>
-        </div>
-        <div className={styles.row}>
-          <dt>{t("summary.outcome")}</dt>
-          <dd>{outcomeLabel}</dd>
-        </div>
-        <div className={styles.row}>
-          <dt>{t("summary.detail")}</dt>
-          <dd>
-            {t("summary.rounds", { count: roundCount })} ·{" "}
-            {t("summary.questions", { count: questionCount })}
-          </dd>
-        </div>
-        {detail.evidenceVerified && (
-          <div className={styles.row}>
-            <dt>{t("detail.verified")}</dt>
-            <dd>●</dd>
+        <dl className={styles.facts}>
+          <div className={styles.fact}>
+            <dt>{t("summary.level")}</dt>
+            <dd>{detail.levelName}</dd>
           </div>
-        )}
-      </dl>
+          <div className={styles.fact}>
+            <dt>{t("summary.month")}</dt>
+            <dd>{detail.interviewMonth}</dd>
+          </div>
+          <div className={styles.fact}>
+            <dt>{t("summary.roundsLabel")}</dt>
+            <dd>{roundCount}</dd>
+          </div>
+          <div className={styles.fact}>
+            <dt>{t("summary.questionsLabel")}</dt>
+            <dd>{questionCount}</dd>
+          </div>
+        </dl>
+      </div>
 
       {/* The report content: rounds → questions → topics. Hidden for a
           soft-deleted report (the owner sees only the deleted notice). */}
       {!hideRounds && roundCount > 0 && (
         <>
-          <FtlRule />
-          <p className={styles.sectionHeading}>{t("detail.roundsHeading")}</p>
-          <div className={styles.rounds}>
+          <p className={styles.sectionHeading}>
+            {t("detail.roundsHeading")}
+            <span className={styles.sectionHeading__count}>{roundCount}</span>
+          </p>
+          <ol className={styles.rounds}>
             {detail.rounds.map((round, i) => (
-              <section key={i} className={styles.round}>
+              <li key={i} className={styles.round}>
                 <div className={styles.round__head}>
-                  <span className={styles.round__type}>
+                  <span className={styles.round__num} aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <h3 className={styles.round__type}>
                     {tRounds(`type.${round.roundType}`)}
-                  </span>
-                  <span className={styles.round__rating}>
+                  </h3>
+                  <FtlStatusBadge status={ratingTone(round.rating)}>
                     {tRounds(`rating.${round.rating}`)}
-                  </span>
+                  </FtlStatusBadge>
                 </div>
                 {round.experienceProse && (
                   <p className={styles.round__experience}>
@@ -111,7 +142,7 @@ export function ReportDetailBody({
                 {round.questions.length > 0 && (
                   <ul className={styles.questions}>
                     {round.questions.map((q, qi) => (
-                      <li key={qi}>
+                      <li key={qi} className={styles.question}>
                         <p className={styles.question__prose}>{q.prose}</p>
                         {q.topics.length > 0 && (
                           <div className={styles.question__topics}>
@@ -126,9 +157,9 @@ export function ReportDetailBody({
                     ))}
                   </ul>
                 )}
-              </section>
+              </li>
             ))}
-          </div>
+          </ol>
         </>
       )}
     </>

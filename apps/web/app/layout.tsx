@@ -2,19 +2,20 @@ import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
-import { Archivo, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-// Swiss Precision: a single neo-grotesque (Archivo) used systematically
-// for both display and UI, differentiated only by weight and size.
-const display = Archivo({
+// Friendly Rounded: a warm geometric sans (Plus Jakarta Sans) used
+// systematically for both display and UI. Its rounded terminals match the
+// soft shapes; weight and size carry the hierarchy.
+const display = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--next-font-display",
   display: "swap",
 });
 
-const sans = Archivo({
+const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--next-font-sans",

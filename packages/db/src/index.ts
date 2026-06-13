@@ -78,6 +78,9 @@ export * from "./reports.js";
 // Internal event outbox: emit (in report-write txns) + drain (worker).
 export * from "./events.js";
 
+// Product-analytics sink (ADR-0010 instrumentation) — distinct from the outbox.
+export * from "./analytics.js";
+
 // Karma earn rule + per-user recompute (Sprint 5 Day 7).
 export * from "./karma.js";
 

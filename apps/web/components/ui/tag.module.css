@@ -1,16 +1,19 @@
 .tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 3px var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
+  gap: 5px;
+  padding: 4px 11px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
   font-weight: 500;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  border-radius: var(--radius-sm);
-  line-height: 1;
+  letter-spacing: 0;
+  border-radius: var(--radius-full);
+  line-height: 1.2;
   white-space: nowrap;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .tag--default {
@@ -26,7 +29,7 @@
 .tag--accent {
   background: var(--color-accent-soft);
   color: var(--color-accent-deep);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
 }
 .tag--ghost {
   background: var(--color-paper-2);

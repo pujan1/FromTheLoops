@@ -79,7 +79,7 @@ export default async function CompanyRolePage({
     <>
       <FtlSiteHeader />
       <main className={styles.page}>
-        <FtlContainer>
+        <FtlContainer width="wide">
           <Breadcrumb
             items={[
               { label: "Companies", href: routes.companies },

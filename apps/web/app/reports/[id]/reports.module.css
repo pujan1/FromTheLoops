@@ -2,42 +2,104 @@
   padding-block: var(--space-6) var(--space-8);
 }
 
-/* Definition-list summary of the report's top-level fields. */
-.summary {
-  margin: 0;
+/* ============================================================
+   Summary card — the result is the lead, then at-a-glance facts.
+   ============================================================ */
+.summaryCard {
+  margin-top: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-paper-3);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
 }
 
-.row {
+.summaryCard__lead {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
-.row dt {
-  flex: 0 0 8rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
+/* The outcome reads as the headline — a big tinted pill keyed on severity. */
+.outcome {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h3);
+  letter-spacing: -0.01em;
+  line-height: 1;
+  background: color-mix(in srgb, var(--tone) 14%, var(--color-paper));
+  color: color-mix(in srgb, var(--tone) 70%, var(--color-ink));
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+}
+.outcome[data-tone="success"] { --tone: var(--color-success); }
+.outcome[data-tone="danger"]  { --tone: var(--color-danger); }
+.outcome[data-tone="warning"] { --tone: var(--color-warning); }
+.outcome[data-tone="pending"] { --tone: var(--color-pending); }
+.outcome[data-tone="neutral"] { --tone: var(--color-muted); }
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-paper));
+  border: 1px solid color-mix(in srgb, var(--color-success) 28%, transparent);
+}
+
+/* Fact grid: label over value, wraps responsively. */
+.facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-rule);
+  padding-top: var(--space-5);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fact dt {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 600;
   color: var(--color-muted);
 }
-
-.row dd {
+.fact dd {
   margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
 }
 
+/* ============================================================
+   Owner controls
+   ============================================================ */
 .editBlock {
+  margin-top: var(--space-6);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-4);
 }
 
-/* Row of action buttons (Edit + Delete, or Delete alone once locked). */
 .actions {
   display: flex;
   align-items: center;
@@ -45,98 +107,150 @@
   flex-wrap: wrap;
 }
 
-/* Public detail: the rounds → questions → topics tree. */
-.rounds {
+/* ============================================================
+   Rounds → questions → topics
+   ============================================================ */
+.sectionHeading {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
-.round {
-  display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-2);
-}
-
-.round__head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.round__type {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.round__rating {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: var(--tracking-wide);
+  margin: var(--space-7) 0 var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-muted);
 }
-
-.round__experience {
-  margin: 0;
-  color: var(--color-ink);
+.sectionHeading__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
 }
 
-.questions {
+.rounds {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  border-left: 2px solid var(--color-rule);
-  padding-left: var(--space-4);
+  gap: var(--space-4);
 }
 
-.question__prose {
-  margin: 0 0 var(--space-2);
+.round {
+  background: var(--color-paper-3);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.round__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.round__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+.round__type {
+  margin: 0;
+  margin-right: auto;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
 }
 
+.round__experience {
+  margin: 0;
+  color: var(--color-ink-2);
+  line-height: var(--lh-relaxed);
+}
+
+/* Questions: recessed blocks with an accent edge, stacked inside the round. */
+.questions {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.question {
+  background: var(--color-paper-2);
+  border-radius: var(--radius-md);
+  border-left: 3px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.question__prose {
+  margin: 0;
+  color: var(--color-ink);
+  line-height: var(--lh-normal);
+}
 .question__topics {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
-.sectionHeading {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin-bottom: var(--space-4);
-}
-
-/* Helpful-flag block: heading, live count, then the toggle (or a hint). */
+/* ============================================================
+   Helpful-flag block
+   ============================================================ */
 .helpful {
+  margin-top: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-paper-2);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
 }
-
 .helpful__heading {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: var(--tracking-wide);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-muted);
 }
-
 .helpful__count {
-  margin: 0;
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 600;
   color: var(--color-ink);
 }
-
 .helpful__hint {
   margin-top: var(--space-2);
 }

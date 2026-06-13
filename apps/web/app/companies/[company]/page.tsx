@@ -2,6 +2,7 @@ import { resolveCompany } from "@fromtheloop/core";
 import {
   getCompanyStats,
   getDb,
+  listReportIdsForCompany,
   listReportsForCompany,
   listRolesForCompanyWithReports,
   listTopTopicsForCompany,
@@ -10,7 +11,7 @@ import { parseReportFilters } from "@fromtheloop/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FilterBar, Pagination, ReportList } from "@/components/reports";
+import { FilterBar } from "@/components/reports";
 import {
   FtlBody,
   FtlContainer,
@@ -21,6 +22,8 @@ import {
 } from "@/components/ui";
 import { routes } from "@/lib/routes";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { TRIAGE_ID_CAP } from "@/lib/triage";
+import { ReportTriage } from "../_components/report-triage";
 import styles from "../browse.module.css";
 
 type Params = Promise<{ company: string }>;
@@ -61,7 +64,9 @@ export default async function CompanyPage({
   const filters = parseReportFilters(await searchParams);
   const basePath = routes.company(resolved.company.slug);
 
-  const [stats, rolesList, topTopics, feed] = await Promise.all([
+  // Outcome is the only in-place facet on the company feed.
+  const feedFilters = { outcome: filters.outcome };
+  const [stats, rolesList, topTopics, feed, orderedIds] = await Promise.all([
     getCompanyStats(db, resolved.company.id),
     listRolesForCompanyWithReports(db, resolved.company.id),
     // Top tags at this company — the Sprint 5 rollup content; each links to the
@@ -70,8 +75,13 @@ export default async function CompanyPage({
     listReportsForCompany(db, resolved.company.id, {
       limit: filters.perPage,
       offset: (filters.page - 1) * filters.perPage,
-      // Outcome is the only in-place facet on the company feed.
-      filters: { outcome: filters.outcome },
+      filters: feedFilters,
+    }),
+    // The full ordered ID list (same scope + filter) feeding the triage pane/
+    // sheet — it walks the WHOLE feed, not just the visible page.
+    listReportIdsForCompany(db, resolved.company.id, {
+      filters: feedFilters,
+      cap: TRIAGE_ID_CAP,
     }),
   ]);
 
@@ -81,7 +91,7 @@ export default async function CompanyPage({
     <>
       <FtlSiteHeader />
       <main className={styles.page}>
-        <FtlContainer>
+        <FtlContainer width="wide">
           <Breadcrumb
             items={[
               { label: "Companies", href: routes.companies },
@@ -147,18 +157,18 @@ export default async function CompanyPage({
               showRound={false}
               showTrust={false}
             />
-            <ReportList
+            {/* Master-detail triage (ADR-0010): a row click previews in-pane on
+                desktop / a bottom sheet on mobile; the per-report SSR page stays
+                the canonical address + no-JS fallback. */}
+            <ReportTriage
               items={feed.items}
+              orderedIds={orderedIds}
               companyName={resolved.company.name}
               startIndex={startIndex}
+              basePath={basePath}
+              filters={filters}
+              total={feed.total}
             />
-            {feed.total > 0 && (
-              <p className={styles.listFoot}>
-                Showing {startIndex + 1}–{startIndex + feed.items.length} of{" "}
-                {feed.total}
-              </p>
-            )}
-            <Pagination basePath={basePath} filters={filters} total={feed.total} />
           </section>
         </FtlContainer>
       </main>

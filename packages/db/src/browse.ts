@@ -513,16 +513,34 @@ export async function listReportsForUser(
   userId: string,
   opts: { limit: number; offset: number; filters?: CellReportFilters },
 ): Promise<CellReportList> {
-  const where = sql.join(
+  return runReportList(db, userReportWhere(userId, opts.filters), opts);
+}
+
+// The profile scope + filter WHERE, shared by the paginated list and the
+// ordered-ID provider (so the pane walks the SAME attributed set). The
+// display_attribution='display_name' predicate IS the privacy boundary — an
+// anonymously-posted report is absent from both reads identically.
+function userReportWhere(userId: string, filters?: CellReportFilters): SQL {
+  return sql.join(
     [
       sql`r.created_by_user_id = ${userId}::uuid`,
       sql`r.display_attribution = 'display_name'`,
       ...VISIBLE,
-      ...reportFilterConditions(opts.filters),
+      ...reportFilterConditions(filters),
     ],
     sql` AND `,
   );
-  return runReportList(db, where, opts);
+}
+
+// Ordered-ID provider for the profile feed (ADR-0010). Same scope + filters as
+// listReportsForUser, so the triage pane/sheet steps through the exact attributed
+// set the page paginates. See listReportIdsForRole for the cap semantics.
+export async function listReportIdsForUser(
+  db: Db,
+  userId: string,
+  opts: { filters?: CellReportFilters; cap: number },
+): Promise<string[]> {
+  return runReportIdList(db, userReportWhere(userId, opts.filters), opts.cap);
 }
 
 // One page of visible reports across ALL roles at a company — the company page's
@@ -535,15 +553,30 @@ export async function listReportsForCompany(
   companyId: string,
   opts: { limit: number; offset: number; filters?: CellReportFilters },
 ): Promise<CellReportList> {
-  const where = sql.join(
+  return runReportList(db, companyReportWhere(companyId, opts.filters), opts);
+}
+
+// The company-feed scope + filter WHERE (all roles at one company), shared by the
+// paginated list and the ordered-ID provider so the pane walks the SAME set.
+function companyReportWhere(companyId: string, filters?: CellReportFilters): SQL {
+  return sql.join(
     [
       sql`r.company_id = ${companyId}::uuid`,
       ...VISIBLE,
-      ...reportFilterConditions(opts.filters),
+      ...reportFilterConditions(filters),
     ],
     sql` AND `,
   );
-  return runReportList(db, where, opts);
+}
+
+// Ordered-ID provider for the company feed (ADR-0010). Same scope + filters as
+// listReportsForCompany. See listReportIdsForRole for the cap semantics.
+export async function listReportIdsForCompany(
+  db: Db,
+  companyId: string,
+  opts: { filters?: CellReportFilters; cap: number },
+): Promise<string[]> {
+  return runReportIdList(db, companyReportWhere(companyId, opts.filters), opts.cap);
 }
 
 // Headline counts for the company page header: total visible reports + how many

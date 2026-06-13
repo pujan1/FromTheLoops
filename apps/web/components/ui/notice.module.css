@@ -2,8 +2,8 @@
   display: flex;
   align-items: stretch;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--notice-color) 10%, var(--color-paper));
   border: 1px solid color-mix(in srgb, var(--notice-color) 28%, transparent);
 }

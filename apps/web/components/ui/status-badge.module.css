@@ -2,14 +2,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 3px var(--space-2);
-  font-family: var(--font-mono);
+  padding: 4px 10px;
+  font-family: var(--font-sans);
   font-size: var(--fs-micro);
-  font-weight: 500;
-  letter-spacing: var(--tracking-wide);
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-radius: var(--radius-sm);
-  line-height: 1;
+  border-radius: var(--radius-full);
+  line-height: 1.1;
   white-space: nowrap;
   /* Tinted fill + matching border + readable text, all derived from one token
      per status via color-mix so the badge tracks light/dark automatically. */

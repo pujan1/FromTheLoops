@@ -6,12 +6,11 @@
 }
 
 .label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-ink-2);
 }
 
 .required {
@@ -35,6 +34,7 @@
   color: var(--color-ink);
   transition:
     border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
     background var(--dur-fast) var(--ease-out);
 }
 
@@ -46,6 +46,7 @@
   outline: none;
   border-color: var(--color-accent);
   background: var(--color-paper);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
 .input:disabled {
@@ -82,11 +83,10 @@
   list-style: none;
   max-height: 320px;
   overflow-y: auto;
-  background: var(--color-paper);
-  border: 1px solid var(--color-rule-strong);
-  border-radius: var(--radius-md);
-  /* Editorial: a crisp hairline lift, not a soft drop shadow. */
-  box-shadow: 0 1px 0 var(--color-rule) inset, 0 8px 24px -16px var(--color-ink);
+  background: var(--color-paper-3);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .option {

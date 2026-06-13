@@ -18,3 +18,4 @@ export * from "./verifications.js";
 export * from "./helpful-flags.js";
 export * from "./moderation.js";
 export * from "./events.js";
+export * from "./analytics.js";

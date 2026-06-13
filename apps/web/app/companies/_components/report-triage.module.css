@@ -20,24 +20,95 @@
   color: var(--color-muted);
 }
 
-@media (min-width: 1024px) {
-  .split {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-7);
-    align-items: start;
-  }
+/* ── Mobile bottom sheet (<1024px) ─────────────────────────────────────────
+   The mobile counterpart of the desktop pane: same engine + body, a sheet that
+   slides up over the list and drags down to dismiss. Hidden on desktop above. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay, 60);
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.45);
+  animation: sheetBackdropIn 180ms ease;
+}
 
-  /* The pane tracks the viewport while the master scrolls beneath it, so the
-     list never loses its place during a peek. */
-  .detail {
-    display: block;
-    position: sticky;
-    top: var(--space-6);
-    max-height: calc(100vh - var(--space-7));
-    overflow-y: auto;
-    border-left: 1px solid var(--color-rule);
-    padding-left: var(--space-7);
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 85vh;
+  max-height: 85vh;
+  background: var(--color-paper, var(--color-bg));
+  border-top-left-radius: var(--radius-4, 20px);
+  border-top-right-radius: var(--radius-4, 20px);
+  box-shadow: var(--shadow-3, 0 -8px 40px rgba(0, 0, 0, 0.25));
+  animation: sheetSlideUp 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Grab region: the handle + control bar. Owns the drag gesture, so it opts out
+   of native touch scrolling/panning; the scrollable body below does not. */
+.sheetHeader {
+  flex: none;
+  touch-action: none;
+  cursor: grab;
+  background: var(--color-paper, var(--color-bg));
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.handle {
+  width: 36px;
+  height: 4px;
+  margin: var(--space-3) auto var(--space-2);
+  border-radius: 999px;
+  background: var(--color-rule);
+}
+
+.sheetBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-5) var(--space-3);
+}
+
+.sheetBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5);
+}
+
+@keyframes sheetBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .sheet {
+    animation: none;
+  }
+  .sheet {
+    transition: none;
   }
 }
 
@@ -102,4 +173,35 @@
 }
 .openFull:hover {
   text-decoration: underline;
+}
+
+/* ── Desktop master-detail (≥1024px) ───────────────────────────────────────
+   Placed after the mobile sheet styles so these overrides win: media queries
+   add no specificity, so an equal-specificity `.backdrop { display: none }`
+   only beats the base `.backdrop { display: flex }` if it comes later in
+   source order. Earlier, the sheet leaked onto desktop. */
+@media (min-width: 1024px) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-7);
+    align-items: start;
+  }
+
+  /* The pane tracks the viewport while the master scrolls beneath it, so the
+     list never loses its place during a peek. */
+  .detail {
+    display: block;
+    position: sticky;
+    top: var(--space-6);
+    max-height: calc(100vh - var(--space-7));
+    overflow-y: auto;
+    border-left: 1px solid var(--color-rule);
+    padding-left: var(--space-7);
+  }
+
+  /* The sheet is the mobile counterpart of the pane — never both at once. */
+  .backdrop {
+    display: none;
+  }
 }

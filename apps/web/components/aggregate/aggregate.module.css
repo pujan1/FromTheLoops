@@ -42,7 +42,7 @@
   width: 100%;
   height: 14px;
   overflow: hidden;
-  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-full);
   background: var(--color-paper-2);
 }
 
@@ -89,6 +89,7 @@
   width: 9px;
   height: 9px;
   flex: none;
+  border-radius: var(--radius-full);
 }
 
 .legend__swatch--offer {
@@ -167,13 +168,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.375rem;
+  height: 1.375rem;
   flex: none;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   color: var(--color-paper);
   background: var(--color-ink);
+  border-radius: var(--radius-full);
 }
 
 .step__name {
@@ -197,16 +199,22 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-rule);
+  padding: 5px 13px;
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-full);
   text-decoration: none;
   color: var(--color-ink);
-  font-size: var(--fs-micro);
-  transition: border-color var(--dur-fast) var(--ease-out);
+  font-size: var(--fs-meta);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .topic:hover {
-  border-color: var(--color-ink);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
 }
 
 .topic__count {

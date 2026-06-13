@@ -1,13 +1,13 @@
-/* ===== Display (Archivo — neo-grotesque, set tight & bold) ===== */
+/* ===== Display (Plus Jakarta Sans — geometric, warm, set bold) ===== */
 .display {
   font-family: var(--font-display);
   font-weight: 700;
   line-height: var(--lh-tight);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
   color: var(--color-ink);
   text-wrap: balance;
 }
-/* Swiss emphasis: signal-red, upright — never italic */
+/* Emphasis: the coral-orange accent, upright — never italic */
 .display em, .display i {
   font-style: normal;
   font-weight: 700;
@@ -24,7 +24,7 @@
   font-weight: 600;
   color: var(--color-ink);
   line-height: var(--lh-snug);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 .h1 { font-size: var(--fs-h1); }

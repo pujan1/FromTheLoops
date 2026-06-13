@@ -2,12 +2,15 @@ import { karmaTier, resolveUser } from "@fromtheloop/core";
 import {
   getDb,
   getUserProfileStats,
+  listReportIdsForUser,
   listReportsForUser,
 } from "@fromtheloop/db";
 import { parseReportFilters } from "@fromtheloop/shared";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { FilterBar, Pagination, ReportList } from "@/components/reports";
+import { FilterBar } from "@/components/reports";
+import { ReportTriage } from "@/app/companies/_components/report-triage";
+import { TRIAGE_ID_CAP } from "@/lib/triage";
 import {
   FtlBody,
   FtlContainer,
@@ -78,12 +81,19 @@ export default async function UserProfilePage({
   const filters = parseReportFilters(await searchParams);
   const basePath = routes.user(username);
 
-  const [stats, feed] = await Promise.all([
+  const feedFilters = { outcome: filters.outcome };
+  const [stats, feed, orderedIds] = await Promise.all([
     getUserProfileStats(db, user.id),
     listReportsForUser(db, user.id, {
       limit: filters.perPage,
       offset: (filters.page - 1) * filters.perPage,
-      filters: { outcome: filters.outcome },
+      filters: feedFilters,
+    }),
+    // Ordered IDs for the triage pane/sheet — the SAME attributed set the feed
+    // paginates (anonymous reports excluded by the provider's privacy predicate).
+    listReportIdsForUser(db, user.id, {
+      filters: feedFilters,
+      cap: TRIAGE_ID_CAP,
     }),
   ]);
 
@@ -97,7 +107,7 @@ export default async function UserProfilePage({
     <>
       <FtlSiteHeader />
       <main className={styles.page}>
-        <FtlContainer>
+        <FtlContainer width="wide">
           <FtlEyebrow tone="accent">profile</FtlEyebrow>
           <FtlDisplay as="h1" size="xl" style={{ marginTop: 24 }}>
             {name}
@@ -143,21 +153,17 @@ export default async function UserProfilePage({
               showRound={false}
               showTrust={false}
             />
-            <ReportList
+            {/* Master-detail triage (ADR-0010): cross-company feed, so no
+                constant companyName — each row carries its own. Desktop pane /
+                mobile sheet; the per-report SSR page stays canonical. */}
+            <ReportTriage
               items={feed.items}
+              orderedIds={orderedIds}
               startIndex={startIndex}
-              emptyMessage="No public reports match these filters."
-            />
-            {feed.total > 0 && (
-              <p className={styles.listFoot}>
-                Showing {startIndex + 1}–{startIndex + feed.items.length} of{" "}
-                {feed.total}
-              </p>
-            )}
-            <Pagination
               basePath={basePath}
               filters={filters}
               total={feed.total}
+              emptyMessage="No public reports match these filters."
             />
           </section>
         </FtlContainer>

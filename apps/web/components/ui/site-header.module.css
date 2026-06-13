@@ -18,9 +18,9 @@
 
 .wordmark {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1.25rem;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
   line-height: 1;
   color: var(--color-ink);
   white-space: nowrap;
@@ -85,10 +85,11 @@
 .authPrimary {
   color: var(--color-paper);
   background: var(--color-ink);
-  padding: 7px 14px;
-  border-radius: 0;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
 }
-.authPrimary:hover { background: var(--color-accent); }
+.authPrimary:hover { background: var(--color-accent); box-shadow: var(--shadow-accent); }
 
 @media (max-width: 720px) {
   .inner { grid-template-columns: 1fr auto; }

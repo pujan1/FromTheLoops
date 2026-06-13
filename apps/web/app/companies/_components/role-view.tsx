@@ -16,11 +16,8 @@ import { FtlBody, FtlRule } from "@/components/ui";
 import { WedgeRail } from "@/components/wedge-rail";
 import { routes } from "@/lib/routes";
 import styles from "../browse.module.css";
+import { TRIAGE_ID_CAP } from "@/lib/triage";
 import { ReportTriage } from "./report-triage";
-
-// Cap on the ordered-ID list shipped to the triage pane. KB-scale even at the
-// ceiling; past it, the pane's "next" stops gracefully (page-bounded fallback).
-const TRIAGE_ID_CAP = 1500;
 
 export interface ResolvedRole {
   company: { id: string; slug: string; name: string };

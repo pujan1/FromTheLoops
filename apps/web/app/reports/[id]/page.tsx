@@ -121,7 +121,7 @@ export default async function ReportPage({
     <>
       <FtlSiteHeader />
       <main className={styles.page}>
-        <FtlContainer width="prose">
+        <FtlContainer width="narrow">
           {/* Title · summary · rounds tree — the single shared rendering, also
               used by the client triage pane (ADR-0010). Viewer-specific eyebrow
               and byline are resolved here and passed in; the owner of a deleted
@@ -138,16 +138,13 @@ export default async function ReportPage({
           {/* Helpful-flag: count + (for an eligible viewer) the toggle. Public
               readers see the count and a hint to sign in / verify. */}
           {showHelpful && (
-            <>
-              <FtlRule />
-              <HelpfulFlagButton
-                reportId={detail.report.id}
-                initialFlagged={viewerFlagged}
-                initialCount={helpfulCount}
-                canFlag={canFlag}
-                reason={flagReason}
-              />
-            </>
+            <HelpfulFlagButton
+              reportId={detail.report.id}
+              initialFlagged={viewerFlagged}
+              initialCount={helpfulCount}
+              canFlag={canFlag}
+              reason={flagReason}
+            />
           )}
 
           {/* Owner controls: edit (within 24h) + soft-delete. Only the author
