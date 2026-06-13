@@ -8,7 +8,6 @@ import {
   FtlDisplay,
   FtlEyebrow,
   FtlStatusBadge,
-  FtlTag,
   type BadgeStatus,
 } from "@/components/ui";
 import styles from "./reports.module.css";
@@ -121,10 +120,24 @@ export function ReportDetailBody({
             <span className={styles.sectionHeading__count}>{roundCount}</span>
           </p>
           <ol className={styles.rounds}>
-            {detail.rounds.map((round, i) => (
+            {detail.rounds.map((round, i) => {
+              // One quiet "what this round covered" line at the round's foot:
+              // every topic across the round's questions, deduped, in order.
+              // Beats repeating a row of pills under each question.
+              const roundTopics = round.questions
+                .flatMap((q) => q.topics)
+                .filter(
+                  (topic, idx, arr) =>
+                    arr.findIndex((x) => x.id === topic.id) === idx,
+                );
+              return (
               <li key={i} className={styles.round}>
                 <div className={styles.round__head}>
-                  <span className={styles.round__num} aria-hidden="true">
+                  <span
+                    className={styles.round__num}
+                    data-tone={ratingTone(round.rating)}
+                    aria-hidden="true"
+                  >
                     {i + 1}
                   </span>
                   <h3 className={styles.round__type}>
@@ -140,25 +153,32 @@ export function ReportDetailBody({
                   </p>
                 )}
                 {round.questions.length > 0 && (
-                  <ul className={styles.questions}>
-                    {round.questions.map((q, qi) => (
-                      <li key={qi} className={styles.question}>
-                        <p className={styles.question__prose}>{q.prose}</p>
-                        {q.topics.length > 0 && (
-                          <div className={styles.question__topics}>
-                            {q.topics.map((topic) => (
-                              <FtlTag key={topic.id} variant="ghost">
-                                {topic.name}
-                              </FtlTag>
-                            ))}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className={styles.asked}>
+                    <ul className={styles.questions}>
+                      {round.questions.map((q, qi) => (
+                        <li key={qi} className={styles.question}>
+                          <p className={styles.question__prose}>{q.prose}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {roundTopics.length > 0 && (
+                  <p className={styles.round__topics}>
+                    <span
+                      className={styles.round__topicsIcon}
+                      aria-hidden="true"
+                    >
+                      ↳
+                    </span>
+                    <span className={styles.round__topicsList}>
+                      {roundTopics.map((topic) => topic.name).join(" · ")}
+                    </span>
+                  </p>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ol>
         </>
       )}

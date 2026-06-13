@@ -137,24 +137,42 @@
   font-weight: 600;
 }
 
+/* The rounds read as a TIMELINE: a vertical rail threads through numbered
+   nodes, one per round, so the sequence of stages — recruiter → phone → onsite,
+   or screen → trade test → site walkthrough — is legible at a glance and scales
+   to any hiring flow. No per-round card; the rail does the grouping. */
 .rounds {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
 }
 
+/* --rail: x-center of the node, where the connector is drawn.
+   --node: node diameter. Content is inset past both so it clears the rail. */
 .round {
-  background: var(--color-paper-3);
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-5);
+  --node: 1.75rem;
+  --rail: calc(var(--node) / 2);
+  position: relative;
+  padding-left: calc(var(--node) + var(--space-4));
+  padding-bottom: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+.round:last-child {
+  padding-bottom: 0;
+}
+/* The connector line, drawn behind the node (which is opaque) and bridged
+   through the padding gap to the next node. Suppressed under the last round. */
+.round:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: var(--rail);
+  top: var(--node);
+  bottom: calc(-1 * var(--space-2));
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--color-rule-strong);
 }
 
 .round__head {
@@ -162,21 +180,32 @@
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+  min-height: var(--node);
 }
+/* The node: a numbered ink disc pinned to the rail, haloed with the round's
+   sentiment so the timeline carries the verdict in colour as you scan down. */
 .round__num {
+  --tone: var(--color-muted);
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.625rem;
-  height: 1.625rem;
-  flex: none;
+  width: var(--node);
+  height: var(--node);
   border-radius: var(--radius-full);
   background: var(--color-ink);
   color: var(--color-paper);
   font-family: var(--font-mono);
-  font-size: var(--fs-micro);
+  font-size: var(--fs-meta);
   font-weight: 500;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 22%, transparent);
 }
+.round__num[data-tone="success"] { --tone: var(--color-success); }
+.round__num[data-tone="danger"]  { --tone: var(--color-danger); }
+.round__num[data-tone="warning"] { --tone: var(--color-warning); }
 .round__type {
   margin: 0;
   margin-right: auto;
@@ -193,33 +222,69 @@
   line-height: var(--lh-relaxed);
 }
 
-/* Questions: recessed blocks with an accent edge, stacked inside the round. */
+/* "What was asked" — the questions group, fenced off from the round's framing
+   (title + sentiment + experience) by a hairline, so the head reads as a header
+   and the bullets as a distinct section beneath it. */
+.asked {
+  margin-top: var(--space-1);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-rule);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Questions: a plain stacked list, no inner boxes. Each is marked by a small
+   accent bead so the round's prose and its questions stay visually distinct
+   without a competing container. */
 .questions {
   list-style: none;
   margin: var(--space-1) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 .question {
-  background: var(--color-paper-2);
-  border-radius: var(--radius-md);
-  border-left: 3px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
-  padding: var(--space-3) var(--space-4);
+  position: relative;
+  padding-left: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+.question::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
 }
 .question__prose {
   margin: 0;
   color: var(--color-ink);
   line-height: var(--lh-normal);
 }
-.question__topics {
+
+/* Round footer — a single quiet line of every topic the round touched, deduped.
+   Reads as a caption, not a row of pills, so it sits lightly under the prose. */
+.round__topics {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-meta);
+  line-height: var(--lh-normal);
+}
+.round__topicsIcon {
+  flex: none;
+  color: var(--color-accent);
+  font-size: var(--fs-small);
+  line-height: 1;
+}
+.round__topicsList {
+  color: var(--color-muted);
 }
 
 /* ============================================================
