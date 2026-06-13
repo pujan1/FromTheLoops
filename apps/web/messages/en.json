@@ -187,6 +187,49 @@
       "authorHint": "You can't mark your own report helpful — but you earn karma when others do.",
       "rateLimited": "You've reached today's limit for helpful marks. Try again tomorrow.",
       "error": "Something went wrong. Please try again."
+    },
+    "likes": {
+      "like": "Like",
+      "liked": "Liked"
+    },
+    "share": {
+      "share": "Share",
+      "copied": "Link copied"
+    },
+    "comments": {
+      "count": "{count, plural, =0 {No comments yet} =1 {1 comment} other {# comments}}",
+      "empty": "No comments yet. Start the conversation.",
+      "placeholder": "Add a comment…",
+      "post": "Post",
+      "posting": "Posting…",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "reply": "Reply",
+      "like": "Like",
+      "liked": "Liked",
+      "quoteThis": "Quote",
+      "edited": "edited",
+      "anonymous": "Anonymous",
+      "someoneAnonymous": "Anonymous",
+      "postAnonymous": "Post anonymously",
+      "postAsName": "Posting as {name}",
+      "quotingQuestion": "Quoting question",
+      "replyingTo": "Replying to {name}",
+      "clearQuote": "Remove quote",
+      "replyTargetGone": "(comment removed)",
+      "deletedPlaceholder": "This comment was deleted.",
+      "removedPlaceholder": "This comment was removed by a moderator.",
+      "confirmDelete": "Delete this comment?",
+      "sortNewest": "Newest",
+      "sortTop": "Top",
+      "loadMore": "Load more",
+      "signInToComment": "Sign in to join the conversation.",
+      "signInCta": "Sign in",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "errorRateLimited": "You're commenting too fast. Try again later.",
+      "errorTooLong": "That comment is too long."
     }
   }
 }

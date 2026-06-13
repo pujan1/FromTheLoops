@@ -87,6 +87,14 @@ export * from "./karma.js";
 // Helpful-flags: toggle, counts, and the verified/rate guards (Sprint 5 Day 8).
 export * from "./helpful-flags.js";
 
+// Comments: flat thread writes (create/edit/soft-delete), the anonymity-safe
+// thread read, and batched card counts (ADR-0011).
+export * from "./comments.js";
+
+// Likes: casual post/comment toggles + counts; comment-likes feed capped karma
+// (ADR-0011).
+export * from "./likes.js";
+
 // Per-(company, role, level) aggregate refresh + reads (Sprint 3).
 export * from "./aggregates.js";
 

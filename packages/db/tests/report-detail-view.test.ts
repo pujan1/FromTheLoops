@@ -31,7 +31,7 @@ const detail = {
       rating: "positive",
       experienceProse: "Two algo questions.",
       questions: [
-        { prose: "Reverse a list", topics: [{ id: "t1", slug: "arrays", name: "Arrays" }] },
+        { id: "q1", prose: "Reverse a list", topics: [{ id: "t1", slug: "arrays", name: "Arrays" }] },
       ],
     },
   ],

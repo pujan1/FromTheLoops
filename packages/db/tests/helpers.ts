@@ -37,6 +37,9 @@ export function makeTestClient(): {
 // auto-increment drift across cases.
 const TRUNCATE_TABLES = [
   "events",
+  "comment_likes",
+  "post_likes",
+  "comments",
   "question_topics",
   "questions",
   "rounds",

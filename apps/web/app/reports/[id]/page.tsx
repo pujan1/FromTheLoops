@@ -1,6 +1,8 @@
 import { currentUser } from "@clerk/nextjs/server";
 import {
+  countCommentsForReport,
   countHelpfulFlags,
+  countPostLikes,
   EDIT_WINDOW_MS,
   getDb,
   getOrCreateUserByClerkId,
@@ -8,7 +10,9 @@ import {
   getReportForEdit,
   getUserById,
   hasUserFlaggedReport,
+  hasUserLikedPost,
   isReportEditable,
+  listCommentsForReport,
   type ReportDetail,
   toReportDetailView,
   userIsVerified,
@@ -24,8 +28,12 @@ import {
   FtlSiteHeader,
 } from "@/components/ui";
 import { startReportEdit } from "./actions";
+import { COMMENTS_PAGE_SIZE } from "./comments-config";
 import { DeleteReportButton } from "./delete-report-button";
-import { HelpfulFlagButton } from "./helpful-flag-button";
+import {
+  type ConversationEngagement,
+  ReportConversation,
+} from "./report-conversation";
 import { ReportDetailBody } from "./report-detail-body";
 import styles from "./reports.module.css";
 
@@ -117,33 +125,70 @@ export default async function ReportPage({
     }
   }
 
+  // Conversation engagement (ADR-0011) — only on an active public report. Bundles
+  // the casual post-like, the (above) helpful state, and the SSR first page of
+  // comments + viewer's commenting identity. The full page eager-loads comments;
+  // other surfaces (triage pane) start collapsed and lazy-fetch.
+  let engagement: ConversationEngagement | null = null;
+  if (showHelpful) {
+    const [postLikeCount, viewerLikedPost, commentPage, commentCount, viewerUser] =
+      await Promise.all([
+        countPostLikes(db, detail.report.id),
+        viewerId
+          ? hasUserLikedPost(db, detail.report.id, viewerId)
+          : Promise.resolve(false),
+        listCommentsForReport(db, {
+          reportId: detail.report.id,
+          viewerId,
+          sort: "newest",
+          limit: COMMENTS_PAGE_SIZE + 1,
+        }),
+        countCommentsForReport(db, detail.report.id),
+        viewerId ? getUserById(db, viewerId) : Promise.resolve(null),
+      ]);
+    engagement = {
+      postLike: { liked: viewerLikedPost, count: postLikeCount },
+      helpful: { count: helpfulCount, flagged: viewerFlagged, canFlag, reason: flagReason },
+      comments: {
+        initial: commentPage.slice(0, COMMENTS_PAGE_SIZE),
+        hasMore: commentPage.length > COMMENTS_PAGE_SIZE,
+        count: commentCount,
+      },
+      commenter: {
+        displayName: viewerUser?.displayName ?? viewerUser?.username ?? null,
+        defaultAttribution: viewerUser?.defaultDisplayAttribution ?? "anonymous",
+      },
+    };
+  }
+
   return (
     <>
       <FtlSiteHeader />
       <main className={styles.page}>
         <FtlContainer width="narrow">
-          {/* Title · summary · rounds tree — the single shared rendering, also
-              used by the client triage pane (ADR-0010). Viewer-specific eyebrow
-              and byline are resolved here and passed in; the owner of a deleted
-              report sees the summary but not the rounds (hideRounds). */}
-          <ReportDetailBody
-            detail={toReportDetailView(detail)}
-            eyebrow={viewerIsAuthor ? t("eyebrow") : t("detail.publicEyebrow")}
-            byline={
-              viewerIsAuthor ? t(`status.${detail.report.status}`) : attribution
-            }
-            hideRounds={isDeleted}
-          />
-
-          {/* Helpful-flag: count + (for an eligible viewer) the toggle. Public
-              readers see the count and a hint to sign in / verify. */}
-          {showHelpful && (
-            <HelpfulFlagButton
+          {/* Active report → the full conversation (shared body + post-like +
+              share + Helpful + comments, ADR-0011). Non-active (pending owner-
+              only / deleted) → the plain shared body with no engagement. The
+              body itself is the single rendering shared with the triage pane. */}
+          {engagement ? (
+            <ReportConversation
+              detail={toReportDetailView(detail)}
+              eyebrow={viewerIsAuthor ? t("eyebrow") : t("detail.publicEyebrow")}
+              byline={
+                viewerIsAuthor ? t(`status.${detail.report.status}`) : attribution
+              }
               reportId={detail.report.id}
-              initialFlagged={viewerFlagged}
-              initialCount={helpfulCount}
-              canFlag={canFlag}
-              reason={flagReason}
+              signedIn={viewerId !== null}
+              engagement={engagement}
+            />
+          ) : (
+            <ReportDetailBody
+              detail={toReportDetailView(detail)}
+              eyebrow={viewerIsAuthor ? t("eyebrow") : t("detail.publicEyebrow")}
+              byline={
+                viewerIsAuthor ? t(`status.${detail.report.status}`) : attribution
+              }
+              hideRounds={isDeleted}
             />
           )}
 

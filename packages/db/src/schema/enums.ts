@@ -119,5 +119,22 @@ export const modActionType = pgEnum("mod_action_type", [
   "merge",
   "ban",
   "delete",
+  // `hide` (ADR-0011): a mod removes a comment from public view without
+  // hard-deleting it. Distinct from `delete` (the author's own soft-delete) so
+  // the audit log + the rendered placeholder ("removed by moderator" vs
+  // "deleted") can tell the two actors apart.
+  "hide",
   "edit_taxonomy",
+]);
+
+// Lifecycle of a comment (ADR-0011). `active` on insert (comments post
+// instantly, no pre-moderation). `hidden` = a moderator removed it from view
+// (mod_action_type 'hide', logged). `deleted` = the author soft-deleted it
+// (deleted_at set in the same write). Both non-active states keep the row so
+// replies/quotes pointing at it can render a placeholder and the 90-day PII
+// purge can clear the body.
+export const commentStatus = pgEnum("comment_status", [
+  "active",
+  "hidden",
+  "deleted",
 ]);

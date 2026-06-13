@@ -1,125 +1,132 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1779565555263,
-			"tag": "0000_bizarre_black_cat",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1780105534279,
-			"tag": "0001_giant_nightcrawler",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1780257176713,
-			"tag": "0002_trgm_taxonomy_indexes",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1780450072043,
-			"tag": "0003_big_squadron_supreme",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1780450072044,
-			"tag": "0004_topics_trgm_indexes",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "7",
-			"when": 1780504043579,
-			"tag": "0005_report_write_columns",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "7",
-			"when": 1780520856381,
-			"tag": "0006_cloudy_major_mapleleaf",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "7",
-			"when": 1780538210545,
-			"tag": "0007_dry_luke_cage",
-			"breakpoints": true
-		},
-		{
-			"idx": 8,
-			"version": "7",
-			"when": 1780538310545,
-			"tag": "0008_aggregates_company_role_level",
-			"breakpoints": true
-		},
-		{
-			"idx": 9,
-			"version": "7",
-			"when": 1780624870827,
-			"tag": "0009_graceful_lady_ursula",
-			"breakpoints": true
-		},
-		{
-			"idx": 10,
-			"version": "7",
-			"when": 1780624970827,
-			"tag": "0010_events_notify_trigger",
-			"breakpoints": true
-		},
-		{
-			"idx": 11,
-			"version": "7",
-			"when": 1780711370827,
-			"tag": "0011_aggregates_company_role",
-			"breakpoints": true
-		},
-		{
-			"idx": 12,
-			"version": "7",
-			"when": 1780790076861,
-			"tag": "0012_topics_category",
-			"breakpoints": true
-		},
-		{
-			"idx": 13,
-			"version": "7",
-			"when": 1780906644850,
-			"tag": "0013_user_settings_columns",
-			"breakpoints": true
-		},
-		{
-			"idx": 14,
-			"version": "7",
-			"when": 1780940242773,
-			"tag": "0014_user_karma",
-			"breakpoints": true
-		},
-		{
-			"idx": 15,
-			"version": "7",
-			"when": 1780941338154,
-			"tag": "0015_helpful_flags",
-			"breakpoints": true
-		},
-		{
-			"idx": 16,
-			"version": "7",
-			"when": 1781062412832,
-			"tag": "0016_analytics_events",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779565555263,
+      "tag": "0000_bizarre_black_cat",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780105534279,
+      "tag": "0001_giant_nightcrawler",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780257176713,
+      "tag": "0002_trgm_taxonomy_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780450072043,
+      "tag": "0003_big_squadron_supreme",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780450072044,
+      "tag": "0004_topics_trgm_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780504043579,
+      "tag": "0005_report_write_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780520856381,
+      "tag": "0006_cloudy_major_mapleleaf",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780538210545,
+      "tag": "0007_dry_luke_cage",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780538310545,
+      "tag": "0008_aggregates_company_role_level",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780624870827,
+      "tag": "0009_graceful_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780624970827,
+      "tag": "0010_events_notify_trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780711370827,
+      "tag": "0011_aggregates_company_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1780790076861,
+      "tag": "0012_topics_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780906644850,
+      "tag": "0013_user_settings_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780940242773,
+      "tag": "0014_user_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1780941338154,
+      "tag": "0015_helpful_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781062412832,
+      "tag": "0016_analytics_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781368618372,
+      "tag": "0017_regular_korg",
+      "breakpoints": true
+    }
+  ]
 }

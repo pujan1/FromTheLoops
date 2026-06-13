@@ -15,6 +15,7 @@
 
 import { describe, expectTypeOf, it } from "vitest";
 import type {
+  Comment,
   Company,
   CompanyLevel,
   Draft,
@@ -75,7 +76,19 @@ describe("schema types", () => {
 
   it("ModActionLog.actionType is the exact enum union", () => {
     expectTypeOf<ModActionLog["actionType"]>().toEqualTypeOf<
-      "approve" | "reject" | "merge" | "ban" | "delete" | "edit_taxonomy"
+      | "approve"
+      | "reject"
+      | "merge"
+      | "ban"
+      | "delete"
+      | "hide"
+      | "edit_taxonomy"
+    >();
+  });
+
+  it("Comment.status is the exact enum union", () => {
+    expectTypeOf<Comment["status"]>().toEqualTypeOf<
+      "active" | "hidden" | "deleted"
     >();
   });
 

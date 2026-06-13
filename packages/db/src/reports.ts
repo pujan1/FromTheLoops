@@ -518,6 +518,10 @@ export interface ReportTopicDetail {
 }
 
 export interface ReportQuestionDetail {
+  // The question's id — lets a reader quote this exact question in a comment
+  // (ADR-0011). Safe to expose: it only ever resolves a question within a
+  // report the viewer can already read.
+  id: string;
   prose: string;
   topics: ReportTopicDetail[];
 }
@@ -644,6 +648,7 @@ async function assembleReportDetail(
   // round-scoped queries.
   const questionRows = await db
     .select({
+      questionId: questions.id,
       roundId: questions.roundId,
       questionOrder: questions.orderIndex,
       prose: questions.questionProse,
@@ -668,7 +673,7 @@ async function assembleReportDetail(
     const key = `${row.roundId}:${row.questionOrder}`;
     let q = seen.get(key);
     if (!q) {
-      q = { prose: row.prose, topics: [] };
+      q = { id: row.questionId, prose: row.prose, topics: [] };
       seen.set(key, q);
       const list = questionsByRound.get(row.roundId) ?? [];
       list.push(q);

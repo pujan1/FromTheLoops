@@ -16,6 +16,9 @@ export * from "./rounds.js";
 export * from "./questions.js";
 export * from "./verifications.js";
 export * from "./helpful-flags.js";
+// Comments must precede likes (comment_likes FKs comments) — ADR-0011.
+export * from "./comments.js";
+export * from "./likes.js";
 export * from "./moderation.js";
 export * from "./events.js";
 export * from "./analytics.js";

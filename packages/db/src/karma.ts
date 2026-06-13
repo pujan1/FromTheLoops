@@ -20,6 +20,15 @@
 //                                   user (Day 8). The flagger's verification is re-checked
 //                                   live here, so a flag from a since-unverified account
 //                                   stops counting on the next recompute.
+//   - comment-like .......... +1  — per like on the author's ACTIVE comments (ADR-0011).
+//                                   Unlike helpful-flags, ANY signed-in liker counts (no
+//                                   verification gate), so it is DOUBLE-CAPPED to blunt
+//                                   farming: at most N likes/comment/day count, and at most
+//                                   M karma/day total from comment-likes, summed across
+//                                   days. Capping per-day on the LIKE's created_at keeps the
+//                                   term a pure function of the like rows, so it stays
+//                                   idempotent under from-scratch recompute. Self-likes are
+//                                   excluded defensively (the write path already blocks them).
 //
 // Recruiter-confirmed is DEFERRED, not dropped: Layer-3 per-report evidence
 // (PLAN.md §Trust, the "✓✓ Recruiter-Confirmed" badge) is admin-reviewed and
@@ -42,7 +51,18 @@ export const KARMA_EARN = {
   verifiedPro: 10,
   recruiterConfirmed: 25,
   helpfulFlag: 1,
+  commentLike: 1,
 } as const;
+
+// Anti-farm caps on the comment-like earn term (ADR-0011). Tunable — these are
+// unproven launch defaults; tighten if farming shows up, or switch to a
+// verified-liker gate like helpful-flags. Applied per author per day:
+//   - PER_COMMENT: a single comment's likes count toward karma only up to this
+//     many per day (one viral comment can't dominate).
+//   - DAILY_TOTAL: the most karma a user can earn from comment-likes in a day,
+//     across all their comments.
+export const COMMENT_LIKE_KARMA_PER_COMMENT_DAILY_CAP = 5;
+export const COMMENT_LIKE_KARMA_DAILY_CAP = 10;
 
 export interface RecomputeKarmaResult {
   // The newly persisted karma total. 0 if the user doesn't exist.
@@ -119,6 +139,33 @@ export async function recomputeUserKarma(
               SELECT 1 FROM user_verifications v2
                WHERE v2.user_id = hf.flagger_user_id
             )
+        ), 0)
+        +
+        -- 3. comment-like earn, double-capped per author per day. Inner query:
+        --    likes per (comment, day) capped at PER_COMMENT. Middle: sum those
+        --    within a day, capped at DAILY_TOTAL. Outer: sum the capped days.
+        COALESCE((
+          SELECT SUM(per_day_capped)::int FROM (
+            SELECT LEAST(
+                     SUM(per_comment_capped),
+                     ${COMMENT_LIKE_KARMA_DAILY_CAP}::int
+                   ) AS per_day_capped
+            FROM (
+              SELECT
+                date_trunc('day', cl.created_at) AS like_day,
+                LEAST(
+                  COUNT(*),
+                  ${COMMENT_LIKE_KARMA_PER_COMMENT_DAILY_CAP}::int
+                ) * ${KARMA_EARN.commentLike}::int AS per_comment_capped
+              FROM comments c
+              JOIN comment_likes cl ON cl.comment_id = c.id
+              WHERE c.author_user_id = ${userId}::uuid
+                AND c.status = 'active'
+                AND cl.user_id <> c.author_user_id
+              GROUP BY c.id, date_trunc('day', cl.created_at)
+            ) per_comment_day
+            GROUP BY like_day
+          ) per_day
         ), 0)
       )::int AS karma
     `);
