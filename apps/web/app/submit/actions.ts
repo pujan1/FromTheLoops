@@ -31,8 +31,10 @@ import {
   submissionDraftSchema,
   topicSuggestionSchema,
 } from "@fromtheloop/shared";
+import { revalidateTag } from "next/cache";
 import { renderSubmissionConfirmedEmail } from "@/emails/submission-confirmed";
 import { getNotificationsQueue } from "@/lib/queue";
+import { reportDetailTag } from "@/lib/report-detail-cache";
 import {
   RATE_LIMITS,
   RATE_LIMIT_MESSAGE,
@@ -285,10 +287,15 @@ export async function finalizeSubmissionAction(input: {
   });
 
   if (result.ok) {
-    // Confirmation email — only for a fresh submission, never an edit.
-    // Best-effort: a render/enqueue failure must not fail the submission, so
-    // it's awaited but swallowed (the report is already written).
-    if (!editingReportId) {
+    if (editingReportId) {
+      // An in-place edit changed the report's content/attribution — drop the
+      // cached triage-peek body so the pane serves the new version, not the
+      // stale one (ADR-0010). A fresh submission has nothing cached to bust.
+      revalidateTag(reportDetailTag(editingReportId));
+    } else {
+      // Confirmation email — only for a fresh submission, never an edit.
+      // Best-effort: a render/enqueue failure must not fail the submission, so
+      // it's awaited but swallowed (the report is already written).
       await enqueueSubmissionConfirmation(
         db,
         internal.id,

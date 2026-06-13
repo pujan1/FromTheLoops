@@ -48,6 +48,21 @@ function reportIdFromPath(pathname: string): string | null {
   return m && m[1] ? decodeURIComponent(m[1]) : null;
 }
 
+// True when focus sits in a text-entry context (the search box, a form field, a
+// contenteditable), so the j/k triage keys never steal a keystroke the user
+// meant to type. Esc is exempt from this guard — it always escapes.
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    el.isContentEditable
+  );
+}
+
 export function ReportTriage({
   items,
   orderedIds,
@@ -258,14 +273,31 @@ export function ReportTriage({
     return () => window.removeEventListener("popstate", onPop);
   }, [select, flushDwell]);
 
-  // Esc closes the pane.
+  // Keyboard triage, active only while a peek is open: Esc closes; j/k step to
+  // the next/previous report (vim convention — j down, k up) so the whole
+  // filtered set can be walked without the mouse. The deferred fast-follow from
+  // ADR-0010, now that the step engine exists. We deliberately bind only j/k
+  // (not the arrows) so reading-scroll inside the pane is never hijacked, and we
+  // bail on a typing target or a modifier chord so app/browser shortcuts win.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedRef.current !== null) close();
+      if (selectedRef.current === null) return;
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "j") {
+        e.preventDefault();
+        step(1);
+      } else if (e.key === "k") {
+        e.preventDefault();
+        step(-1);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
+  }, [close, step]);
 
   // Flush any pending dwell when the user leaves the page entirely.
   useEffect(() => flushDwell, [flushDwell]);

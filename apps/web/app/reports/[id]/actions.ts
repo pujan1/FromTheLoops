@@ -23,8 +23,9 @@ import {
   softDeleteReport,
   unflagReportHelpful,
 } from "@fromtheloop/db";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { notFound, redirect } from "next/navigation";
+import { reportDetailTag } from "@/lib/report-detail-cache";
 import { routes } from "@/lib/routes";
 
 export async function startReportEdit(formData: FormData): Promise<void> {
@@ -82,6 +83,10 @@ export async function softDeleteReportAction(
   });
 
   await softDeleteReport(db, reportId, internal.id);
+
+  // Drop the cached triage-peek body in lockstep: a deleted report must 404 the
+  // pane's /api/reports/:id read, not serve a stale cached body (ADR-0010).
+  revalidateTag(reportDetailTag(reportId));
 
   // Re-render the owner view with the now-deleted status instead of bouncing
   // away — the user sees their delete took effect.
