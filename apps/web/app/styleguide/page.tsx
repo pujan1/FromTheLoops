@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { ComboboxDemo } from "./_combobox-demo";
 import { DismissibleNoticeDemo } from "./_notice-demo";
+import { ModQueueDemo } from "./_mod-queue-demo";
 import styles from "./page.module.css";
 
 const colors = [
@@ -440,6 +441,22 @@ export default function StyleguidePage() {
 --container-max      1240
 --container-prose    680
 --theme-storage      fromtheloop-theme`}</pre>
+          </section>
+
+          <section className={styles.section}>
+            <header className={styles.section__head}>
+              <div className={styles.section__head__no}>11 / ModQueue</div>
+              <div>
+                <FtlHeading level={2}>The moderation queue.</FtlHeading>
+                <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
+                  One generic component behind all seven admin queues — filter,
+                  bulk select, per-row + bulk actions, reason capture, optimistic
+                  removal. Each queue is just config. (Demo data; actions are
+                  simulated.)
+                </FtlBody>
+              </div>
+            </header>
+            <ModQueueDemo />
           </section>
         </FtlContainer>
       </main>

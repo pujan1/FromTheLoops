@@ -22,8 +22,8 @@ Short, dated, append-only records of technical decisions. Format: [Michael Nygar
 | [0007](0007-karma-design.md) | Karma design — recompute earn, flagger-weighted ranking, no submitter boost | accepted | 2026-06-08 | 5 |
 | 0008 | RBAC, evidence storage, audit log | _planned_ | — | 6 |
 | [0009](0009-role-primary-browse-grain.md) | Role-primary browse grain (level → filter) | accepted | 2026-06-06 | 4 |
-| [0010](0010-report-triage-master-detail.md) | Report triage — client master-detail pane over preserved per-report URLs | proposed | 2026-06-09 | — |
-| [0011](0011-comments-and-reactions.md) | Comments & reactions — flat thread, question-quote, lightweight likes, share | proposed | 2026-06-13 | — |
+| [0010](0010-report-triage-master-detail.md) | Report triage — client master-detail pane over preserved per-report URLs | accepted | 2026-06-09 | — |
+| [0011](0011-comments-and-reactions.md) | Comments & reactions — flat thread, question-quote, lightweight likes, share | accepted | 2026-06-13 | — |
 
 Add new ADRs as `NNNN-kebab-case-title.md` and link them above.
 

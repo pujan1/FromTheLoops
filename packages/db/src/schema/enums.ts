@@ -44,11 +44,16 @@ export const displayAttribution = pgEnum("display_attribution", [
 
 // Lifecycle of a taxonomy row. active = shown in autocomplete; pending =
 // user-suggested, mod-queue only; merged = superseded, redirects via
-// merged_into_id. See PLAN.md §Taxonomy curation.
+// merged_into_id; rejected = a moderator declined a pending suggestion
+// (Sprint 6 Day 3). Rejected rows are kept (not deleted) because reports FK to
+// taxonomy with ON DELETE RESTRICT — and because every surface already filters
+// status='active', a rejected row drops out of search/aggregates/queues with no
+// extra predicate. See PLAN.md §Taxonomy curation.
 export const taxonomyStatus = pgEnum("taxonomy_status", [
   "active",
   "pending",
   "merged",
+  "rejected",
 ]);
 
 // Provenance of a taxonomy row. Separate from report_source (different

@@ -118,13 +118,13 @@ describe("schema types", () => {
 
   it("Company.status / Role.status / CompanyLevel.status share taxonomy_status", () => {
     expectTypeOf<Company["status"]>().toEqualTypeOf<
-      "active" | "pending" | "merged"
+      "active" | "pending" | "merged" | "rejected"
     >();
     expectTypeOf<Role["status"]>().toEqualTypeOf<
-      "active" | "pending" | "merged"
+      "active" | "pending" | "merged" | "rejected"
     >();
     expectTypeOf<CompanyLevel["status"]>().toEqualTypeOf<
-      "active" | "pending" | "merged"
+      "active" | "pending" | "merged" | "rejected"
     >();
   });
 
@@ -136,7 +136,7 @@ describe("schema types", () => {
 
   it("Topic shares the taxonomy status/source/aliases shape", () => {
     expectTypeOf<Topic["status"]>().toEqualTypeOf<
-      "active" | "pending" | "merged"
+      "active" | "pending" | "merged" | "rejected"
     >();
     expectTypeOf<Topic["source"]>().toEqualTypeOf<
       "seed_curated" | "user_suggested"

@@ -16,6 +16,7 @@ import { config } from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { closeDb, getDb, refreshAllAggregates } from "../index.js";
+import { seedComments } from "./comments.js";
 import { seedCurated } from "./curated.js";
 import { seedReports } from "./reports.js";
 
@@ -42,6 +43,12 @@ async function main(): Promise<void> {
 
   const cells = await refreshAllAggregates(db);
   console.log(`[seed:reports] aggregates refreshed — ${cells} cell(s)`);
+
+  const c = await seedComments(db);
+  console.log(
+    `[seed:reports] comments ok — ${c.comments} comments + ${c.likes} likes ` +
+      `across ${c.reports} report(s). Rich thread: /reports/${c.mainReportId}`,
+  );
 
   console.log(
     `[seed:reports] done in ${Date.now() - started}ms. ` +

@@ -17,7 +17,7 @@ import { FtlBody, FtlButton } from "@/components/ui";
 import { createCommentAction, loadCommentsAction } from "./comment-actions";
 import { CommentComposer } from "./comment-composer";
 import { CommentItem } from "./comment-item";
-import type { CommentTarget } from "./report-conversation";
+import type { CommentTarget, QuotableQuestion } from "./report-conversation";
 import styles from "./reports.module.css";
 
 export function CommentsSection({
@@ -28,6 +28,7 @@ export function CommentsSection({
   initialComments,
   initialHasMore,
   initialCount,
+  quotableQuestions,
   target,
   setTarget,
   collapsed: startCollapsed = false,
@@ -39,6 +40,7 @@ export function CommentsSection({
   initialComments: CommentView[];
   initialHasMore: boolean;
   initialCount: number;
+  quotableQuestions: QuotableQuestion[];
   target: CommentTarget;
   setTarget: (t: CommentTarget) => void;
   collapsed?: boolean;
@@ -149,6 +151,10 @@ export function CommentsSection({
       <CommentComposer
         target={target}
         onClearTarget={() => setTarget(null)}
+        quotableQuestions={quotableQuestions}
+        onQuoteQuestion={(q) =>
+          setTarget({ kind: "question", questionId: q.id, text: q.prose })
+        }
         signedIn={signedIn}
         displayName={displayName}
         anonymous={anonymous}

@@ -9,13 +9,20 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { FtlBody, FtlButton, FtlLinkButton, FtlTextarea } from "@/components/ui";
 import { routes } from "@/lib/routes";
-import type { CommentTarget } from "./report-conversation";
+import type { CommentTarget, QuotableQuestion } from "./report-conversation";
 import { COMMENT_MAX_LENGTH } from "./comments-config";
 import styles from "./reports.module.css";
+
+// Trim a question's prose to a single readable <option> line.
+const QUOTE_OPTION_MAX = 80;
+const truncate = (s: string, n: number) =>
+  s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s;
 
 export function CommentComposer({
   target,
   onClearTarget,
+  quotableQuestions,
+  onQuoteQuestion,
   signedIn,
   displayName,
   anonymous,
@@ -28,6 +35,8 @@ export function CommentComposer({
 }: {
   target: CommentTarget;
   onClearTarget: () => void;
+  quotableQuestions: QuotableQuestion[];
+  onQuoteQuestion: (q: QuotableQuestion) => void;
   signedIn: boolean;
   displayName: string | null;
   anonymous: boolean;
@@ -68,6 +77,15 @@ export function CommentComposer({
         ? t("replyingTo", { name: target.authorLabel ?? t("someoneAnonymous") })
         : null;
 
+  // Group the quotable questions by their round for the dropdown's <optgroup>s,
+  // preserving the report's round order.
+  const quoteGroups: { round: string; items: QuotableQuestion[] }[] = [];
+  for (const q of quotableQuestions) {
+    const last = quoteGroups[quoteGroups.length - 1];
+    if (last && last.round === q.round) last.items.push(q);
+    else quoteGroups.push({ round: q.round, items: [q] });
+  }
+
   return (
     <form
       className={styles.composer}
@@ -89,6 +107,30 @@ export function CommentComposer({
             ✕
           </button>
         </div>
+      )}
+
+      {quoteGroups.length > 0 && (
+        <select
+          className={styles.composer__quote}
+          aria-label={t("quotePicker")}
+          value=""
+          onChange={(e) => {
+            const q = quotableQuestions.find((x) => x.id === e.target.value);
+            if (q) onQuoteQuestion(q);
+            e.currentTarget.value = "";
+          }}
+        >
+          <option value="">{t("quotePicker")}</option>
+          {quoteGroups.map((g) => (
+            <optgroup key={g.round} label={g.round}>
+              {g.items.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {truncate(q.prose, QUOTE_OPTION_MAX)}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
       )}
 
       <FtlTextarea

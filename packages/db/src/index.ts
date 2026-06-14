@@ -104,3 +104,7 @@ export * from "./search-index.js";
 // Public browse reads: /companies index + rollup pages + wedge cell list +
 // the slug lookups the canonical URL resolver composes (Sprint 4).
 export * from "./browse.js";
+
+// Moderation: queue read-models + approve/reject commands + logModAction audit
+// write, behind /admin/queues/* (Sprint 6).
+export * from "./moderation.js";

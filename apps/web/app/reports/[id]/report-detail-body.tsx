@@ -34,16 +34,11 @@ export function ReportDetailBody({
   eyebrow,
   byline,
   hideRounds = false,
-  renderQuestionAffordance,
 }: {
   detail: ReportDetailView;
   eyebrow: string;
   byline: ReactNode;
   hideRounds?: boolean;
-  // ADR-0011: an optional per-question slot (the inline "Reply"/quote affordance).
-  // Only the report-conversation wrapper passes it; the SSR page and triage pane
-  // that render the body without comments simply omit it (no affordance shown).
-  renderQuestionAffordance?: (questionId: string, prose: string) => ReactNode;
 }) {
   const t = useTranslations("report");
   const tRounds = useTranslations("rounds");
@@ -163,7 +158,6 @@ export function ReportDetailBody({
                       {round.questions.map((q, qi) => (
                         <li key={qi} className={styles.question}>
                           <p className={styles.question__prose}>{q.prose}</p>
-                          {renderQuestionAffordance?.(q.id, q.prose)}
                         </li>
                       ))}
                     </ul>

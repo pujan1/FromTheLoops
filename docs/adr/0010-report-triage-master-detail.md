@@ -1,6 +1,7 @@
 ---
-status: proposed
+status: accepted
 date: 2026-06-09
+accepted: 2026-06-13
 deciders: [pujan]
 ---
 

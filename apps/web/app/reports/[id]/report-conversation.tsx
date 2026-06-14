@@ -13,16 +13,22 @@ import type { CommentView, ReportDetailView } from "@fromtheloop/db";
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { CommentsSection } from "./comments-section";
-import { HelpfulFlagButton } from "./helpful-flag-button";
 import { PostEngagement } from "./post-engagement";
 import { ReportDetailBody } from "./report-detail-body";
-import styles from "./reports.module.css";
 
 // The thing a new comment quotes: one question, one comment, or nothing.
 export type CommentTarget =
   | { kind: "question"; questionId: string; text: string }
   | { kind: "comment"; commentId: string; text: string; authorLabel: string | null }
   | null;
+
+// A question the composer's "quote" dropdown can pick, flattened across rounds
+// with a human round label for the <optgroup> heading.
+export interface QuotableQuestion {
+  id: string;
+  prose: string;
+  round: string;
+}
 
 export interface ConversationEngagement {
   postLike: { liked: boolean; count: number };
@@ -56,25 +62,22 @@ export function ReportConversation({
   engagement: ConversationEngagement;
   collapsedComments?: boolean;
 }) {
-  const t = useTranslations("report.comments");
+  const tRounds = useTranslations("rounds");
   const [target, setTarget] = useState<CommentTarget>(null);
+
+  // Flatten the report's questions so the composer can offer them in a "quote"
+  // dropdown — replacing the old per-question inline quote button.
+  const quotableQuestions: QuotableQuestion[] = detail.rounds.flatMap((round) =>
+    round.questions.map((q) => ({
+      id: q.id,
+      prose: q.prose,
+      round: tRounds(`type.${round.roundType}`),
+    })),
+  );
 
   return (
     <>
-      <ReportDetailBody
-        detail={detail}
-        eyebrow={eyebrow}
-        byline={byline}
-        renderQuestionAffordance={(questionId, prose) => (
-          <button
-            type="button"
-            className={styles.question__reply}
-            onClick={() => setTarget({ kind: "question", questionId, text: prose })}
-          >
-            {t("quoteThis")}
-          </button>
-        )}
-      />
+      <ReportDetailBody detail={detail} eyebrow={eyebrow} byline={byline} />
 
       <PostEngagement
         reportId={reportId}
@@ -82,16 +85,6 @@ export function ReportConversation({
         initialLiked={engagement.postLike.liked}
         initialLikeCount={engagement.postLike.count}
       />
-
-      {engagement.helpful && (
-        <HelpfulFlagButton
-          reportId={reportId}
-          initialFlagged={engagement.helpful.flagged}
-          initialCount={engagement.helpful.count}
-          canFlag={engagement.helpful.canFlag}
-          reason={engagement.helpful.reason}
-        />
-      )}
 
       <CommentsSection
         reportId={reportId}
@@ -101,6 +94,7 @@ export function ReportConversation({
         initialComments={engagement.comments.initial}
         initialHasMore={engagement.comments.hasMore}
         initialCount={engagement.comments.count}
+        quotableQuestions={quotableQuestions}
         target={target}
         setTarget={setTarget}
         collapsed={collapsedComments}

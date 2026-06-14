@@ -1,0 +1,1 @@
+ALTER TYPE "public"."taxonomy_status" ADD VALUE 'rejected';

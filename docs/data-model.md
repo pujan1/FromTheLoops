@@ -63,7 +63,7 @@ Source: [`packages/db/src/schema/enums.ts`](../packages/db/src/schema/enums.ts).
 | `report_status` | `active`, `pending_moderation`, `deleted` | `interview_reports.status` |
 | `report_outcome` | `offer`, `reject`, `withdrew`, `ghosted`, `pending` | `interview_reports.outcome`, shared submission schemas |
 | `display_attribution` | `display_name`, `anonymous` | `interview_reports.display_attribution`, shared submission schemas |
-| `taxonomy_status` | `active`, `pending`, `merged` | companies, roles, topics, company levels |
+| `taxonomy_status` | `active`, `pending`, `merged`, `rejected` | companies, roles, topics, company levels |
 | `taxonomy_source` | `seed_curated`, `user_suggested` | companies, roles, topics, company levels |
 | `level_tier` | `junior`, `mid`, `senior`, `staff`, `senior_staff`, `principal` | `company_levels.tier` |
 | `topic_category` | `algorithms`, `system-design`, `fundamentals`, `machine-learning`, `data-engineering`, `infrastructure`, `behavioral` | `topics.category` |
