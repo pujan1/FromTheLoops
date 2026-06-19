@@ -14,6 +14,7 @@ const QUEUE_TABS: Tab[] = [
   { href: "/admin/queues/companies", label: "Companies" },
   { href: "/admin/queues/tags", label: "Tags" },
   { href: "/admin/queues/roles", label: "Roles" },
+  { href: "/admin/audit", label: "Audit" },
 ];
 
 export function AdminNav({ canSeeHealth }: { canSeeHealth: boolean }) {

@@ -37,7 +37,13 @@ export function getDb(): Database {
   //   Neon's connection pooler (transaction-mode PgBouncer doesn't preserve
   //   prepared-statement state across pooled connections). Disabling here
   //   means the same client works locally and on Neon without surprises.
-  const client = postgres(url, { max: 10, prepare: false });
+  // idle_timeout (seconds) — close idle pooled connections instead of holding
+  //   them open forever (postgres.js default). Critical for Neon's free-tier
+  //   scale-to-zero: the compute only suspends with zero open connections, so a
+  //   lingering idle handle (esp. the long-lived worker) would pin it awake 24/7
+  //   and burn the monthly compute allowance. Env-overridable; 20s default.
+  const idleTimeout = Number(process.env.DB_IDLE_TIMEOUT_S) || 20;
+  const client = postgres(url, { max: 10, prepare: false, idle_timeout: idleTimeout });
   const db = drizzle(client, { schema });
   cached = { client, db };
   return db;

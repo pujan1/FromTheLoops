@@ -25,10 +25,16 @@ export const REFRESH_AGGREGATE_QUEUE = "refresh-aggregate";
 export const REFRESH_EVENT_JOB = "event"; // data: { eventId }
 export const REFRESH_SWEEP_JOB = "sweep"; // repeatable fallback, no data
 
-// Fallback sweep cadence. NOTIFY delivers in milliseconds; this only has to
-// catch the rare dropped notification, so a loose interval is plenty.
+// Fallback sweep cadence. With the LISTEN fast path ON this only catches the
+// rare dropped notification, so the interval is loose. With it OFF (Neon free
+// tier — the default) the sweep IS the delivery path, and the interval is long
+// (30 min default) so the worker leaves Neon idle long enough to scale to zero
+// between sweeps — the gap must exceed Neon's ~5-min suspend timer. All three
+// consumer sweeps read the same env var so they fire together (one Neon wake
+// window, not three). Lower WORKER_SWEEP_EVERY_MS for fresher data once off a
+// compute-capped plan.
 export const REFRESH_SWEEP_SCHEDULER = "refresh-aggregate-sweep";
-export const REFRESH_SWEEP_EVERY_MS = 30_000;
+export const REFRESH_SWEEP_EVERY_MS = Number(process.env.WORKER_SWEEP_EVERY_MS) || 1_800_000;
 
 // Per-event job options. jobId dedupes NOTIFY re-deliveries of the same event;
 // attempts+backoff give BullMQ-level retry so a transient DB error or a mid-job

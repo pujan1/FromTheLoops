@@ -151,30 +151,44 @@ try {
   Sentry.captureException(err, { tags: { phase: "boot-provision" } });
 }
 
-// One LISTEN connection fans every report-write NOTIFY out to BOTH consumers.
-const eventListener = await startEventListener([
-  {
-    queue: refreshAggregateQueue,
-    jobName: REFRESH_EVENT_JOB,
-    jobId: eventJobId,
-    jobOpts: REFRESH_EVENT_JOB_OPTS,
-    label: "refresh-aggregate",
-  },
-  {
-    queue: indexTypesenseQueue,
-    jobName: INDEX_EVENT_JOB,
-    jobId: indexEventJobId,
-    jobOpts: INDEX_EVENT_JOB_OPTS,
-    label: "index-typesense",
-  },
-  {
-    queue: recomputeKarmaQueue,
-    jobName: KARMA_EVENT_JOB,
-    jobId: karmaEventJobId,
-    jobOpts: KARMA_EVENT_JOB_OPTS,
-    label: "recompute-karma",
-  },
-]);
+// One LISTEN connection fans every report-write NOTIFY out to BOTH consumers —
+// the real-time fast path. It holds a Postgres connection open for the worker's
+// whole lifetime, which on Neon's free tier blocks scale-to-zero and burns the
+// monthly compute allowance. So it's opt-in: off by default (the fallback sweeps
+// below still drain the outbox, just at sweep latency instead of sub-second),
+// flip WORKER_EVENT_LISTENER=on once on a plan without a compute cap (Neon
+// Launch). See docs/scaling.md rung 1.
+const EVENT_LISTENER_ENABLED = process.env.WORKER_EVENT_LISTENER === "on";
+const eventListener = EVENT_LISTENER_ENABLED
+  ? await startEventListener([
+      {
+        queue: refreshAggregateQueue,
+        jobName: REFRESH_EVENT_JOB,
+        jobId: eventJobId,
+        jobOpts: REFRESH_EVENT_JOB_OPTS,
+        label: "refresh-aggregate",
+      },
+      {
+        queue: indexTypesenseQueue,
+        jobName: INDEX_EVENT_JOB,
+        jobId: indexEventJobId,
+        jobOpts: INDEX_EVENT_JOB_OPTS,
+        label: "index-typesense",
+      },
+      {
+        queue: recomputeKarmaQueue,
+        jobName: KARMA_EVENT_JOB,
+        jobId: karmaEventJobId,
+        jobOpts: KARMA_EVENT_JOB_OPTS,
+        label: "recompute-karma",
+      },
+    ])
+  : null;
+if (!EVENT_LISTENER_ENABLED) {
+  console.log(
+    "[worker] event listener OFF (WORKER_EVENT_LISTENER!=on) — outbox drains via fallback sweeps only, letting Neon scale to zero between them",
+  );
+}
 
 const workers = [
   helloWorker,
@@ -225,7 +239,7 @@ for (const w of workers) {
 const shutdown = async (signal: string) => {
   console.log(`[worker] ${signal} — shutting down`);
   // Stop accepting NOTIFY-driven enqueues before tearing down the queue.
-  await eventListener.close();
+  if (eventListener) await eventListener.close();
   await Promise.all(workers.map((w) => w.close()));
   await Promise.all([
     purgeQueue.close(),

@@ -37,7 +37,9 @@ export const KARMA_RECOMPUTE_JOB = "recompute"; // data: { userId }, deduped
 export const KARMA_SWEEP_JOB = "sweep"; // repeatable fallback, no data
 
 export const KARMA_SWEEP_SCHEDULER = "recompute-karma-sweep";
-export const KARMA_SWEEP_EVERY_MS = 30_000;
+// See refresh-aggregate.ts for the cadence rationale (Neon scale-to-zero). Same
+// env var across all three sweeps so they wake Neon in one window.
+export const KARMA_SWEEP_EVERY_MS = Number(process.env.WORKER_SWEEP_EVERY_MS) || 1_800_000;
 
 // The debounce window. A burst of events for one user inside this window
 // collapses to one recompute (BullMQ deduplication). Short enough that the

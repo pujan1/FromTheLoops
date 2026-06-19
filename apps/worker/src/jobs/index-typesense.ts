@@ -25,7 +25,9 @@ export const INDEX_EVENT_JOB = "event"; // data: { eventId }
 export const INDEX_SWEEP_JOB = "sweep"; // repeatable fallback, no data
 
 export const INDEX_SWEEP_SCHEDULER = "index-typesense-sweep";
-export const INDEX_SWEEP_EVERY_MS = 30_000;
+// See refresh-aggregate.ts for the cadence rationale (Neon scale-to-zero). Same
+// env var across all three sweeps so they wake Neon in one window.
+export const INDEX_SWEEP_EVERY_MS = Number(process.env.WORKER_SWEEP_EVERY_MS) || 1_800_000;
 
 // jobId dedupes NOTIFY re-deliveries; attempts+backoff retry a transient
 // Typesense blip without losing the index write.

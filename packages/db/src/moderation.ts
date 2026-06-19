@@ -132,6 +132,68 @@ export async function listPendingRoles(db: Db): Promise<PendingRoleItem[]> {
     .orderBy(desc(roles.createdAt));
 }
 
+/* --------------------------- audit history ----------------------------- */
+// The read side of the audit log (Day 4). logModAction writes; this reads back.
+// One query serves two surfaces: pass no target for the global recent-activity
+// feed (/admin/audit), or a (targetType, targetId) pair for "everything that
+// happened to this entity". Joins the acting mod so the view shows a name, not
+// a UUID. Ordered newest-first; capped so the global feed can't run away.
+
+export type ModActionLogItem = {
+  id: string;
+  actionType: ModActionType;
+  targetType: string;
+  targetId: string;
+  reason: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+  // Acting moderator, resolved to a human label (displayName ?? username).
+  // Null only if the mod row was purged — the FK is ON DELETE RESTRICT, so in
+  // practice the join always lands.
+  modName: string | null;
+  modKarma: number | null;
+};
+
+export async function listModActions(
+  db: Db,
+  opts: { targetType?: string; targetId?: string; limit?: number } = {},
+): Promise<ModActionLogItem[]> {
+  const filters = [];
+  if (opts.targetType) filters.push(eq(modActionLogs.targetType, opts.targetType));
+  if (opts.targetId) filters.push(eq(modActionLogs.targetId, opts.targetId));
+
+  const rows = await db
+    .select({
+      id: modActionLogs.id,
+      actionType: modActionLogs.actionType,
+      targetType: modActionLogs.targetType,
+      targetId: modActionLogs.targetId,
+      reason: modActionLogs.reason,
+      metadata: modActionLogs.metadata,
+      createdAt: modActionLogs.createdAt,
+      modDisplayName: users.displayName,
+      modUsername: users.username,
+      modKarma: users.karma,
+    })
+    .from(modActionLogs)
+    .leftJoin(users, eq(modActionLogs.modUserId, users.id))
+    .where(filters.length ? and(...filters) : undefined)
+    .orderBy(desc(modActionLogs.createdAt))
+    .limit(opts.limit ?? 100);
+
+  return rows.map((r) => ({
+    id: r.id,
+    actionType: r.actionType,
+    targetType: r.targetType,
+    targetId: r.targetId,
+    reason: r.reason,
+    metadata: (r.metadata as Record<string, unknown> | null) ?? null,
+    createdAt: r.createdAt,
+    modName: r.modDisplayName ?? r.modUsername ?? null,
+    modKarma: r.modKarma,
+  }));
+}
+
 /* ------------------------------ commands ------------------------------- */
 // All return true iff a pending row was actually transitioned — so the queue UI
 // drops exactly the rows that changed, and a double-submit is a logged no-op

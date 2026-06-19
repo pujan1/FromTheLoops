@@ -202,3 +202,39 @@ pulled Day 4's audit log forward so no mod action ever runs unlogged.
   auto-approve work (Day 8), which needs the same dedup signal.
 - ⏭ UI click-through left for the operator (the MCP browser isn't signed in);
   seeded 3 pending companies / 1 topic / 1 role in dev for that.
+
+### Day 4 — audit history view ✅ 🟢
+
+Closed out Day 4: the *write* side (`logModAction` + the reason input) was pulled
+forward into Days 2–3, so all that remained was the **read** — surfacing
+`mod_action_logs` to a moderator.
+
+- **Read-model (`packages/db/src/moderation.ts`).** `listModActions(db, {
+  targetType?, targetId?, limit? })` — one query, two surfaces: omit the target
+  for a global recent-activity feed, or pass `(targetType, targetId)` for
+  "everything that happened to this entity". Left-joins `users` so the row shows
+  the acting mod's name (`displayName ?? username`) + karma, not a raw UUID.
+  Newest-first, default cap 100. Returns a render-ready `ModActionLogItem[]`.
+- **Page (`app/admin/audit/page.tsx`, server, `requireModerator()`).** A timeline
+  feed — one dot per action, tinted by action tone (approve/merge green, reject/
+  hide amber, delete/ban red), the mod + verb + target as a sentence, the logged
+  reason in a quoted block, relative + absolute (hover) timestamps. Each row's
+  target id deep-links to `?type=&id=` for that entity's scoped history; `merge`
+  rows also link their `metadata.mergedInto` canonical. Empty + scoped states
+  handled. New **Audit** tab in `_components/admin-nav.tsx` (moderator-visible).
+- **Verified.** web + db typecheck clean, web lint clean (one pre-existing warning
+  in `theme-toggle.tsx`, unrelated). Exercised the write→read path end-to-end via
+  a throwaway probe (deleted): `logModAction` row read back both globally and
+  entity-scoped, mod name joined correctly, reason preserved — then cleaned up,
+  dev DB left untouched.
+
+**Decisions / deferrals**
+- **No per-queue-row history badge.** A taxonomy row leaves the pending queue
+  permanently on its first action (reject → `rejected`, never re-enters pending),
+  so a "prior action on this id" badge would essentially never fire on the 3 live
+  queues. The entity-scoped audit URL is the honest home for that; it lights up
+  for the evidence/flags queues and entity pages on their sprint days.
+- ⏭ **Queue-row / entity-page deep-links into the audit view** aren't wired yet
+  (the `ModQueueItem.href` slot renders "Inspect ↗" for full-entity inspection, a
+  different intent). Trivial to add once entity pages exist (Days 5–7).
+- ⏭ UI click-through still left for the operator (MCP browser unauthenticated).
