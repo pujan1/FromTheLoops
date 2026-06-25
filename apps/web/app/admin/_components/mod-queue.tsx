@@ -12,12 +12,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { FtlInput, FtlTextarea } from "@/components/ui";
+import { relativeTime } from "@/lib/format";
 import type {
   ModQueueItem,
   QueueAction,
   QueueActionFn,
   QueueConfig,
 } from "../queues/queue-config";
+import { haystack } from "./mod-queue.helpers";
 import styles from "./mod-queue.module.css";
 
 type Prompt = {
@@ -25,22 +27,6 @@ type Prompt = {
   ids: string[];
   scope: "row" | "bulk";
 };
-
-function relativeTime(iso: string): string {
-  const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-}
-
-const haystack = (item: ModQueueItem): string =>
-  [item.primary, item.secondary, ...(item.fields?.map((f) => f.value) ?? [])]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
 
 export function ModQueue({
   config,

@@ -11,22 +11,43 @@
 // reads use db.execute(sql`…`) with a typed row alias, mirroring getAggregate in
 // aggregates.ts (postgres.js returns COUNT as a string, so every read casts
 // `::int` in SQL and the mapper coerces with Number() defensively).
+//
+// Row/filter shapes live in ./browse-types.js; the shared visibility/scope/
+// filter SQL composition lives in ./browse-helpers.js.
 
-import { and, eq, isNull } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { and, eq } from "drizzle-orm";
 import { sql, type SQL } from "drizzle-orm";
-import type { RoleCellKey } from "./aggregates.js";
-import * as schema from "./schema/index.js";
-import { companies, companyLevels, roles, topics } from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
-
-// A resolved taxonomy node: the trio the URL resolver and page headers need.
-export interface TaxonomyRef {
-  id: string;
-  slug: string;
-  name: string;
-}
+import type { RoleCellKey } from "../pipeline/aggregates.js";
+import type { Db } from "../lib/types.js";
+import { companies, companyLevels, roles, topics } from "../schema/index.js";
+import {
+  companyReportWhere,
+  HELPFUL_FLAG_LATERAL,
+  REPORT_LIST_ORDER,
+  reportFilterConditions,
+  roleReportWhere,
+  userReportWhere,
+  VISIBLE,
+} from "./browse-helpers.js";
+import type {
+  CellKey,
+  CellReportFilters,
+  CellReportList,
+  CellReportSqlRow,
+  CompanyBrowseRow,
+  CompanyBrowseSqlRow,
+  CompanyStats,
+  CompanyTopicRow,
+  LevelBrowseRow,
+  LevelBrowseSqlRow,
+  RoleBrowseRow,
+  RoleBrowseSqlRow,
+  TaxonomyRef,
+  TopicBrowseRow,
+  TopicBrowseSqlRow,
+  TopicQuestionList,
+  TopicQuestionSqlRow,
+} from "./browse-types.js";
 
 // ---------------------------------------------------------------------------
 // Slug lookups — the resolver's primitives. Active rows only (a pending/merged
@@ -88,17 +109,6 @@ export async function getCompanyLevelBySlug(
 // a company/role/level with no public reports is not a page worth linking.
 // ---------------------------------------------------------------------------
 
-export interface CompanyBrowseRow extends TaxonomyRef {
-  reportCount: number;
-}
-
-type CompanyBrowseSqlRow = {
-  id: string;
-  slug: string;
-  name: string;
-  report_count: number | string;
-};
-
 // Companies that have ≥1 visible report, busiest first. Drives /companies.
 export async function listCompaniesWithReports(
   db: Db,
@@ -122,12 +132,6 @@ export async function listCompaniesWithReports(
     reportCount: Number(r.report_count),
   }));
 }
-
-export interface RoleBrowseRow extends TaxonomyRef {
-  reportCount: number;
-}
-
-type RoleBrowseSqlRow = CompanyBrowseSqlRow;
 
 // Roles with ≥1 visible report at one company, busiest first. Drives
 // /companies/[company].
@@ -155,23 +159,6 @@ export async function listRolesForCompanyWithReports(
     reportCount: Number(r.report_count),
   }));
 }
-
-// A level rung in a (company, role) rollup. `slug` is null when the report's
-// level text has no matching company_levels row (a custom / "N/A" level) — such
-// a rung has no canonical wedge URL, so the page renders it without a link.
-export interface LevelBrowseRow {
-  slug: string | null;
-  name: string;
-  orderIndex: number | null;
-  reportCount: number;
-}
-
-type LevelBrowseSqlRow = {
-  slug: string | null;
-  name: string;
-  order_index: number | string | null;
-  report_count: number | string;
-};
 
 // Distinct level values for a (company, role), with counts. Grouped on the
 // report's text `level` (what the wedge index + aggregate are keyed on), left
@@ -208,153 +195,9 @@ export async function listLevelsForCompanyRoleWithReports(
 // ---------------------------------------------------------------------------
 // Wedge cell report list (Position X). Day 2 shipped paginated + unfiltered;
 // Day 4 added the per-report topic chips; Day 5 layers the filter predicates
-// (outcome / round-type / topics / trust-tier) on top of the same read.
+// (outcome / round-type / topics / trust-tier) on top of the same read. The
+// scope/visibility/filter WHERE composition lives in ./browse-helpers.js.
 // ---------------------------------------------------------------------------
-
-// A topic shown as a chip on a report card. Slug links to /topics/[slug].
-export interface CellReportTopic {
-  slug: string;
-  name: string;
-}
-
-export interface CellReportListItem {
-  id: string;
-  outcome: schema.InterviewReport["outcome"];
-  level: string;
-  // The report's company — carried per-row so a cross-company feed (the user
-  // profile) can label + link each card; constant on the company/role/level
-  // pages (which pass `companyName` to ReportList once).
-  companySlug: string;
-  companyName: string;
-  // The report's canonical role — carried per-row so a cross-role feed (the
-  // company page) can label + link each card; constant on the role/level pages.
-  roleSlug: string;
-  roleName: string;
-  interviewMonth: string;
-  roundCount: number;
-  evidenceVerified: boolean;
-  // The author's display name when the report opted into attribution; null when
-  // anonymous (the page renders "Anonymous").
-  authorName: string | null;
-  // Distinct topics across the report's questions, name-sorted. The card slices
-  // the first few; the full set rides along for callers that want it.
-  topics: CellReportTopic[];
-  // How many readers flagged this report helpful (verified, non-self flaggers
-  // only — the same population that earns the author karma). Surfaced on the
-  // card and the input to the list's karma-weighted ordering (see runReportList).
-  helpfulCount: number;
-  createdAt: Date;
-}
-
-export interface CellReportList {
-  items: CellReportListItem[];
-  total: number;
-}
-
-export interface CellKey {
-  companyId: string;
-  canonicalRoleId: string;
-  level: string;
-}
-
-// The Position-X filters, mirroring the shared `reportFiltersSchema`
-// (packages/shared/url) minus the search-only fields. All optional; an absent
-// field is "no constraint", so an unfiltered call is the Day-2 behavior. The
-// types are the db's own enum-derived types — browse.ts stays free of a
-// @fromtheloop/shared dep (same rule as aggregates.ts).
-export interface CellReportFilters {
-  outcome?: schema.InterviewReport["outcome"];
-  roundType?: schema.Round["roundType"];
-  // Topic slugs; a report matches if it carries ANY of them (OR within the
-  // facet — friendlier than AND on sparse data; documented in ADR / sprint).
-  topics?: string[];
-  // Trust-tier floor: when true, only evidence-verified reports.
-  verifiedOnly?: boolean;
-  // Level facet (role-page only): pin to a single level text. The role page
-  // lists ALL levels by default; this narrows to one (e.g. ?level=L4 → the
-  // exact level text the slug resolves to). Ignored on the level-pinned read.
-  level?: string;
-}
-
-type CellReportSqlRow = {
-  id: string;
-  outcome: schema.InterviewReport["outcome"];
-  level: string;
-  company_slug: string;
-  company_name: string;
-  role_slug: string;
-  role_name: string;
-  interview_month: string;
-  round_count: number | string;
-  evidence_verified: boolean;
-  author_name: string | null;
-  topics: CellReportTopic[] | null;
-  helpful_count: number | string;
-  created_at: string | Date;
-  total: number | string;
-};
-
-// The optional, facet-driven WHERE clauses shared by every report-list read
-// (cell / role / company). The scope clauses (company/role/level) are the
-// caller's; these are the user-toggled filters. Topic / round-type filters are
-// EXISTS sub-selects so a report is counted once however many of its
-// rounds/questions match. Returns the extra conditions to AND onto the scope.
-function reportFilterConditions(filters?: CellReportFilters): SQL[] {
-  const conditions: SQL[] = [];
-  if (!filters) return conditions;
-  if (filters.outcome) conditions.push(sql`r.outcome = ${filters.outcome}`);
-  if (filters.level) conditions.push(sql`r.level = ${filters.level}`);
-  if (filters.verifiedOnly) conditions.push(sql`r.evidence_verified = true`);
-  if (filters.roundType) {
-    conditions.push(sql`EXISTS (
-      SELECT 1 FROM rounds rd
-      WHERE rd.report_id = r.id AND rd.round_type = ${filters.roundType}
-    )`);
-  }
-  if (filters.topics && filters.topics.length > 0) {
-    // IN-list (one bound param per slug) rather than `= ANY($arr)` — drizzle's
-    // sql template binds a JS array as a scalar, which postgres rejects as a
-    // malformed array literal.
-    const slugList = sql.join(
-      filters.topics.map((slug) => sql`${slug}`),
-      sql`, `,
-    );
-    conditions.push(sql`EXISTS (
-      SELECT 1 FROM rounds rd
-      JOIN questions q ON q.round_id = rd.id
-      JOIN question_topics qt ON qt.question_id = q.id
-      JOIN topics t ON t.id = qt.topic_id
-      WHERE rd.report_id = r.id AND t.slug IN (${slugList})
-    )`);
-  }
-  return conditions;
-}
-
-// Helpful-flag signal per report (PLAN.md §Karma "helpful-flag-weighted
-// aggregation ranking"), shared verbatim by the paginated list read and the
-// ordered-ID provider so the two can NEVER disagree on ordering. cnt = how many
-// readers flagged it (display); score = karma-weighted sum, weighting each VALID
-// flag by the FLAGGER's karma (GREATEST(.,1) so every flag counts ≥1 and a
-// heavier flagger lifts more). We weight by the flagger, never the submitter —
-// "no submitter-rank boost" (the rich-get-richer trap PLAN.md avoids). Self-flags
-// and unverified flaggers are excluded, matching the karma earn rule.
-const HELPFUL_FLAG_LATERAL = sql`
-  LEFT JOIN LATERAL (
-    SELECT COUNT(*)::int AS cnt,
-           COALESCE(SUM(GREATEST(fu.karma, 1)), 0)::int AS score
-    FROM helpful_flags hf
-    JOIN users fu ON fu.id = hf.flagger_user_id
-    WHERE hf.report_id = r.id
-      AND fu.id <> r.created_by_user_id
-      AND EXISTS (
-        SELECT 1 FROM user_verifications v WHERE v.user_id = hf.flagger_user_id
-      )
-  ) hflag ON true`;
-
-// Karma-weighted helpful signal first, recency as the tiebreak. Unflagged
-// reports all score 0, so they keep newest-first order — the signal only lifts
-// reports readers have endorsed. Consumed by both reads below.
-const REPORT_LIST_ORDER = sql`ORDER BY hflag.score DESC, r.created_at DESC`;
 
 // The one report-list query. Takes the already-built WHERE (scope + filters),
 // runs the paginated, newest-first read with the window total, and maps rows.
@@ -418,8 +261,6 @@ async function runReportList(
   };
 }
 
-const VISIBLE = [sql`r.status = 'active'`, sql`r.deleted_at IS NULL`];
-
 // One page of visible reports for a (company, role, level) cell, newest first,
 // plus the window total (over() so it costs one query, not two). Optional
 // `filters` narrow the result set (and the window total, so pagination reflects
@@ -451,20 +292,6 @@ export async function listReportsForRole(
   opts: { limit: number; offset: number; filters?: CellReportFilters },
 ): Promise<CellReportList> {
   return runReportList(db, roleReportWhere(cell, opts.filters), opts);
-}
-
-// The (company, role) scope + filter WHERE, shared by the paginated list read
-// and the ordered-ID provider so the pane walks the SAME set the list paginates.
-function roleReportWhere(cell: RoleCellKey, filters?: CellReportFilters): SQL {
-  return sql.join(
-    [
-      sql`r.company_id = ${cell.companyId}::uuid`,
-      sql`r.canonical_role_id = ${cell.canonicalRoleId}::uuid`,
-      ...VISIBLE,
-      ...reportFilterConditions(filters),
-    ],
-    sql` AND `,
-  );
 }
 
 // The full, ordered ID list for a (company, role) under the active filter —
@@ -516,22 +343,6 @@ export async function listReportsForUser(
   return runReportList(db, userReportWhere(userId, opts.filters), opts);
 }
 
-// The profile scope + filter WHERE, shared by the paginated list and the
-// ordered-ID provider (so the pane walks the SAME attributed set). The
-// display_attribution='display_name' predicate IS the privacy boundary — an
-// anonymously-posted report is absent from both reads identically.
-function userReportWhere(userId: string, filters?: CellReportFilters): SQL {
-  return sql.join(
-    [
-      sql`r.created_by_user_id = ${userId}::uuid`,
-      sql`r.display_attribution = 'display_name'`,
-      ...VISIBLE,
-      ...reportFilterConditions(filters),
-    ],
-    sql` AND `,
-  );
-}
-
 // Ordered-ID provider for the profile feed (ADR-0010). Same scope + filters as
 // listReportsForUser, so the triage pane/sheet steps through the exact attributed
 // set the page paginates. See listReportIdsForRole for the cap semantics.
@@ -556,19 +367,6 @@ export async function listReportsForCompany(
   return runReportList(db, companyReportWhere(companyId, opts.filters), opts);
 }
 
-// The company-feed scope + filter WHERE (all roles at one company), shared by the
-// paginated list and the ordered-ID provider so the pane walks the SAME set.
-function companyReportWhere(companyId: string, filters?: CellReportFilters): SQL {
-  return sql.join(
-    [
-      sql`r.company_id = ${companyId}::uuid`,
-      ...VISIBLE,
-      ...reportFilterConditions(filters),
-    ],
-    sql` AND `,
-  );
-}
-
 // Ordered-ID provider for the company feed (ADR-0010). Same scope + filters as
 // listReportsForCompany. See listReportIdsForRole for the cap semantics.
 export async function listReportIdsForCompany(
@@ -581,11 +379,6 @@ export async function listReportIdsForCompany(
 
 // Headline counts for the company page header: total visible reports + how many
 // distinct roles they span. One round-trip.
-export interface CompanyStats {
-  reportCount: number;
-  roleCount: number;
-}
-
 export async function getCompanyStats(
   db: Db,
   companyId: string,
@@ -657,28 +450,6 @@ export async function getTopicBySlug(
   return rows[0] ?? null;
 }
 
-// One topic row for the /topics index. `category` is the curated grouping the
-// page renders sections from (null → the "Other" bucket). Counts are over
-// VISIBLE reports only: questionCount = distinct tagged questions, reportCount =
-// distinct reports those questions live in (the count badge the page shows).
-export interface TopicBrowseRow {
-  id: string;
-  slug: string;
-  name: string;
-  category: schema.Topic["category"];
-  questionCount: number;
-  reportCount: number;
-}
-
-type TopicBrowseSqlRow = {
-  id: string;
-  slug: string;
-  name: string;
-  category: schema.Topic["category"];
-  question_count: number | string;
-  report_count: number | string;
-};
-
 // Every active topic with its visible question/report counts, name-sorted. The
 // index page groups these by `category` in app code (category order is a
 // presentation concern). Topics with zero reports ARE included — the curated
@@ -743,46 +514,6 @@ export async function listCompaniesForTopic(
     reportCount: Number(r.report_count),
   }));
 }
-
-// One question in a topic's question list. Carries its source report's
-// company / role / level / outcome so the card can label itself and link to
-// /reports/[reportId]. (Question-grain: the same report contributes one row per
-// tagged question.)
-export interface TopicQuestionListItem {
-  questionId: string;
-  prose: string;
-  reportId: string;
-  companySlug: string;
-  companyName: string;
-  roleSlug: string;
-  roleName: string;
-  level: string;
-  outcome: schema.InterviewReport["outcome"];
-  interviewMonth: string;
-  evidenceVerified: boolean;
-  createdAt: Date;
-}
-
-export interface TopicQuestionList {
-  items: TopicQuestionListItem[];
-  total: number;
-}
-
-type TopicQuestionSqlRow = {
-  question_id: string;
-  prose: string;
-  report_id: string;
-  company_slug: string;
-  company_name: string;
-  role_slug: string;
-  role_name: string;
-  level: string;
-  outcome: schema.InterviewReport["outcome"];
-  interview_month: string;
-  evidence_verified: boolean;
-  created_at: string | Date;
-  total: number | string;
-};
 
 // One page of visible questions tagged with a topic, newest report first. With
 // `companyId` set, narrowed to that company (the /topics/[topic]/[company]
@@ -868,12 +599,6 @@ export async function countReportsForTopic(
 // section the Sprint 5 company rollup adds. Each row links to
 // /topics/[topic]/[company]. reportCount = distinct reports at the company whose
 // questions carry the topic; capped by the caller's `limit`.
-export interface CompanyTopicRow {
-  slug: string;
-  name: string;
-  reportCount: number;
-}
-
 export async function listTopTopicsForCompany(
   db: Db,
   companyId: string,

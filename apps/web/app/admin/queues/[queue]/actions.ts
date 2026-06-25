@@ -13,14 +13,17 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import {
+  approveHeldReport,
   approvePendingCompany,
   approvePendingRole,
   approvePendingTopic,
   getDb,
   getOrCreateUserByClerkId,
+  rejectHeldReport,
   rejectPendingCompany,
   rejectPendingRole,
   rejectPendingTopic,
+  restoreSoftDeleted,
 } from "@fromtheloop/db";
 import { requireModerator } from "@/lib/admin";
 import { isQueueId, type QueueActionFn, type QueueId } from "../queue-config";
@@ -36,6 +39,8 @@ const DISPATCH: Partial<Record<QueueId, Record<string, CommandFn>>> = {
   companies: { approve: approvePendingCompany, reject: rejectPendingCompany },
   tags: { approve: approvePendingTopic, reject: rejectPendingTopic },
   roles: { approve: approvePendingRole, reject: rejectPendingRole },
+  "soft-delete": { restore: restoreSoftDeleted },
+  "new-user-hold": { approve: approveHeldReport, reject: rejectHeldReport },
 };
 
 export const runQueueAction: QueueActionFn = async ({ queueId, actionId, itemIds, reason }) => {

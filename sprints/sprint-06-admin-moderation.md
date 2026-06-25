@@ -237,4 +237,97 @@ forward into Days 2–3, so all that remained was the **read** — surfacing
 - ⏭ **Queue-row / entity-page deep-links into the audit view** aren't wired yet
   (the `ModQueueItem.href` slot renders "Inspect ↗" for full-entity inspection, a
   different intent). Trivial to add once entity pages exist (Days 5–7).
+
+### Day 5 — trust-evidence upload ⏸️ PAUSED (R2 billing stuck)
+
+Started Day 5; **blocked before any code** on infra. R2 turned out **not
+provisioned** (`docs/technologies/cloudflare-r2.md`: "not integrated yet"; no
+`@aws-sdk`; no `R2_*` secrets). The operator's Cloudflare R2 subscription is
+stuck in a redirect loop (`/r2/overview` → `/r2/plans` even after "Purchase
+complete"), so the `fromtheloop-uploads` bucket couldn't be created. Day 5 — and
+**Day 6** (evidence review), which depends on it — are parked until R2 is
+un-stuck or we pivot storage (Vercel Blob was the considered alt). **Locked
+design (still valid):** evidence attaches **post-submit on the report page**
+(not inline in submit); new **`report_evidence`** table (report_id, uploaded_by,
+r2_key, content_hash, mime, status, reviewed_*, purge_at) — separate from
+`user_verifications` (that's the user→company work-email layer; Day 5 evidence is
+per-report and flips `reports.evidence_verified` → ✓✓).
+
+### Day 7 (partial) — soft-delete audit queue ✅ 🟢
+
+Pivoted off the R2-blocked work to the first **storage-free** Day-7 queue. The
+generic `<ModQueue>` + the Day-4 audit log carried almost all of it.
+
+- **Enum.** Added `restore` to `mod_action_type` (migration
+  `0019_exotic_proemial_gods.sql`, applied to dev) so an undelete reads as its
+  own verb in the audit log, not a mislabelled `approve`. Mirror updated in
+  `ModActionType` (moderation.ts), `tests/types.test.ts`, and the audit page's
+  `ACTION_TONE`/`ACTION_LABEL` (typecheck forces these — they're
+  `Record<ModActionType, …>`).
+- **DB (`packages/db/src/moderation.ts`).** `listSoftDeleted` — one read-model
+  spanning **both** soft-deleted reports and comments still inside the 90-day
+  window (`PII_RETENTION_MS`, reused from reports.ts so it matches the purge
+  job), excluding already-purged rows (their prose is gone). Heterogeneous list,
+  so each item carries a composite id `report:<uuid>` / `comment:<uuid>` +
+  `daysLeft` until purge. `restoreSoftDeleted` parses that id, flips
+  status `deleted`→`active` + clears `deleted_at` in a tx, guarded by
+  `status='deleted' AND pii_purged_at IS NULL` (idempotent; refuses gutted
+  content), logging `restore` with the real uuid as target.
+- **Web.** `loadItems` case + `DISPATCH["soft-delete"].restore` (the existing
+  generic `runQueueAction` needed nothing else); `Soft-delete` tab in admin-nav.
+  Rows show type/deleted-by/purge-countdown + a "purging soon" badge ≤7 days.
+- **Verified.** db + web typecheck clean, web lint clean (one pre-existing
+  unrelated warning), `tests/types.test.ts` 18/18. End-to-end probe (deleted
+  after): soft-delete a report → appears in queue (daysLeft 90) → restore →
+  active + `deleted_at` null + gone from queue → re-restore is a `false` no-op →
+  exactly one `restore` audit row (targetType `report`) → bad id returns `false`.
+  **11/11 asserts green**, report left in its original active state.
+
+**Decisions / deferrals**
+- Restore targets `active` (reverses the deletion to its visible state). A report
+  that was `pending_moderation` when deleted would also restore to `active` — an
+  accepted rare edge, since the admin is explicitly choosing to surface it.
+- ⏭ Remaining Day-7 queues: **new-user-hold** (reports already default to
+  `pending_moderation` — next unblocked one) and **community-flags** (needs a NEW
+  reader-abuse-report table; `helpful_flags` is a *positive* toggle, not abuse).
 - ⏭ UI click-through still left for the operator (MCP browser unauthenticated).
+
+### Day 7 (partial) — new-user-hold queue ✅ 🟢
+
+The second storage-free Day-7 queue, and the live **content gate**: every first
+submission lands `pending_moderation` (`decideInitialReportStatus` in core), and
+since nothing sets `evidence_verified` in V1, *every* report is held here until a
+mod releases it.
+
+- **Enum + blast-radius.** Added `rejected` to `report_status` (migration
+  `0020_marvelous_odin.sql`, dev-applied) for the reject verb. Chosen over
+  reusing `deleted` precisely so rejected content stays OUT of the soft-delete
+  *restore* queue (that filters `status='deleted'`). Audited the report status
+  predicates first: all public/aggregate reads use `='active'` (safe); the
+  `<>'deleted'` sites are owner/dedup, no public leak. Mirrors updated:
+  `tests/types.test.ts`, and the **owner dashboard badge** (`statusBadge` was
+  non-exhaustive — a `rejected` report would have mis-rendered as "Published";
+  now shows a danger "Not approved").
+- **DB (`moderation.ts`).** `listHeldReports` (pending reports + company/role/
+  author/karma context, newest-first). `approveHeldReport` → `active`, and
+  because pending→active makes the report newly countable it **emits an
+  `updated` report event in the same tx** so the aggregate cell recomputes and
+  search upserts the doc (the missing-event trap). `rejectHeldReport` → `rejected`
+  with the required reason; it was never active, so no event. Both guarded by
+  `status='pending_moderation'` → idempotent.
+- **Web.** `loadItems` case (rows deep-link to `/reports/:id`) + `DISPATCH`
+  `{approve, reject}` + a **Held** nav tab.
+- **Verified.** db+web typecheck, web lint, `types.test.ts` 18/18, and a probe
+  (cleaned up): held→approve→active + `updated` event emitted + one `approve`
+  log; held→reject→rejected + one `reject` log w/ reason; **rejected report
+  absent from BOTH the held queue AND the soft-delete queue**, and
+  `restoreSoftDeleted` refuses it. **13/13 green**, report restored to active.
+
+**Decisions / deferrals**
+- Rejected reports remain visible in the owner's own dashboard (`getReportsForUser`
+  keeps non-deleted rows) as "Not approved" — deliberate transparency. Surfacing
+  the rejection *reason* to the owner is deferred (the reason lives in the audit
+  log; no owner-facing reason channel yet).
+- ⏭ Last Day-7 queue, **community-flags**, still needs its own reader-abuse-report
+  table before it can be wired. Days 8–10 (auto-approve, reconciliation/blocklist,
+  runbook+ADR-0008) unchanged. Evidence (Days 5–6) still paused on R2.

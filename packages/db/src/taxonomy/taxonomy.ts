@@ -15,7 +15,6 @@
 // they're a closed canonical set with no suggest export.
 
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   companies,
   type Company,
@@ -24,12 +23,11 @@ import {
   roles,
   type Topic,
   topics,
-} from "./schema/index.js";
-import * as schema from "./schema/index.js";
+} from "../schema/index.js";
+import type { Db } from "../lib/types.js";
 import { slugify } from "./slug.js";
 
 // Loose db type so both getDb()'s client and the test client satisfy it.
-type Db = PostgresJsDatabase<typeof schema>;
 
 // Type aliases (not interfaces) so they carry an implicit index signature —
 // db.execute<T>() constrains T to Record<string, unknown>.

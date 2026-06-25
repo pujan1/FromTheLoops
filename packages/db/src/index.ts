@@ -70,47 +70,26 @@ export { sql } from "drizzle-orm";
 export { schema };
 export * from "./schema/index.js";
 
-// Taxonomy lookup + suggest-pending helpers. Apps import these for
-// autocomplete; they ride the pg_trgm indexes from migration 0002.
-export * from "./taxonomy.js";
+// Each domain lives in its own folder with a barrel; this re-exports them so
+// callers keep importing everything from "@fromtheloop/db". See each folder's
+// index.ts for what it groups.
 
-// User upsert-on-visit + submission-draft data-access.
-export * from "./users.js";
-export * from "./drafts.js";
+// Taxonomy lookup + suggest-pending helpers + slugify (pg_trgm, migration 0002).
+export * from "./taxonomy/index.js";
 
-// Interview-report transactional writes + edit-flow reads.
-export * from "./reports.js";
+// Users: upsert-on-visit identity, profile/settings/export, karma (Sprint 5).
+export * from "./users/index.js";
 
-// Internal event outbox: emit (in report-write txns) + drain (worker).
-export * from "./events.js";
+// Interview reports: transactional writes + edit reads, drafts, public browse.
+export * from "./reports/index.js";
 
-// Product-analytics sink (ADR-0010 instrumentation) — distinct from the outbox.
-export * from "./analytics.js";
+// Async pipeline: event outbox, aggregate refresh/reads, search projection,
+// analytics sink (Sprint 3, ADR-0010).
+export * from "./pipeline/index.js";
 
-// Karma earn rule + per-user recompute (Sprint 5 Day 7).
-export * from "./karma.js";
-
-// Helpful-flags: toggle, counts, and the verified/rate guards (Sprint 5 Day 8).
-export * from "./helpful-flags.js";
-
-// Comments: flat thread writes (create/edit/soft-delete), the anonymity-safe
-// thread read, and batched card counts (ADR-0011).
-export * from "./comments.js";
-
-// Likes: casual post/comment toggles + counts; comment-likes feed capped karma
-// (ADR-0011).
-export * from "./likes.js";
-
-// Per-(company, role, level) aggregate refresh + reads (Sprint 3).
-export * from "./aggregates.js";
-
-// Search-index reads: per-report projection + company/topic backfill sources.
-export * from "./search-index.js";
-
-// Public browse reads: /companies index + rollup pages + wedge cell list +
-// the slug lookups the canonical URL resolver composes (Sprint 4).
-export * from "./browse.js";
+// Engagement on reports: comments, likes, helpful-flags (ADR-0011, Sprint 5).
+export * from "./engagement/index.js";
 
 // Moderation: queue read-models + approve/reject commands + logModAction audit
 // write, behind /admin/queues/* (Sprint 6).
-export * from "./moderation.js";
+export * from "./moderation/index.js";

@@ -14,20 +14,18 @@
 // cases, but a hand-crafted POST must not slip past.
 
 import { and, eq, gte, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { recomputeUserKarma } from "./karma.js";
-import { helpfulFlags, interviewReports } from "./schema/index.js";
-import * as schema from "./schema/index.js";
-import { userIsVerified } from "./users.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+import { recomputeUserKarma } from "../users/karma.js";
+import { helpfulFlags, interviewReports } from "../schema/index.js";
+import type { Db } from "../lib/types.js";
+import { DAY_MS } from "../lib/time.js";
+import { userIsVerified } from "../users/users.js";
 
 // Rolling-window rate limit (sprint exit criterion: 50/day/user). A rolling 24h
 // window, not a calendar day — avoids timezone ambiguity and bounds burst
 // flagging, which is the abuse we care about. Counts flags that still EXIST in
 // the window (an un-flagged row is gone), so the cap bounds standing flags.
 export const HELPFUL_FLAG_DAILY_LIMIT = 50;
-export const HELPFUL_FLAG_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const HELPFUL_FLAG_WINDOW_MS = DAY_MS;
 
 // How many readers have flagged this report helpful — the detail-page badge.
 export async function countHelpfulFlags(

@@ -15,8 +15,7 @@
 // edit never extends the window.
 
 import { and, asc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { emitReportEvent } from "./events.js";
+import { emitReportEvent } from "../pipeline/events.js";
 import {
   companies,
   type InterviewReport,
@@ -28,19 +27,15 @@ import {
   roles,
   rounds,
   topics,
-} from "./schema/index.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
-// The transaction handle drizzle hands the callback. Typed off Db so the
-// child-write helper can take either without widening to `any`.
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+} from "../schema/index.js";
+import type { Db, Tx } from "../lib/types.js";
+import { DAY_MS } from "../lib/time.js";
 
 // The 24h edit window, in ms. The DB owns the boundary itself
 // (interview_reports.locked_at is a generated column = created_at + 24h); this
 // constant exists for any caller that wants to reason about the window in JS
 // (e.g. "time left" copy) and to document the figure in one place.
-export const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const EDIT_WINDOW_MS = DAY_MS;
 
 // A question's resolved shape: prose + the topic ids to attach. Ids are
 // already real rows (active or freshly-suggested pending) — the FK is
@@ -290,7 +285,7 @@ export async function softDeleteReport(
 // PII retention for soft-deleted reports: free-text prose is cleared once a
 // report has been in the 'deleted' state this long. 90 days gives a window for
 // dispute/appeal/audit before the user's words are irrecoverably scrubbed.
-export const PII_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+export const PII_RETENTION_MS = 90 * DAY_MS;
 
 // 90-day PII purge. Finds soft-deleted reports whose deleted_at is older than
 // `before` (caller passes now - PII_RETENTION_MS) and that haven't been purged

@@ -7,9 +7,8 @@
 // write anything that references it (drafts, reports, …).
 
 import { and, asc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { emitReportEvent } from "./events.js";
-import { PII_RETENTION_MS } from "./reports.js";
+import { emitReportEvent } from "../pipeline/events.js";
+import { PII_RETENTION_MS } from "../reports/reports.js";
 import {
   companies,
   drafts,
@@ -22,10 +21,8 @@ import {
   type User,
   userVerifications,
   users,
-} from "./schema/index.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+} from "../schema/index.js";
+import type { Db } from "../lib/types.js";
 
 export interface ClerkIdentity {
   clerkId: string;

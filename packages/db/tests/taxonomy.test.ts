@@ -24,7 +24,7 @@ import {
   searchTopics,
   suggestCompany,
   suggestTopic,
-} from "../src/taxonomy.js";
+} from "../src/taxonomy/index.js";
 import { makeTestClient, type TestDb } from "./helpers.js";
 
 // Slug a suggested-pending test row collides on nothing in the curated set.

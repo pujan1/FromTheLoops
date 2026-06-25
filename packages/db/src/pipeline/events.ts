@@ -9,12 +9,8 @@
 // Pure persistence, like reports.ts: no shared/core dep.
 
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { events, type ReportEventRow } from "./schema/events.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+import { events, type ReportEventRow } from "../schema/events.js";
+import type { Db, Tx } from "../lib/types.js";
 
 // The Postgres LISTEN/NOTIFY channel the trigger (migration 0010) publishes to.
 // Worker LISTENs here; payload is the event id.

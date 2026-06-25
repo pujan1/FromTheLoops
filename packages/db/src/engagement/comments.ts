@@ -12,19 +12,17 @@
 // job, not the web layer's.
 
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { comments, users } from "./schema/index.js";
-import * as schema from "./schema/index.js";
-import type { Comment } from "./schema/comments.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+import { comments, users } from "../schema/index.js";
+import type { Db } from "../lib/types.js";
+import { DAY_MS } from "../lib/time.js";
+import type { Comment } from "../schema/comments.js";
 
 // Body bounds + posting rate limit (ADR-0011). Tunable launch defaults. The
 // rate limit is a rolling 24h window per author (the helpful-flags pattern):
 // bounds burst posting, which is the spam vector we care about.
 export const COMMENT_MAX_LENGTH = 2000;
 export const COMMENT_RATE_LIMIT = 100;
-export const COMMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const COMMENT_WINDOW_MS = DAY_MS;
 // How much of a referenced comment's body to inline as the reply preview.
 const REPLY_PREVIEW_CHARS = 120;
 

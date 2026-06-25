@@ -10,14 +10,11 @@
 // Pure persistence, like reports.ts: no @fromtheloop/shared or /core dep.
 
 import { sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   getEventById,
   markAggregateEventProcessed,
 } from "./events.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { Db } from "../lib/types.js";
 
 // The trust-tier → weight mapping, mirrored from the SQL report_trust_weight()
 // (migration 0008) so JS callers can reason about / re-derive a weight without a

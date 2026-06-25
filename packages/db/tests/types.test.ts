@@ -38,7 +38,7 @@ describe("schema types", () => {
 
   it("InterviewReport.status is the exact non-null enum union", () => {
     expectTypeOf<InterviewReport["status"]>().toEqualTypeOf<
-      "active" | "pending_moderation" | "deleted"
+      "active" | "pending_moderation" | "rejected" | "deleted"
     >();
   });
 
@@ -83,6 +83,7 @@ describe("schema types", () => {
       | "delete"
       | "hide"
       | "edit_taxonomy"
+      | "restore"
     >();
   });
 

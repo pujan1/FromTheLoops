@@ -11,11 +11,8 @@
 // separate cron; this cap is the per-user backstop.
 
 import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { type Draft, drafts } from "./schema/index.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+import { type Draft, drafts } from "../schema/index.js";
+import type { Db } from "../lib/types.js";
 
 export const MAX_DRAFTS_PER_USER = 10;
 

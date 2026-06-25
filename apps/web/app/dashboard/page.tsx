@@ -59,10 +59,14 @@ function draftLabel(data: unknown): string {
 
 // The owner-facing moderation-status badge. pending_moderation reads as
 // "Pending review" (the report is submitted but not yet publicly visible);
+// rejected reads as "Not approved" (a moderator declined a held submission);
 // active reads as "Published". (Deleted rows are filtered out upstream.)
 function statusBadge(status: OwnReportListItem["status"]) {
   if (status === "pending_moderation") {
     return <FtlStatusBadge status="pending">Pending review</FtlStatusBadge>;
+  }
+  if (status === "rejected") {
+    return <FtlStatusBadge status="danger">Not approved</FtlStatusBadge>;
   }
   return <FtlStatusBadge status="success">Published</FtlStatusBadge>;
 }

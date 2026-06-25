@@ -3,11 +3,8 @@
 // track() stream here. Append-only writes, no reads from app code — you query
 // analytics_events directly with SQL. Pure persistence, no shared/core dep.
 
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { analyticsEvents } from "./schema/analytics.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+import { analyticsEvents } from "../schema/analytics.js";
+import type { Db } from "../lib/types.js";
 
 export interface AnalyticsEventInput {
   name: string;

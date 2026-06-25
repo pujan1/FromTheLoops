@@ -12,7 +12,6 @@
 // the search package owns the Typesense doc mapping.
 
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   companies,
   interviewReports,
@@ -21,10 +20,8 @@ import {
   roles,
   rounds,
   topics,
-} from "./schema/index.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+} from "../schema/index.js";
+import type { Db } from "../lib/types.js";
 
 export interface ReportIndexTopic {
   id: string;

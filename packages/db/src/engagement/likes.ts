@@ -13,17 +13,14 @@
 // the unique index makes a double-like a no-op (onConflictDoNothing).
 
 import { and, eq, inArray, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { recomputeUserKarma } from "./karma.js";
+import { recomputeUserKarma } from "../users/karma.js";
 import {
   comments,
   commentLikes,
   interviewReports,
   postLikes,
-} from "./schema/index.js";
-import * as schema from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+} from "../schema/index.js";
+import type { Db } from "../lib/types.js";
 
 export type LikeRefusal = "self_like" | "not_found";
 

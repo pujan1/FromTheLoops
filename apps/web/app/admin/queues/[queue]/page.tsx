@@ -8,9 +8,11 @@
 import { notFound } from "next/navigation";
 import {
   getDb,
+  listHeldReports,
   listPendingCompanies,
   listPendingRoles,
   listPendingTopics,
+  listSoftDeleted,
 } from "@fromtheloop/db";
 import { requireModerator } from "@/lib/admin";
 import { ModQueue } from "../../_components/mod-queue";
@@ -55,6 +57,35 @@ async function loadItems(queue: QueueId): Promise<ModQueueItem[]> {
         primary: r.name,
         secondary: r.slug,
         fields: [{ label: "Folds into", value: r.canonicalName ?? "— (new role)" }],
+        createdAt: r.createdAt.toISOString(),
+      }));
+    }
+    case "soft-delete": {
+      const rows = await listSoftDeleted(db);
+      return rows.map((r) => ({
+        id: r.id,
+        primary: r.primary,
+        secondary: r.secondary ?? undefined,
+        fields: [
+          { label: "Type", value: r.kind === "report" ? "Report" : "Comment" },
+          { label: "Deleted by", value: r.author ?? "unknown" },
+          {
+            label: "Purge in",
+            value: r.daysLeft === 0 ? "imminent" : `${r.daysLeft} day${r.daysLeft === 1 ? "" : "s"}`,
+          },
+        ],
+        badges: r.daysLeft <= 7 ? [{ label: "purging soon", tone: "warn" as const }] : undefined,
+        createdAt: r.deletedAt.toISOString(),
+      }));
+    }
+    case "new-user-hold": {
+      const rows = await listHeldReports(db);
+      return rows.map((r) => ({
+        id: r.id,
+        primary: `${r.company} · ${r.role}`,
+        secondary: [r.level, r.month, r.outcome ?? undefined].filter(Boolean).join(" · "),
+        fields: [karmaField(r.authorKarma), { label: "By", value: r.author ?? "unknown" }],
+        href: `/reports/${r.id}`,
         createdAt: r.createdAt.toISOString(),
       }));
     }

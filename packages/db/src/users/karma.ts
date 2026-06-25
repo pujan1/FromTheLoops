@@ -38,11 +38,8 @@
 // 5/10 split.
 
 import { eq, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import * as schema from "./schema/index.js";
-import { users } from "./schema/index.js";
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { Db } from "../lib/types.js";
+import { users } from "../schema/index.js";
 
 // The per-submission base award by trust tier. Exported so tests assert against
 // the rule, not a magic number, and Day 8's helpful-flag earn can sit beside it.

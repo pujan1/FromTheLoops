@@ -6,45 +6,13 @@
 // Gated by requireModerator() (the admin layout also gates; defence-in-depth).
 
 import Link from "next/link";
-import { getDb, listModActions, type ModActionType } from "@fromtheloop/db";
+import { getDb, listModActions } from "@fromtheloop/db";
 import { requireModerator } from "@/lib/admin";
+import { absoluteTime, relativeTime } from "@/lib/format";
+import { ACTION_LABEL, ACTION_TONE } from "./constants";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
-
-// Visual tone per action, reusing the queue's badge vocabulary.
-const ACTION_TONE: Record<ModActionType, "good" | "warn" | "danger" | "neutral"> = {
-  approve: "good",
-  merge: "good",
-  reject: "warn",
-  hide: "warn",
-  delete: "danger",
-  ban: "danger",
-  edit_taxonomy: "neutral",
-};
-
-const ACTION_LABEL: Record<ModActionType, string> = {
-  approve: "approved",
-  merge: "merged",
-  reject: "rejected",
-  hide: "hid",
-  delete: "deleted",
-  ban: "banned",
-  edit_taxonomy: "edited",
-};
-
-function relativeTime(date: Date): string {
-  const seconds = Math.round((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-}
-
-const absolute = (date: Date) =>
-  date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
 export default async function AuditPage({
   searchParams,
@@ -118,7 +86,7 @@ export default async function AuditPage({
                       </Link>
                     </p>
                   )}
-                  <p className={styles.when} title={absolute(e.createdAt)}>
+                  <p className={styles.when} title={absoluteTime(e.createdAt)}>
                     {relativeTime(e.createdAt)}
                     {e.modKarma != null && <span className={styles.karma}> · {e.modKarma.toLocaleString()} karma</span>}
                   </p>

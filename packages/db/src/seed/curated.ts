@@ -20,7 +20,7 @@ import {
   topicCategory,
   topics,
 } from "../schema/index.js";
-import { slugify } from "../slug.js";
+import { slugify } from "../taxonomy/slug.js";
 
 // Minimal DB type: a Drizzle postgres-js client bound to our schema. Both
 // getDb()'s client and the test client (helpers.ts `TestDb`) satisfy this —

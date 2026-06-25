@@ -26,6 +26,13 @@ export const reportSource = pgEnum("report_source", [
 export const reportStatus = pgEnum("report_status", [
   "active",
   "pending_moderation",
+  // `rejected` (Sprint 6 Day 7): a moderator rejected a held first-submission.
+  // Like the author-soft-delete 'deleted', it drops out of every public surface
+  // (all filter status='active'), but it's kept DISTINCT from 'deleted' so it
+  // stays out of the soft-delete *restore* queue (that's for author deletions)
+  // and reads as a moderation decision in the audit log. Reversible only by an
+  // admin via the audit/moderation path, not the public restore flow.
+  "rejected",
   "deleted",
 ]);
 
@@ -130,6 +137,11 @@ export const modActionType = pgEnum("mod_action_type", [
   // "deleted") can tell the two actors apart.
   "hide",
   "edit_taxonomy",
+  // `restore` (Sprint 6 Day 7): a mod reverses a soft-delete — content whose
+  // status was 'deleted' goes back to 'active' and its deleted_at clears. The
+  // soft-delete audit queue is the only writer. Distinct from the delete/hide
+  // verbs so the audit log reads "undid a deletion", not another removal.
+  "restore",
 ]);
 
 // Lifecycle of a comment (ADR-0011). `active` on insert (comments post
