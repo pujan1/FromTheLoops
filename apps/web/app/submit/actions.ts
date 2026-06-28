@@ -15,6 +15,7 @@ import {
   getDraft,
   getOrCreateUserByClerkId,
   getReportForEdit,
+  runAutoApprove,
   suggestCompany,
   suggestTopic,
   updateDraft,
@@ -86,6 +87,23 @@ async function enqueueSubmissionConfirmation(
   } catch (err) {
     // Swallow — confirmation email is not worth failing a submission over.
     console.error("enqueueSubmissionConfirmation failed:", err);
+  }
+}
+
+// Best-effort heuristic auto-approve of a just-suggested taxonomy row (Sprint 6
+// Day 8). If a trusted submitter proposed a clean, non-duplicate name, the
+// pending row is promoted immediately (and audited as a system action) so it
+// never reaches the human mod queue. Fully swallowed: this runs after the row
+// already exists, so a failure here must never fail the suggestion.
+async function tryAutoApprove(
+  db: ReturnType<typeof getDb>,
+  kind: "company" | "topic",
+  id: string,
+): Promise<void> {
+  try {
+    await runAutoApprove(db, { only: { kind, id } });
+  } catch (err) {
+    console.error(`tryAutoApprove(${kind}) failed:`, err);
   }
 }
 
@@ -181,6 +199,8 @@ export async function suggestPendingCompany(input: {
     name: parsed.data.name,
     suggestedByUserId: internal.id,
   });
+  // May promote it past the queue if the heuristic clears it (best-effort).
+  await tryAutoApprove(db, "company", company.id);
   return actionOk({ id: company.id, name: company.name });
 }
 
@@ -228,6 +248,8 @@ export async function suggestPendingTopic(input: {
     name: parsed.data.name,
     suggestedByUserId: internal.id,
   });
+  // May promote it past the queue if the heuristic clears it (best-effort).
+  await tryAutoApprove(db, "topic", topic.id);
   return actionOk({ id: topic.id, slug: topic.slug, name: topic.name });
 }
 

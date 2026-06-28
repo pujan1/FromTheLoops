@@ -1,15 +1,6 @@
-// Search-index read (Sprint 3 Day 6). The Typesense indexer (the worker's
-// index-typesense job, via @fromtheloop/search) calls getReportForIndex to turn
-// one report into the flat, denormalised shape a `reports` collection doc needs.
-//
-// Visibility filter — IDENTICAL to the aggregate pipeline's: only
-// status='active' AND deleted_at IS NULL reports are indexable. Anything else
-// returns null, which the indexer treats as "ensure no doc exists" (drop it).
-// So a pending_moderation or soft-deleted report never leaks into search.
-//
-// Pure persistence, like reports.ts: no @fromtheloop/shared or /core dep, and
-// crucially no @fromtheloop/search dep — the db layer hands back a plain shape;
-// the search package owns the Typesense doc mapping.
+// Flat report projection for the Typesense indexer. Only status='active' AND
+// deleted_at IS NULL reports are indexable; anything else returns null (the
+// indexer drops the stale doc). Hands back a plain shape, no @fromtheloop/search dep.
 
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import {
@@ -29,8 +20,6 @@ export interface ReportIndexTopic {
   name: string;
 }
 
-// The flat projection of one report, ready for the search package to map onto a
-// Typesense `reports` doc. Names denormalised so a faceted query needs no join.
 export interface ReportIndexInput {
   id: string;
   company: { id: string; slug: string; name: string };
@@ -40,20 +29,13 @@ export interface ReportIndexInput {
   evidenceVerified: boolean;
   interviewMonth: string;
   createdAt: Date;
-  // Distinct round types across the report's rounds (facet).
   roundTypes: string[];
-  // Total number of rounds (not deduped — the displayed "N rounds" count).
   roundCount: number;
-  // Distinct topic tags across all the report's questions (facets).
   topics: ReportIndexTopic[];
-  // Full-text body: every round's experience prose + every question's prose,
-  // concatenated. This is the field free-text search runs over.
-  text: string;
+  text: string; // every round + question prose, concatenated; the full-text field
 }
 
-// Deep read of a single VISIBLE report, shaped for indexing. Returns null if
-// the report doesn't exist or isn't publicly visible (pending/deleted) — the
-// indexer then drops any stale doc.
+// null if the report doesn't exist or isn't publicly visible.
 export async function getReportForIndex(
   db: Db,
   reportId: string,
@@ -82,7 +64,6 @@ export async function getReportForIndex(
   const head = headRows[0];
   if (!head) return null;
 
-  // Rounds in declared order — for round_types + experience prose.
   const roundRows = await db
     .select({
       roundType: rounds.roundType,
@@ -92,8 +73,6 @@ export async function getReportForIndex(
     .where(eq(rounds.reportId, reportId))
     .orderBy(asc(rounds.orderIndex));
 
-  // Questions (joined to their topics) for the report's rounds — question prose
-  // for the text body, topics for the facets.
   const questionRows = await db
     .select({
       prose: questions.questionProse,
@@ -108,10 +87,8 @@ export async function getReportForIndex(
     .where(eq(rounds.reportId, reportId))
     .orderBy(asc(questions.roundId), asc(questions.orderIndex));
 
-  // Distinct round types, preserving first-seen order.
   const roundTypes = [...new Set(roundRows.map((r) => r.roundType))];
 
-  // Distinct topics by id; collect the text body as we go.
   const topicsById = new Map<string, ReportIndexTopic>();
   const textParts: string[] = [];
   for (const r of roundRows) {
@@ -119,8 +96,7 @@ export async function getReportForIndex(
   }
   const seenProse = new Set<string>();
   for (const row of questionRows) {
-    // The question/topic join fans out one row per topic; dedupe prose by a
-    // running set so a 3-tag question doesn't triple its prose in the body.
+    // The topic join fans out one row per topic; dedupe prose so it isn't repeated.
     if (!seenProse.has(row.prose)) {
       seenProse.add(row.prose);
       textParts.push(row.prose);
@@ -150,9 +126,7 @@ export async function getReportForIndex(
   };
 }
 
-// Backfill source: every VISIBLE report's id, oldest first. The Typesense
-// backfill script (Day 6) streams these and indexes each. Kept as a thin id
-// list so the caller controls fan-out / batching.
+// Backfill source: every visible report's id, oldest first.
 export async function listVisibleReportIds(db: Db): Promise<string[]> {
   const rows = await db
     .select({ id: interviewReports.id })
@@ -167,13 +141,8 @@ export async function listVisibleReportIds(db: Db): Promise<string[]> {
   return rows.map((r) => r.id);
 }
 
-// ── companies / topics backfill ────────────────────────────────────────────
-// These two collections aren't event-driven in V1 (the events outbox only
-// carries report writes); the backfill script repopulates them wholesale, and a
-// later reconciliation job (Sprint 6) keeps the counts fresh. report_count /
-// question_count are computed over VISIBLE reports only, matching search's
-// "what the public can see" contract.
-
+// companies / topics backfill — not event-driven; repopulated wholesale. Counts
+// are over visible reports only.
 export interface CompanyIndexInput {
   id: string;
   slug: string;

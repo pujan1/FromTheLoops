@@ -1,16 +1,6 @@
-// `pnpm db:seed:reports` entrypoint. Lays down the Sprint 4 wedge-page fixtures:
-//
-//   1. seedCurated()       — ensure taxonomy exists (idempotent; safe if already run)
-//   2. seedReports()       — ~150 active `seed_dummy` reports across mixed-density cells
-//   3. refreshAllAggregates() — rebuild the per-cell aggregate table so the wedge
-//                               page renders Position-Y immediately
-//
-// Typesense is NOT touched here (the db package must not depend on the search
-// package). Run `pnpm backfill:typesense` afterward — with the local stack up —
-// to populate search. The runner reminds you on exit.
-//
-// Idempotent end-to-end: seedReports() clears prior seed_dummy reports first,
-// and refreshAllAggregates() recomputes wholesale.
+// `pnpm db:seed:reports` — taxonomy + dummy reports + aggregates + comments.
+// Idempotent. Run `pnpm backfill:typesense` afterward to populate search (the db
+// package must not depend on the search package).
 
 import { config } from "dotenv";
 import { dirname, resolve } from "node:path";
@@ -20,7 +10,6 @@ import { seedComments } from "./comments.js";
 import { seedCurated } from "./curated.js";
 import { seedReports } from "./reports.js";
 
-// packages/db/src/seed → repo root is four directories up.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 config({ path: resolve(repoRoot, ".env.local") });
 config({ path: resolve(repoRoot, ".env") });

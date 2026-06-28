@@ -2,12 +2,8 @@ import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 
-// Server-side submission drafts — one in-progress /submit form per row,
-// resumed from /drafts/[id]. Auto-saved (debounced server action) so a
-// refresh never loses work. `data` is the partial form state as jsonb,
-// validated against shared's draftDataSchema before write; kept schema-light
-// so it doesn't track the evolving reports/rounds tables. CASCADE from users
-// (throwaway scratch, no audit value). Abandoned drafts are pruned by a cron.
+// Server-side /submit drafts. `data` is partial form state (jsonb, validated
+// against draftDataSchema). CASCADE from users; pruned by a 30-day TTL cron.
 export const drafts = pgTable(
   "submission_drafts",
   {
@@ -22,8 +18,7 @@ export const drafts = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    // Bumped on every save; drives the 30-day TTL prune.
-    updatedAt: timestamp("updated_at", { withTimezone: true })
+    updatedAt: timestamp("updated_at", { withTimezone: true }) // drives the TTL prune
       .notNull()
       .defaultNow(),
   },

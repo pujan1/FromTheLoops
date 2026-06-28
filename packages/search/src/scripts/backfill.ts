@@ -1,11 +1,5 @@
-// backfill:typesense (Sprint 3 Day 6) — rebuild every Typesense collection from
-// Postgres. Provisions the collections first (create-if-missing), then indexes
-// all VISIBLE reports + active companies + active topics. Idempotent: docs are
-// upserted by id, so a re-run overwrites in place rather than duplicating.
-//
-//   pnpm backfill:typesense
-//
-// Reads DATABASE_URL + TYPESENSE_* from .env.local / .env (first match wins).
+// `pnpm backfill:typesense` — provision collections, then rebuild every
+// collection from Postgres. Idempotent (docs upserted by id).
 
 import { config } from "dotenv";
 import { dirname, resolve } from "node:path";
@@ -15,7 +9,6 @@ import { backfillAll } from "../indexers/index.js";
 import { getSearchClient } from "../client.js";
 import { ensureCollections } from "../provision.js";
 
-// packages/search/src/scripts → repo root is four directories up.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 config({ path: resolve(repoRoot, ".env.local") });
 config({ path: resolve(repoRoot, ".env") });

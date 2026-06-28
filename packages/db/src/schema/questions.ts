@@ -12,19 +12,8 @@ import {
 import { rounds } from "./rounds.js";
 import { topics } from "./taxonomy.js";
 
-// `questions` — ordered children of rounds. The atom of the data model:
-// one row = one interview question someone was asked.
-//
-// Topics: many-to-many with the `topics` taxonomy via the
-// `question_topics` join table. Each question must have ≥1 topic, but Postgres
-// alone can't enforce "row in this join table" — that's an application-level
-// invariant asserted in the submission form's Zod validator.
-//
-// Why no individual /questions/[id] page (PLAN.md §URL structure):
-//   "No individual question pages in V1 (thin-content risk); topic pages
-//    aggregate questions." So questions are only ever rendered inside a
-//   report or a topic-aggregated list — never as a standalone canonical
-//   URL. Schema doesn't enforce this; routing does.
+// Ordered children of rounds. Many-to-many with topics via question_topics;
+// the ≥1-topic rule is enforced in the submission validator, not Postgres.
 export const questions = pgTable(
   "questions",
   {

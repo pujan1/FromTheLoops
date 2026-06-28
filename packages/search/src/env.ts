@@ -1,10 +1,5 @@
-// Typesense connection config, read from the same env vars the rest of the
-// stack uses (.env.example / compose). Centralised here so the client wrapper
-// and the provisioning script can't drift on host/port/protocol/key.
-//
-// Defaults match docker-compose's local Typesense so dev "just works" with no
-// .env at all; production (Vercel web read path + the Hetzner worker) sets all
-// four explicitly.
+// Typesense connection config. Defaults match docker-compose's local Typesense;
+// production sets all four explicitly.
 
 export interface TypesenseConfig {
   host: string;

@@ -16,14 +16,9 @@ import {
 } from "./enums.js";
 import { users } from "./users.js";
 
-// Curated taxonomy: companies, roles, topics, per-company levels. FK
-// targets for reports/questions/verifications. See docs/data-model.md.
-//
-// Curation model (PLAN.md §Taxonomy curation):
-//   - companies + levels: inline "create pending" allowed; mod approves later.
-//   - roles: NO inline create — users only match existing rows. `roles` IS
-//     the canonical-roles table (the doc's `canonical_roles`); kept this
-//     name since reports.canonical_role_id + the wedge index FK to it.
+// Curated taxonomy: companies, roles, topics, per-company levels.
+// Companies/topics/levels allow inline "create pending"; roles do not (match
+// existing only). `roles` is the canonical-roles table.
 
 export const companies = pgTable(
   "companies",
@@ -31,13 +26,10 @@ export const companies = pgTable(
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
-    // Alternate names, matched alongside `name` by fuzzy search.
     aliases: text("aliases").array().notNull().default(sql`'{}'`),
-    // Primary email domain for work-email verification matching.
-    domain: text("domain"),
+    domain: text("domain"), // for work-email verification matching
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),
-    // Who suggested a pending company (null for seed rows).
     suggestedByUserId: uuid("suggested_by_user_id").references(
       () => users.id,
       { onDelete: "set null" },
@@ -61,8 +53,7 @@ export const roles = pgTable(
     aliases: text("aliases").array().notNull().default(sql`'{}'`),
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),
-    // Self-FK: a merged/duplicate role points at its canonical row.
-    // (drizzle needs the explicit AnyPgColumn return type for self-refs.)
+    // Self-FK to the canonical row (explicit AnyPgColumn type required by drizzle).
     mergedIntoId: uuid("merged_into_id").references(
       (): import("drizzle-orm/pg-core").AnyPgColumn => roles.id,
       { onDelete: "set null" },
@@ -77,31 +68,18 @@ export const roles = pgTable(
   ],
 );
 
-// Topic tags — the curated taxonomy a question is tagged with (≥1 active
-// tag required per question; see docs/data-model.md). Unlike `roles`, topics
-// DO allow inline "suggest new → pending" (same affordance as companies):
-// a user can propose a tag the curated set is missing, landing it as
-// status='pending' until a mod promotes it. Pending tags don't satisfy the
-// ≥1-active-tag rule until promoted — that's enforced in the submission
-// validator; the active-vs-pending distinction modeled here mirrors companies.
-// Shares the status/source/aliases shape so the
-// pg_trgm autocomplete + suggest-pending helpers in taxonomy.ts can mirror
-// searchCompanies/suggestCompany exactly.
+// Topic tags (≥1 active tag required per question, enforced in the submission
+// validator). Like companies, allows inline suggest → pending.
 export const topics = pgTable(
   "topics",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
-    // Alternate names, matched alongside `name` by fuzzy search.
     aliases: text("aliases").array().notNull().default(sql`'{}'`),
-    // Curated grouping for the /topics index's category sections (Sprint 5).
-    // Nullable: user-suggested pending tags have no category until a mod
-    // assigns one — they render in the index's "Other" bucket.
     category: topicCategory("category"),
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),
-    // Who suggested a pending tag (null for seed rows).
     suggestedByUserId: uuid("suggested_by_user_id").references(
       () => users.id,
       { onDelete: "set null" },
@@ -116,9 +94,7 @@ export const topics = pgTable(
   ],
 );
 
-// Per-company levels (Amazon SDE II, Google L4, Meta E4) — meaningless
-// across companies, so they hang off one. A company with none falls back
-// to the "N/A" form sentinel (no row). CASCADE from companies.
+// Per-company levels (Amazon SDE II, Google L4) — hang off one company, CASCADE.
 export const companyLevels = pgTable(
   "company_levels",
   {
@@ -128,11 +104,7 @@ export const companyLevels = pgTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
-    // Ladder order (L3 < L4 < L5) — levels don't sort lexically.
-    orderIndex: integer("order_index").notNull().default(0),
-    // Canonical seniority tier this rung maps to, for the submission UI's
-    // "Senior Frontend Engineer (E5)" relabeling. Nullable: a user-suggested
-    // level or an un-mapped rung renders with no seniority prefix.
+    orderIndex: integer("order_index").notNull().default(0), // ladder order; levels don't sort lexically
     tier: levelTier("tier"),
     status: taxonomyStatus("status").notNull().default("active"),
     source: taxonomySource("source").notNull().default("user_suggested"),

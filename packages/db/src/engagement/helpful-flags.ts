@@ -1,17 +1,6 @@
-// Helpful-flags data-access (Sprint 5 Day 8).
-//
-// A helpful-flag is a reader's standing "this report helped me" endorsement —
-// a TOGGLE (insert to flag, delete to un-flag), one per (report, reader). The
-// report author earns +1 karma per flag from another verified user; that earn
-// lives in karma.ts and re-derives from these rows, so the write paths here
-// recompute the AUTHOR's karma after a change rather than incrementing anything.
-//
-// Three guards blunt the sock-puppet vector (sprint risk table):
-//   - no self-flag (you can't endorse your own report),
-//   - flagger must be verified-pro (userIsVerified),
-//   - 50 flags / rolling 24h / user (HELPFUL_FLAG_DAILY_LIMIT).
-// All three are enforced here, server-side — the UI hides the control in these
-// cases, but a hand-crafted POST must not slip past.
+// Reader "this helped me" endorsement toggle, one per (report, reader). Earns
+// the author +1 karma (recomputed, not incremented). Three server-side guards:
+// no self-flag, flagger must be verified, 50/rolling-24h/user.
 
 import { and, eq, gte, sql } from "drizzle-orm";
 import { recomputeUserKarma } from "../users/karma.js";
@@ -20,14 +9,9 @@ import type { Db } from "../lib/types.js";
 import { DAY_MS } from "../lib/time.js";
 import { userIsVerified } from "../users/users.js";
 
-// Rolling-window rate limit (sprint exit criterion: 50/day/user). A rolling 24h
-// window, not a calendar day — avoids timezone ambiguity and bounds burst
-// flagging, which is the abuse we care about. Counts flags that still EXIST in
-// the window (an un-flagged row is gone), so the cap bounds standing flags.
 export const HELPFUL_FLAG_DAILY_LIMIT = 50;
 export const HELPFUL_FLAG_WINDOW_MS = DAY_MS;
 
-// How many readers have flagged this report helpful — the detail-page badge.
 export async function countHelpfulFlags(
   db: Db,
   reportId: string,
@@ -38,7 +22,6 @@ export async function countHelpfulFlags(
   return Number(rows[0]?.n ?? 0);
 }
 
-// Has THIS viewer already flagged THIS report? Drives the button's on/off state.
 export async function hasUserFlaggedReport(
   db: Db,
   reportId: string,
@@ -57,8 +40,6 @@ export async function hasUserFlaggedReport(
   return rows.length > 0;
 }
 
-// The reasons a flag attempt is refused. The UI maps each to a hint; the action
-// returns them so the reader learns WHY (esp. rate-limited / verify-to-flag).
 export type FlagRefusal =
   | "self_flag"
   | "not_verified"
@@ -69,18 +50,15 @@ export type FlagResult =
   | { ok: true; flagged: true; count: number }
   | { ok: false; reason: FlagRefusal };
 
-// Cast a helpful-flag. Idempotent: if the reader has already flagged this
-// report it's a benign success (no rate consumed, no duplicate). Otherwise runs
-// the three guards, inserts, and recomputes the AUTHOR's karma so the +1 lands
-// immediately. Returns the new flag count on success, or the refusal reason.
+// Idempotent (already-flagged → benign success, no guard spend). Otherwise runs
+// the three guards, inserts, and recomputes the author's karma.
 export async function flagReportHelpful(
   db: Db,
   input: { reportId: string; flaggerUserId: string },
 ): Promise<FlagResult> {
   const { reportId, flaggerUserId } = input;
 
-  // The report must exist and be non-deleted; we need its author for the
-  // self-flag check and the karma recompute. One read serves both.
+  // One read serves the self-flag check + the karma recompute.
   const reportRows = await db
     .select({
       authorId: interviewReports.createdByUserId,
@@ -97,7 +75,6 @@ export async function flagReportHelpful(
     return { ok: false, reason: "self_flag" };
   }
 
-  // Already flagged → idempotent success, no guard spend.
   if (await hasUserFlaggedReport(db, reportId, flaggerUserId)) {
     return { ok: true, flagged: true, count: await countHelpfulFlags(db, reportId) };
   }
@@ -109,8 +86,7 @@ export async function flagReportHelpful(
     return { ok: false, reason: "rate_limited" };
   }
 
-  // onConflictDoNothing guards the race where two requests insert the same flag
-  // between the check above and here — the unique index makes the loser a no-op.
+  // onConflictDoNothing guards the check-then-insert race.
   await db
     .insert(helpfulFlags)
     .values({ reportId, flaggerUserId })
@@ -121,9 +97,7 @@ export async function flagReportHelpful(
   return { ok: true, flagged: true, count: await countHelpfulFlags(db, reportId) };
 }
 
-// Remove the reader's flag. Always allowed (you may withdraw your own
-// endorsement) — no verified/rate checks. A no-op if there was no flag. Returns
-// the new count. Recomputes the author's karma so the −1 lands immediately.
+// No-op if there was no flag. Recomputes the author's karma.
 export async function unflagReportHelpful(
   db: Db,
   input: { reportId: string; flaggerUserId: string },
@@ -151,8 +125,6 @@ export async function unflagReportHelpful(
   return { ok: true, flagged: false, count: await countHelpfulFlags(db, reportId) };
 }
 
-// Has this user hit the rolling-24h flag cap? Counts their still-standing flags
-// in the window; rides helpful_flags_flagger_created_idx.
 async function reachedDailyLimit(db: Db, userId: string): Promise<boolean> {
   const since = new Date(Date.now() - HELPFUL_FLAG_WINDOW_MS);
   const rows = await db

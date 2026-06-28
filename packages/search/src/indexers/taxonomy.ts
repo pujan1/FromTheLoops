@@ -1,6 +1,5 @@
-// companies / topics indexers — doc mapping + bulk import. Unlike reports,
-// these collections are repopulated wholesale by the backfill (not event-driven
-// in V1), so the primary op is a batched import rather than a single upsert.
+// companies / topics indexers — doc mapping + bulk import (repopulated wholesale
+// by the backfill, not event-driven).
 
 import type { Client } from "typesense";
 import type { CompanyIndexInput, TopicIndexInput } from "@fromtheloop/db";
@@ -43,8 +42,7 @@ export function buildTopicDoc(input: TopicIndexInput): TopicDoc {
   };
 }
 
-// Batched upsert. Typesense's import returns a per-doc result array; we surface
-// any failures so the backfill can report them rather than silently dropping.
+// Batched upsert; surfaces any per-doc failures.
 async function importDocs(
   client: Client,
   collection: string,

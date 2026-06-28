@@ -1,12 +1,10 @@
-// reports indexer — maps a db ReportIndexInput onto a Typesense `reports` doc
-// and pushes/removes it. The db layer owns the read + visibility filter; this
-// owns the Typesense doc shape (kept in lockstep with schemas/reports.ts).
+// Maps a db ReportIndexInput onto a Typesense `reports` doc (shape kept in
+// lockstep with schemas/reports.ts) and pushes/removes it.
 
 import type { Client } from "typesense";
 import type { ReportIndexInput } from "@fromtheloop/db";
 import { REPORTS_COLLECTION } from "../schemas/reports.js";
 
-// The on-disk doc shape. Field names == schemas/reports.ts.
 export interface ReportDoc {
   id: string;
   text: string;
@@ -40,9 +38,7 @@ export function buildReportDoc(input: ReportIndexInput): ReportDoc {
     role_slug: input.role.slug,
     role_name: input.role.name,
     level: input.level,
-    // Omit the field entirely when null — the schema marks outcome optional;
-    // a pending interview simply carries no outcome facet.
-    ...(input.outcome ? { outcome: input.outcome } : {}),
+    ...(input.outcome ? { outcome: input.outcome } : {}), // omit when null
     round_types: input.roundTypes,
     round_count: input.roundCount,
     topic_ids: input.topics.map((t) => t.id),
@@ -51,13 +47,11 @@ export function buildReportDoc(input: ReportIndexInput): ReportDoc {
     trust_tier: input.evidenceVerified ? "verified" : "unverified",
     evidence_verified: input.evidenceVerified,
     interview_month: input.interviewMonth,
-    // Typesense int64 — unix seconds.
-    created_at: Math.floor(input.createdAt.getTime() / 1000),
+    created_at: Math.floor(input.createdAt.getTime() / 1000), // unix seconds
   };
 }
 
-// Upsert (create-or-replace by id). Idempotent — re-indexing the same report is
-// a no-op-equivalent overwrite, so a BullMQ retry is safe.
+// Idempotent upsert by id.
 export async function upsertReportDoc(
   client: Client,
   doc: ReportDoc,
@@ -68,8 +62,7 @@ export async function upsertReportDoc(
     .upsert(doc);
 }
 
-// Batched upsert for the backfill — one import call per chunk instead of N
-// round-trips. Throws if any doc in the batch fails.
+// Batched upsert for the backfill. Throws if any doc fails.
 export async function importReportDocs(
   client: Client,
   docs: ReportDoc[],
@@ -88,8 +81,7 @@ export async function importReportDocs(
   return docs.length;
 }
 
-// Delete by id, tolerant of "already gone" (404). Used for delete events and
-// for a report that's no longer visible (pending/soft-deleted).
+// Delete by id, tolerant of 404 (already gone / no longer visible).
 export async function deleteReportDoc(
   client: Client,
   reportId: string,

@@ -1,55 +1,32 @@
 import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-// `events` — the internal event log / transactional outbox (Sprint 3).
-//
-// Every report write (create / edit / soft-delete) inserts a row here inside
-// the SAME transaction as the report change (see reports.ts). That atomicity is
-// the whole point: if the report commits, the event is durably recorded; if the
-// report rolls back, no event is left behind. An AFTER INSERT trigger
-// (migration 0010) fires pg_notify('events', id) so a listening worker wakes
-// within milliseconds — but the row is the source of truth, and a fallback
-// poller sweeps any events a dropped NOTIFY missed.
-//
-// Three independent consumers fan out from one event, each retried on its own
-// (PLAN/sprint risk table): the aggregate refresh (Day 4), the Typesense
-// indexer (Day 6), and the karma recompute (Sprint 5 Day 7). They track their
-// own progress via separate *_processed_at columns so one consumer's outage
-// can't stall the others. An event is fully drained once all three are non-null.
-//
-// No FKs: this is an append-only log that must survive even a report hard-delete
-// (the cell columns are denormalized onto the row precisely so a delete event
-// can still name the cell to refresh without joining back to a gone row).
+// Transactional outbox: every report write inserts a row in the same tx. An
+// AFTER INSERT trigger fires pg_notify, but the row is the source of truth and a
+// fallback poller catches dropped NOTIFYs. Three consumers (aggregate, search,
+// karma) drain independently via the *_processed_at columns. No FKs (append-only;
+// cell columns denormalized so a delete event survives a report hard-delete).
 export const events = pgTable(
   "events",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-    // The report action this event records. Plain text, not an enum: an event
-    // log should take new kinds without a type-altering migration.
-    // One of 'created' | 'updated' | 'deleted'.
-    op: text("op").notNull(),
+    op: text("op").notNull(), // 'created' | 'updated' | 'deleted' (text, not enum)
     reportId: uuid("report_id").notNull(),
-    // The (company, role, level) cell this report belongs to — the unit the
-    // aggregate refreshes. Denormalized so the consumer needs no join.
+    // (company, role, level) cell, denormalized so the consumer needs no join.
     companyId: uuid("company_id").notNull(),
     canonicalRoleId: uuid("canonical_role_id").notNull(),
     level: text("level").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    // Per-consumer drain markers. Null = that consumer hasn't handled it yet;
-    // its fallback poller scans for nulls. Day 6 wires search_processed_at.
     aggregateProcessedAt: timestamp("aggregate_processed_at", {
       withTimezone: true,
     }),
     searchProcessedAt: timestamp("search_processed_at", { withTimezone: true }),
-    // Day 7: the karma consumer's drain marker. The recompute job resolves the
-    // event's report → author and rebuilds that user's karma.
     karmaProcessedAt: timestamp("karma_processed_at", { withTimezone: true }),
   },
   (t) => [
-    // Partial indexes that keep each consumer's "what's still pending?" sweep
-    // cheap — they only cover the unprocessed tail, not the whole growing log.
+    // Partial indexes covering only each consumer's unprocessed tail.
     index("events_aggregate_pending_idx")
       .on(t.createdAt)
       .where(sql`${t.aggregateProcessedAt} IS NULL`),

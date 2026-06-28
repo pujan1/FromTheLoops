@@ -1,24 +1,14 @@
-// Event outbox data-access (Sprint 3 Day 3).
-//
-// Producers: the report write functions in reports.ts call emitReportEvent
-// inside their transaction. Consumers: the worker's refresh-aggregate job (Day
-// 4) and Typesense indexer (Day 6) drain events — both via the live NOTIFY fast
-// path (LISTEN on EVENTS_CHANNEL) and a fallback poller over the *_processed_at
-// markers. See schema/events.ts for the why.
-//
-// Pure persistence, like reports.ts: no shared/core dep.
+// Event outbox: producers (reports.ts) emit inside their tx; the aggregate,
+// search, and karma consumers drain via NOTIFY + a fallback poller over the
+// *_processed_at markers.
 
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { events, type ReportEventRow } from "../schema/events.js";
 import type { Db, Tx } from "../lib/types.js";
 
-// The Postgres LISTEN/NOTIFY channel the trigger (migration 0010) publishes to.
-// Worker LISTENs here; payload is the event id.
+// LISTEN/NOTIFY channel the trigger publishes to; payload is the event id.
 export const EVENTS_CHANNEL = "events";
 
-// The report action an event records. The aggregate consumer treats all three
-// the same (recompute the cell); the search consumer (Day 6) cares: delete →
-// drop the doc, created/updated → upsert it.
 export type EventOp = "created" | "updated" | "deleted";
 
 export interface EmitReportEventInput {
@@ -29,9 +19,7 @@ export interface EmitReportEventInput {
   level: string;
 }
 
-// Insert an event row on the caller's transaction. MUST be called inside the
-// same tx as the report write so the two commit atomically (the trigger's
-// pg_notify then fires on that commit). Returns the new event id.
+// Must run inside the same tx as the report write so the two commit atomically.
 export async function emitReportEvent(
   tx: Tx,
   input: EmitReportEventInput,
@@ -57,8 +45,7 @@ export async function getEventById(
   return rows[0] ?? null;
 }
 
-// The fallback poller's read: oldest-first events the AGGREGATE consumer hasn't
-// drained yet. Capped so one sweep can't unbounded-load a huge backlog.
+// Oldest-first events the aggregate consumer hasn't drained, capped.
 export async function claimUnprocessedAggregateEvents(
   db: Db,
   limit = 100,
@@ -71,8 +58,7 @@ export async function claimUnprocessedAggregateEvents(
     .limit(limit);
 }
 
-// Mark an event drained by the aggregate consumer. Guarded on still-null so a
-// concurrent double-process is a harmless no-op. Returns true if it flipped.
+// Guarded on still-null so a concurrent double-process is a no-op.
 export async function markAggregateEventProcessed(
   db: Db,
   id: string,
@@ -85,8 +71,7 @@ export async function markAggregateEventProcessed(
   return rows.length > 0;
 }
 
-// Aggregation lag for /admin/health (Day 8): how many events the aggregate
-// consumer still owes. A healthy worker keeps this near zero.
+// Aggregation lag for /admin/health.
 export async function countUnprocessedAggregateEvents(db: Db): Promise<number> {
   const rows = await db.execute<{ n: number }>(
     sql`SELECT count(*)::int AS n FROM events WHERE aggregate_processed_at IS NULL`,
@@ -94,14 +79,7 @@ export async function countUnprocessedAggregateEvents(db: Db): Promise<number> {
   return Number(rows[0]?.n ?? 0);
 }
 
-// ── search consumer (Day 6) ─────────────────────────────────────────────────
-// The exact mirror of the aggregate trio above, against the independent
-// search_processed_at marker. The two consumers drain the same event log on
-// their own clocks (sprint risk table: "both retried independently") — a
-// Typesense outage stalls only search, never the aggregate refresh.
-
-// The fallback poller's read for the SEARCH consumer: oldest-first events it
-// hasn't drained. Rides the events_search_pending_idx partial index.
+// search consumer — mirror of the aggregate trio, against search_processed_at.
 export async function claimUnprocessedSearchEvents(
   db: Db,
   limit = 100,
@@ -114,8 +92,6 @@ export async function claimUnprocessedSearchEvents(
     .limit(limit);
 }
 
-// Mark an event drained by the search consumer. Guarded on still-null so a
-// concurrent double-process is a harmless no-op. Returns true if it flipped.
 export async function markSearchEventProcessed(
   db: Db,
   id: string,
@@ -128,8 +104,7 @@ export async function markSearchEventProcessed(
   return rows.length > 0;
 }
 
-// Search-index lag for /admin/health (Day 8): how many events the search
-// consumer still owes.
+// Search-index lag for /admin/health.
 export async function countUnprocessedSearchEvents(db: Db): Promise<number> {
   const rows = await db.execute<{ n: number }>(
     sql`SELECT count(*)::int AS n FROM events WHERE search_processed_at IS NULL`,
@@ -137,14 +112,7 @@ export async function countUnprocessedSearchEvents(db: Db): Promise<number> {
   return Number(rows[0]?.n ?? 0);
 }
 
-// ── karma consumer (Sprint 5 Day 7) ─────────────────────────────────────────
-// The third drain of the same event log, against karma_processed_at. The karma
-// recompute resolves each event's report → author and rebuilds that user's
-// karma; it drains on its own clock so a slow recompute never stalls the
-// aggregate refresh or the search indexer (and vice-versa).
-
-// The fallback poller's read for the KARMA consumer: oldest-first events it
-// hasn't drained. Rides the events_karma_pending_idx partial index.
+// karma consumer — mirror, against karma_processed_at.
 export async function claimUnprocessedKarmaEvents(
   db: Db,
   limit = 100,
@@ -157,8 +125,6 @@ export async function claimUnprocessedKarmaEvents(
     .limit(limit);
 }
 
-// Mark an event drained by the karma consumer. Guarded on still-null so a
-// concurrent double-process is a harmless no-op. Returns true if it flipped.
 export async function markKarmaEventProcessed(
   db: Db,
   id: string,
@@ -171,8 +137,7 @@ export async function markKarmaEventProcessed(
   return rows.length > 0;
 }
 
-// Karma-recompute lag for /admin/health (Day 8): how many events the karma
-// consumer still owes.
+// Karma-recompute lag for /admin/health.
 export async function countUnprocessedKarmaEvents(db: Db): Promise<number> {
   const rows = await db.execute<{ n: number }>(
     sql`SELECT count(*)::int AS n FROM events WHERE karma_processed_at IS NULL`,

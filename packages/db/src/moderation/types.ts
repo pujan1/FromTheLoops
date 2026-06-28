@@ -1,9 +1,3 @@
-// Public data shapes for the moderation module (Sprint 6). The read-model row
-// types each query returns, plus the audit-log input/action vocabulary. Kept
-// separate from moderation.ts so the queries read as queries and the contracts
-// they fulfil live in one place. Re-exported from moderation.ts, so callers
-// still import these from "@fromtheloop/db".
-
 // Mirror of the mod_action_type enum (schema/enums.ts).
 export type ModActionType =
   | "approve"
@@ -16,14 +10,18 @@ export type ModActionType =
   | "restore";
 
 export type LogModActionInput = {
-  // Internal users.id of the acting moderator (NOT their Clerk id).
-  modUserId: string;
+  modUserId: string; // internal users.id, not the Clerk id
   actionType: ModActionType;
-  // Polymorphic target — e.g. "company", "topic", "role".
-  targetType: string;
+  targetType: string; // "company" | "topic" | "role" | ...
   targetId: string;
   reason?: string | null;
   metadata?: Record<string, unknown> | null;
+};
+
+// `score` is pg_trgm similarity (0..1).
+export type DedupHint = {
+  name: string;
+  score: number;
 };
 
 export type PendingCompanyItem = {
@@ -33,6 +31,7 @@ export type PendingCompanyItem = {
   domain: string | null;
   createdAt: Date;
   suggestedByKarma: number | null;
+  nearest: DedupHint | null;
 };
 
 export type PendingTopicItem = {
@@ -42,6 +41,7 @@ export type PendingTopicItem = {
   category: string | null;
   createdAt: Date;
   suggestedByKarma: number | null;
+  nearest: DedupHint | null;
 };
 
 export type PendingRoleItem = {
@@ -49,8 +49,7 @@ export type PendingRoleItem = {
   name: string;
   slug: string;
   createdAt: Date;
-  // Canonical role this alias folds into, if any.
-  canonicalName: string | null;
+  canonicalName: string | null; // role this alias folds into, if any
 };
 
 export type ModActionLogItem = {
@@ -61,23 +60,40 @@ export type ModActionLogItem = {
   reason: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: Date;
-  // Acting moderator, resolved to a human label (displayName ?? username).
-  // Null only if the mod row was purged — the FK is ON DELETE RESTRICT, so in
-  // practice the join always lands.
   modName: string | null;
   modKarma: number | null;
 };
 
 export type SoftDeletedItem = {
-  // Composite "report:<uuid>" | "comment:<uuid>" — parsed by restoreSoftDeleted.
-  id: string;
+  id: string; // composite "report:<uuid>" | "comment:<uuid>"
   kind: "report" | "comment";
   primary: string;
   secondary: string | null;
   author: string | null;
   deletedAt: Date;
-  // Whole days left before the PII purge clears the prose (restore-able window).
-  daysLeft: number;
+  daysLeft: number; // days left in the restore-able window before PII purge
+};
+
+export type AutoApprovalItem = {
+  id: string;
+  targetType: string;
+  targetId: string;
+  name: string | null;
+  reasons: string[];
+  createdAt: Date;
+};
+
+export type ContentFlagItem = {
+  id: string; // composite "report:<uuid>" | "comment:<uuid>"
+  kind: "report" | "comment";
+  primary: string;
+  secondary: string | null;
+  author: string | null; // author of the content, not the flagger
+  href: string;
+  flagCount: number; // distinct readers who flagged this
+  reasons: string[];
+  firstFlaggedAt: Date;
+  lastFlaggedAt: Date;
 };
 
 export type HeldReportItem = {

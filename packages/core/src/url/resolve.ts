@@ -1,15 +1,5 @@
-// The canonical URL resolver: turns the URL segments of a browse route into the
-// real taxonomy entities (or a null "not found" signal the route turns into a
-// 404). All four /companies/* routes call through these, so the slug→entity
-// contract lives in one place (per Sprint 4's routing-complexity mitigation /
-// the URL-contract ADR).
-//
-// Each resolver composes the db slug lookups (getCompanyBySlug / getRoleBySlug /
-// getCompanyLevelBySlug — all active-only) and threads the parent's id into the
-// next lookup, so resolution fails fast at the first missing segment. The wedge
-// resolver also returns the AggregateCellKey the page needs to read the
-// aggregate + the report list (keyed on the level's display `name`, which is
-// what interview_reports.level and the aggregate table store — NOT the slug).
+// Resolves browse-route slugs to taxonomy entities, null → 404. Each resolver
+// composes the active-only db slug lookups and fails fast at the first miss.
 
 import {
   type Database,
@@ -32,8 +22,7 @@ export interface ResolvedCompanyRole extends ResolvedCompany {
 
 export interface ResolvedWedge extends ResolvedCompanyRole {
   level: TaxonomyRef;
-  // The aggregate / report-list cell key. `level` is the display name, matching
-  // interview_reports.level + aggregates_company_role_level.level.
+  // cell.level is the display name (matches interview_reports.level), not the slug.
   cell: { companyId: string; canonicalRoleId: string; level: string };
 }
 
@@ -84,12 +73,6 @@ export async function resolveWedge(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Topic browse resolvers (Sprint 5) — the second discovery axis. Same
-// composition pattern: resolve each slug to an active taxonomy row, failing
-// fast (null → 404) at the first miss.
-// ---------------------------------------------------------------------------
-
 export interface ResolvedTopic {
   topic: TaxonomyRef;
 }
@@ -120,13 +103,7 @@ export async function resolveTopicCompany(
   return { topic, company };
 }
 
-// ---------------------------------------------------------------------------
-// User profile resolver (Sprint 5) — /u/:username. Same null→404 contract as
-// the browse resolvers, but the key is a public handle (users.username), not a
-// taxonomy slug. The full User row rides along: the page needs the internal id
-// (to read reports + stats) plus display_name / created_at for the header.
-// ---------------------------------------------------------------------------
-
+// /u/:username — keyed on the public handle; the full User row rides along.
 export interface ResolvedUser {
   user: User;
 }

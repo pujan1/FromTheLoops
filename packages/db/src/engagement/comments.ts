@@ -1,15 +1,7 @@
-// Comments data-access (ADR-0011).
-//
-// Flat discussion on a report. This module owns the write guards (length, rate
-// limit, active-report-only, quote/reply integrity) and the anonymity-safe read.
-//
-// Anonymity is enforced HERE, not left to the caller: the read never returns an
-// anonymous comment's author_user_id. Instead it returns a derived `authorLabel`
-// (the display name only when the comment opted into display_name) and a
-// server-computed `viewerIsAuthor` (so the owner gets edit/delete controls
-// without the payload ever linking an anonymous comment back to an account). A
-// leak here would unmask anonymous commenters, so the boundary is the schema's
-// job, not the web layer's.
+// Comment writes (guards: length, rate limit, active-report-only, quote/reply
+// integrity) + anonymity-safe reads. Anonymity is enforced here: reads never
+// return an anonymous comment's author_user_id, only a derived authorLabel +
+// server-computed viewerIsAuthor.
 
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { comments, users } from "../schema/index.js";
@@ -17,13 +9,10 @@ import type { Db } from "../lib/types.js";
 import { DAY_MS } from "../lib/time.js";
 import type { Comment } from "../schema/comments.js";
 
-// Body bounds + posting rate limit (ADR-0011). Tunable launch defaults. The
-// rate limit is a rolling 24h window per author (the helpful-flags pattern):
-// bounds burst posting, which is the spam vector we care about.
+// Body bounds + rolling-24h per-author post cap.
 export const COMMENT_MAX_LENGTH = 2000;
 export const COMMENT_RATE_LIMIT = 100;
 export const COMMENT_WINDOW_MS = DAY_MS;
-// How much of a referenced comment's body to inline as the reply preview.
 const REPLY_PREVIEW_CHARS = 120;
 
 export type CommentRefusal =
@@ -40,27 +29,19 @@ export type CreateCommentResult =
 
 export type CommentSort = "newest" | "top";
 
-// The anonymity-safe shape the web layer renders. No raw author_user_id.
+// Anonymity-safe shape for the web layer. No raw author_user_id.
 export interface CommentView {
   id: string;
-  // null once the body has been PII-purged, or for a non-active (deleted/hidden)
-  // row kept only because something references it.
-  body: string | null;
+  body: string | null; // null when PII-purged or non-active
   status: "active" | "hidden" | "deleted";
-  // Display name/username when the comment is attributed; null when anonymous.
-  authorLabel: string | null;
-  // Computed against the signed-in viewer; false for signed-out readers.
+  authorLabel: string | null; // null when anonymous
   viewerIsAuthor: boolean;
   createdAt: Date;
   editedAt: Date | null;
   likeCount: number;
   viewerLiked: boolean;
-  // Quote-a-question: the snapshot (stable display) + the FK (jump-to, while it
-  // still exists).
   quotedQuestionId: string | null;
   quotedText: string | null;
-  // Reply-to-a-comment: the FK + an inlined, anonymity-safe preview of the
-  // parent (null parent fields when the parent is gone/removed).
   replyToCommentId: string | null;
   replyTo: {
     authorLabel: string | null;
@@ -69,11 +50,6 @@ export interface CommentView {
   } | null;
 }
 
-// ── Writes ───────────────────────────────────────────────────────────────────
-
-// Create a comment. Instant (status defaults to 'active'). Runs the guards in
-// cheap-first order, snapshots the quoted question's prose at quote-time, and
-// resolves the author's default attribution when the caller doesn't override it.
 export async function createComment(
   db: Db,
   input: {
@@ -89,7 +65,7 @@ export async function createComment(
   if (body.length === 0) return { ok: false, reason: "empty" };
   if (body.length > COMMENT_MAX_LENGTH) return { ok: false, reason: "too_long" };
 
-  // Comments only on an ACTIVE (public) report.
+  // Active (public) report only.
   const reportRows = await db.execute<{ status: string }>(
     sql`SELECT status FROM interview_reports WHERE id = ${input.reportId}::uuid LIMIT 1`,
   );
@@ -101,7 +77,7 @@ export async function createComment(
     return { ok: false, reason: "rate_limited" };
   }
 
-  // Quote a question: it must belong to THIS report. Snapshot its prose now.
+  // Quoted question must belong to this report; snapshot its prose.
   let quotedText: string | null = null;
   if (input.quotedQuestionId) {
     const qRows = await db.execute<{ question_prose: string }>(sql`
@@ -116,7 +92,7 @@ export async function createComment(
     quotedText = qRows[0].question_prose;
   }
 
-  // Reply to a comment: it must be an active comment on THIS report.
+  // Reply target must be an active comment on this report.
   if (input.replyToCommentId) {
     const pRows = await db.execute<{ id: string }>(sql`
       SELECT id FROM comments
@@ -128,7 +104,6 @@ export async function createComment(
     if (!pRows[0]) return { ok: false, reason: "invalid_reply" };
   }
 
-  // Default attribution to the author's account default when not overridden.
   let displayAttribution = input.displayAttribution;
   if (!displayAttribution) {
     const u = await db
@@ -157,8 +132,7 @@ export async function createComment(
   return { ok: true, comment };
 }
 
-// Edit own comment. Allowed anytime while active; stamps edited_at. Scoped to
-// (id, author, active) so a non-owner / deleted row updates nothing.
+// Scoped to (id, author, active) so a non-owner / deleted row updates nothing.
 export async function editComment(
   db: Db,
   input: { commentId: string; authorUserId: string; body: string },
@@ -184,10 +158,8 @@ export async function editComment(
   return { ok: true, comment };
 }
 
-// Soft-delete own comment: status → 'deleted', stamp deleted_at. The row
-// survives so replies/quotes pointing at it render a placeholder; the body is
-// cleared later by the 90-day PII purge. No-op (not_found) for a non-owner or an
-// already-non-active row.
+// status → 'deleted'; row survives for placeholder rendering. No-op for a
+// non-owner or already-non-active row.
 export async function softDeleteComment(
   db: Db,
   input: { commentId: string; authorUserId: string },
@@ -206,12 +178,8 @@ export async function softDeleteComment(
   return { ok: updated.length > 0 };
 }
 
-// ── Reads ────────────────────────────────────────────────────────────────────
-
-// The thread read. Returns active comments plus any non-active comment still
-// referenced by an active reply (so the placeholder resolves), newest-first or
-// top (most-liked) — both anonymity-safe. viewerId drives viewerIsAuthor /
-// viewerLiked; pass null for signed-out readers.
+// Active comments plus any non-active one still referenced by an active reply.
+// viewerId drives viewerIsAuthor/viewerLiked; null for signed-out readers.
 export async function listCommentsForReport(
   db: Db,
   input: {
@@ -309,7 +277,6 @@ export async function listCommentsForReport(
   }));
 }
 
-// Count of visible (active) comments on a report — the detail-page badge.
 export async function countCommentsForReport(
   db: Db,
   reportId: string,
@@ -320,8 +287,7 @@ export async function countCommentsForReport(
   return Number(rows[0]?.n ?? 0);
 }
 
-// Batched active-comment counts for list/card surfaces (ADR-0011). Map keyed by
-// report id; ids with no comments are absent. Empty input → empty map.
+// Batched active-comment counts; ids with no comments are absent from the map.
 export async function countCommentsForReports(
   db: Db,
   reportIds: string[],
@@ -340,9 +306,7 @@ export async function countCommentsForReports(
   return new Map(rows.map((r) => [r.reportId, Number(r.count)]));
 }
 
-// Has this author hit the rolling-24h posting cap? Counts their comments in the
-// window regardless of status (a deleted comment still consumed a post slot),
-// riding comments_author_idx + the created_at filter.
+// Counts comments in the window regardless of status (a deleted one still used a slot).
 async function reachedRateLimit(db: Db, authorUserId: string): Promise<boolean> {
   const since = new Date(Date.now() - COMMENT_WINDOW_MS);
   const rows = await db

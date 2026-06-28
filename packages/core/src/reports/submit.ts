@@ -1,23 +1,6 @@
-// Submission finalization — the orchestrator that turns a validated draft into
-// a persisted interview report. This is the single server-side gate the submit
-// action calls.
-//
-// It sits above the data layer and ties three things together:
-//   1. validateFinalSubmission (@fromtheloop/shared) — the strict gate. A draft
-//      that doesn't pass never touches the database.
-//   2. resolve-on-finalize — a "suggested" company or tag is a name with no row
-//      yet. We turn each into a real (pending) taxonomy row via the idempotent
-//      suggestCompany / suggestTopic helpers BEFORE opening the write
-//      transaction. Doing it outside the tx is deliberate: these are
-//      idempotent upserts into a moderation queue, harmless to leave behind if
-//      the report write later fails, and keeping them out of the tx avoids
-//      threading the tx handle through the taxonomy helpers.
-//   3. createReport / updateReport (@fromtheloop/db) — the actual row writes.
-//
-// Edit branch: when the draft carries an editingReportId it's an in-flight edit
-// of an existing report. We re-assert ownership + the 24h window here (the
-// server action also checks, but this is the authority) and update in place;
-// otherwise we create a new report. Either way the source draft is consumed.
+// Submission finalization: validate → resolve suggested taxonomy → write. The
+// single server-side gate the submit action calls. The editingReportId branch
+// re-asserts ownership + the 24h window and updates in place.
 
 import {
   countVerifiedReportsForUser,
@@ -43,32 +26,20 @@ import { type ContentCategory, firstBlockingMatch } from "../anti-abuse/regex.js
 import { decideInitialReportStatus } from "./moderation.js";
 
 export interface FinalizeInput {
-  // Internal users.id (already resolved from the Clerk principal by the caller).
-  userId: string;
-  // The draft being finalized; deleted on success. null is tolerated (a direct
-  // finalize with no persisted draft), in which case nothing is deleted.
-  draftId: string | null;
-  // The raw draft jsonb. Re-validated here — never trusted pre-validated.
-  data: unknown;
-  // When set, edit that report in place instead of creating a new one.
-  editingReportId?: string | null;
+  userId: string; // internal users.id
+  draftId: string | null; // deleted on success; null tolerated
+  data: unknown; // raw draft jsonb, re-validated here
+  editingReportId?: string | null; // set → edit in place
 }
 
 export type FinalizeResult =
   | { ok: true; reportId: string }
-  // Draft failed the finalize gate; issues mirror the form for inline display.
   | { ok: false; reason: "invalid"; issues: SubmissionIssues }
-  // Edit target doesn't exist or isn't owned by this user.
-  | { ok: false; reason: "not_found" }
-  // Edit target exists but its 24h window has closed (or it's deleted).
-  | { ok: false; reason: "locked" }
-  // Free text tripped the block list (contact info / PII). `category` lets the
-  // caller word the rejection without echoing the offending content.
-  | { ok: false; reason: "blocked"; category: ContentCategory }
-  // The user already has a live report for this company (1/company/user cap).
-  | { ok: false; reason: "duplicate_company" };
+  | { ok: false; reason: "not_found" } // edit target missing or not owned
+  | { ok: false; reason: "locked" } // 24h window closed (or deleted)
+  | { ok: false; reason: "blocked"; category: ContentCategory } // contact info / PII
+  | { ok: false; reason: "duplicate_company" }; // 1/company/user cap
 
-// Gather every free-text field in a validated submission for content scanning.
 function submissionTexts(final: FinalSubmission): string[] {
   const texts: string[] = [];
   for (const round of final.rounds) {
@@ -78,11 +49,7 @@ function submissionTexts(final: FinalSubmission): string[] {
   return texts;
 }
 
-// Resolve one question's tag selections to concrete topic ids. "existing" tags
-// already have an id; "suggested" tags are upserted to a pending row (idempotent
-// on slug) and attributed to the user. All resolved ids are attached — a pending
-// tag is a real row, so the FK holds; the ≥1-*active*-tag rule was already
-// enforced by validateFinalSubmission.
+// "suggested" tags are upserted to a pending row (idempotent) and attributed.
 async function resolveTopicIds(
   db: Database,
   userId: string,
@@ -103,8 +70,7 @@ async function resolveTopicIds(
   return ids;
 }
 
-// Turn a validated FinalSubmission into the resolved, id-only ReportWriteInput
-// the db layer wants. Resolves the suggested company + every suggested tag.
+// Resolve a FinalSubmission into the id-only ReportWriteInput the db layer wants.
 async function resolveWriteInput(
   db: Database,
   userId: string,
@@ -160,16 +126,14 @@ export async function finalizeSubmission(
     return { ok: false, reason: "invalid", issues: validation.issues };
   }
 
-  // Block list: contact info / PII in any free-text field hard-rejects before
-  // any write (the trimmed, validated prose is what gets scanned). Profanity is
-  // flag-only and never reaches here, so this gate is high-confidence.
+  // Contact info / PII hard-rejects before any write.
   const blocked = firstBlockingMatch(submissionTexts(validation.data));
   if (blocked) {
     return { ok: false, reason: "blocked", category: blocked.category };
   }
 
-  // For an edit, gate on ownership + the window BEFORE doing any resolution
-  // writes, so a locked/foreign target can't spawn pending taxonomy rows.
+  // Gate edits before resolution writes, so a locked/foreign target can't spawn
+  // pending taxonomy rows.
   if (input.editingReportId) {
     const existing = await getReport(db, input.editingReportId, input.userId);
     if (!existing) return { ok: false, reason: "not_found" };
@@ -178,9 +142,7 @@ export async function finalizeSubmission(
 
   const writeInput = await resolveWriteInput(db, input.userId, validation.data);
 
-  // Per-company cap (create path only — an edit keeps its company). Checked
-  // after company resolution so a "suggested" company is compared by its real
-  // id. A user gets one live report per company; soft-deleting frees the slot.
+  // Per-company cap (create path only), after company resolution.
   if (!input.editingReportId) {
     const dupe = await userHasReportForCompany(
       db,
@@ -198,14 +160,10 @@ export async function finalizeSubmission(
       input.userId,
       writeInput,
     );
-    // Null = the row vanished or changed owner between the gate and the write
-    // (a race). Treat as not-found rather than silently creating a new report.
-    if (!updated) return { ok: false, reason: "not_found" };
+    if (!updated) return { ok: false, reason: "not_found" }; // raced away
     reportId = updated.id;
   } else {
-    // New-user moderation hold: decide the initial status from account age +
-    // prior verified submissions. Trusted users publish 'active'; everyone else
-    // is held 'pending_moderation'. Editing never re-runs this (status sticks).
+    // New-user moderation hold (editing never re-runs this).
     const user = await getUserById(db, input.userId);
     const verifiedReportCount = await countVerifiedReportsForUser(
       db,
@@ -218,8 +176,7 @@ export async function finalizeSubmission(
     reportId = (await createReport(db, { ...writeInput, status })).id;
   }
 
-  // The draft has served its purpose. Best-effort, ownership-scoped — a miss is
-  // harmless (the per-user cap + TTL cron reap it).
+  // Best-effort, ownership-scoped; a miss is harmless.
   if (input.draftId) {
     await deleteDraft(db, input.draftId, input.userId);
   }

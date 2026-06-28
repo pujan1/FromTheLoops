@@ -15,8 +15,10 @@ const QUEUE_TABS: Tab[] = [
   { href: "/admin/queues/tags", label: "Tags" },
   { href: "/admin/queues/roles", label: "Roles" },
   { href: "/admin/queues/new-user-hold", label: "Held" },
+  { href: "/admin/queues/flags", label: "Flags" },
   { href: "/admin/queues/soft-delete", label: "Soft-delete" },
   { href: "/admin/audit", label: "Audit" },
+  { href: "/admin/auto-approve", label: "Auto-approve" },
 ];
 
 export function AdminNav({ canSeeHealth }: { canSeeHealth: boolean }) {

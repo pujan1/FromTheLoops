@@ -1,22 +1,6 @@
-// Dummy comment fixtures (ADR-0011). Hangs a rich, varied thread off a seeded
-// report so the conversation UI can be eyeballed without hand-posting — every
-// comment SHAPE the renderer handles is represented:
-//
-//   • attributed (display_name) and anonymous bodies
-//   • a comment that QUOTES a question (frozen quoted_text snapshot + FK)
-//   • a flat REPLY to another comment (reply preview)
-//   • an EDITED comment (edited_at → "(edited)" marker)
-//   • a long body with a URL (length + auto-linkify)
-//   • a soft-DELETED comment kept alive by an active reply (deleted placeholder)
-//   • a moderator-HIDDEN comment kept alive by an active reply (removed placeholder)
-//   • likes on several comments (badge counts + the "Top" sort)
-//
-// A couple of other reports get one/two plain comments each so list/card badge
-// counts have something to show too.
-//
-// Idempotent: deletes every comment on seed_dummy reports first (comment_likes
-// CASCADE from comments), so re-runs refresh rather than pile up. Attaches to
-// EXISTING seeded reports, so run `db:seed:reports` before this.
+// Dummy comment fixtures hanging a rich thread (every comment shape the renderer
+// handles: quotes, replies, edits, deleted/hidden placeholders, likes) off a
+// seeded report. Idempotent; attaches to existing reports (run db:seed:reports first).
 
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -31,8 +15,7 @@ import { SEED_AUTHORS } from "./reports.js";
 
 type Db = PostgresJsDatabase<typeof schema>;
 
-// Fixed reference instant keeps created_at/edited_at reproducible across runs.
-const REF = Date.UTC(2026, 4, 20); // 2026-05-20
+const REF = Date.UTC(2026, 4, 20); // fixed ref for reproducibility
 const daysAgo = (n: number): Date => new Date(REF - n * 24 * 60 * 60 * 1000);
 
 interface CommentSpec {
@@ -54,13 +37,11 @@ export interface SeedCommentsResult {
   reports: number;
   comments: number;
   likes: number;
-  // The report carrying the rich thread — the runner prints its URL.
-  mainReportId: string;
+  mainReportId: string; // carries the rich thread; the runner prints its URL
 }
 
 export async function seedComments(db: Db): Promise<SeedCommentsResult> {
-  // 1. Resolve seed authors (need a stable cast of ≥8). Keyed by clerk_id so the
-  //    cast is the same set the report seed wrote.
+  // Resolve the ≥8 seed authors, keyed by clerk_id.
   const authorRows = await db
     .select({ id: users.id, clerkId: users.clerkId })
     .from(users)
@@ -75,8 +56,7 @@ export async function seedComments(db: Db): Promise<SeedCommentsResult> {
     );
   }
 
-  // 2. Pick the three most-recent active seeded reports. The first gets the rich
-  //    thread; the others get a couple of plain comments for badge counts.
+  // Three most-recent reports: the first gets the rich thread, the rest plain comments.
   const reportRows = await db
     .select({ id: interviewReports.id })
     .from(interviewReports)
@@ -98,7 +78,7 @@ export async function seedComments(db: Db): Promise<SeedCommentsResult> {
   const second = ids[1];
   const third = ids[2];
 
-  // A real question on the main report, to quote (snapshot its prose now).
+  // A real question on the main report, to quote.
   const qRows = await db.execute<{ id: string; question_prose: string }>(sql`
     SELECT q.id, q.question_prose
       FROM questions q
@@ -109,7 +89,7 @@ export async function seedComments(db: Db): Promise<SeedCommentsResult> {
   `);
   const quoted = qRows[0] ?? null;
 
-  // 3. Idempotency: clear comments on every seed_dummy report (likes CASCADE).
+  // Idempotency: clear comments on every seed_dummy report (likes CASCADE).
   await db.execute(sql`
     DELETE FROM comments
      WHERE report_id IN (
@@ -117,8 +97,7 @@ export async function seedComments(db: Db): Promise<SeedCommentsResult> {
      )
   `);
 
-  // 4. The thread on the main report. Order matters: a reply's parent must be
-  //    inserted before it (we resolve replyToKey → id as we go).
+  // The thread on the main report. A reply's parent must precede it (replyToKey).
   const specs: CommentSpec[] = [
     {
       key: "root1",
@@ -250,7 +229,7 @@ export async function seedComments(db: Db): Promise<SeedCommentsResult> {
     return main;
   };
 
-  // 5. Insert in order, wiring replies + likes.
+  // Insert in order, wiring replies + likes.
   const idByKey = new Map<string, string>();
   let commentCount = 0;
   let likeCount = 0;

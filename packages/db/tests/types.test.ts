@@ -18,6 +18,7 @@ import type {
   Comment,
   Company,
   CompanyLevel,
+  ContentFlag,
   Draft,
   InterviewReport,
   ModActionLog,
@@ -91,6 +92,19 @@ describe("schema types", () => {
     expectTypeOf<Comment["status"]>().toEqualTypeOf<
       "active" | "hidden" | "deleted"
     >();
+  });
+
+  it("ContentFlag enums are the exact unions (target / reason / status)", () => {
+    expectTypeOf<ContentFlag["targetType"]>().toEqualTypeOf<
+      "report" | "comment"
+    >();
+    expectTypeOf<ContentFlag["reason"]>().toEqualTypeOf<
+      "spam" | "harassment" | "pii" | "misinformation" | "off_topic" | "other"
+    >();
+    expectTypeOf<ContentFlag["status"]>().toEqualTypeOf<
+      "open" | "actioned" | "dismissed"
+    >();
+    expectTypeOf<ContentFlag["resolvedByUserId"]>().toEqualTypeOf<string | null>();
   });
 
   it("NewInterviewReport allows optional fields with defaults", () => {

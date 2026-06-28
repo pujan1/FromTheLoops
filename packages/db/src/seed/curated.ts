@@ -1,14 +1,6 @@
-// The curated taxonomy fixtures — 30 top tech companies (with per-company
-// level ladders) and ~20 canonical engineering roles. Everything here is
-// `source = 'seed_curated'`, `status = 'active'`, so it shows up in
-// autocomplete immediately.
-//
-// Kept as plain exported arrays so tests + future tooling (mod queue, fixtures)
-// can import the canonical set without a DB round-trip.
-//
-// Idempotent: seedCurated() upserts on the natural keys (company slug, role
-// slug, company_id+level slug), so re-running refreshes edits in place
-// without duplicating or erroring.
+// Curated taxonomy fixtures (companies + level ladders + roles + topics), all
+// source='seed_curated', status='active'. Plain exported arrays so tests can
+// import the canonical set. seedCurated() upserts on natural keys (idempotent).
 
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -22,16 +14,10 @@ import {
 } from "../schema/index.js";
 import { slugify } from "../taxonomy/slug.js";
 
-// Minimal DB type: a Drizzle postgres-js client bound to our schema. Both
-// getDb()'s client and the test client (helpers.ts `TestDb`) satisfy this —
-// they differ only in the optional `$client` field, which the seed never
-// touches. Typing the param this loosely keeps seedCurated() callable from
-// tests without dragging in the production client's exact shape.
+// Loose DB type so both getDb()'s client and the test client satisfy it.
 type Db = PostgresJsDatabase<typeof schema>;
 
-// Canonical seniority tier a rung maps to (mirrors the level_tier pgEnum).
-// `null` = no standard tier → the submission UI renders the rung with no
-// seniority prefix. `mid` is the baseline IC tier (also no prefix).
+// Mirrors the level_tier pgEnum. null → no seniority prefix.
 export type LevelTier =
   | "junior"
   | "mid"
@@ -40,8 +26,6 @@ export type LevelTier =
   | "senior_staff"
   | "principal";
 
-// One ladder rung: display name + the tier it maps to. Tuple keeps the table
-// below scannable: ["E5", "senior"].
 export type LevelSpec = [name: string, tier: LevelTier | null];
 
 export interface CuratedCompany {
@@ -49,10 +33,7 @@ export interface CuratedCompany {
   name: string;
   domain: string;
   aliases?: string[];
-  // Ladder, low → high. Order is preserved as company_levels.order_index
-  // since level names don't sort lexically (L3 < L4 < L5, E3 < E4 …). Each
-  // rung carries its canonical seniority tier for the submission UI relabel.
-  levels: LevelSpec[];
+  levels: LevelSpec[]; // low → high; preserved as order_index
 }
 
 export interface CuratedRole {
@@ -72,12 +53,7 @@ export interface CuratedTopic {
   category: TopicCategory;
 }
 
-// Level slugs are derived from the display name via the shared slugify()
-// (unique within a company, which is all the (company_id, slug) constraint
-// requires).
-
-// 30 companies. Ladders are the public/known IC engineering tracks; where a
-// company is famously flat (Netflix) the ladder is short on purpose.
+// Level slugs are derived from the display name via slugify().
 export const CURATED_COMPANIES: CuratedCompany[] = [
   { slug: "google", name: "Google", domain: "google.com", aliases: ["Alphabet"], levels: [["L3", "junior"], ["L4", "mid"], ["L5", "senior"], ["L6", "staff"], ["L7", "senior_staff"]] },
   { slug: "meta", name: "Meta", domain: "meta.com", aliases: ["Facebook"], levels: [["E3", "junior"], ["E4", "mid"], ["E5", "senior"], ["E6", "staff"], ["E7", "senior_staff"]] },
@@ -111,9 +87,8 @@ export const CURATED_COMPANIES: CuratedCompany[] = [
   { slug: "openai", name: "OpenAI", domain: "openai.com", levels: [["IC3", "junior"], ["IC4", "mid"], ["IC5", "senior"], ["IC6", "staff"]] },
 ];
 
-// ~20 canonical engineering roles. Slugs are stable (URL + reports FK), so
-// don't rename them; widen `aliases` instead. NO inline create for roles
-// (PLAN.md §Taxonomy curation) — this set is the closed world users match.
+// Canonical roles — the closed set users match (no inline create). Slugs are
+// stable (URL + reports FK); don't rename, widen `aliases` instead.
 export const CURATED_ROLES: CuratedRole[] = [
   { slug: "swe", name: "Software Engineer", aliases: ["SDE", "Software Development Engineer", "Programmer", "Software Developer"] },
   { slug: "frontend", name: "Frontend Engineer", aliases: ["Front-End Engineer", "UI Engineer", "Web Developer"] },
@@ -137,20 +112,8 @@ export const CURATED_ROLES: CuratedRole[] = [
   { slug: "product-manager", name: "Product Manager", aliases: ["PM", "Technical Product Manager", "TPM"] },
 ];
 
-// ~85 curated topic tags — the seed set a question is tagged with (≥1
-// active tag required; see docs/data-model.md). Spans the four families the
-// wedge targets — general SWE (algorithms/DS + system design + language &
-// backend fundamentals), ML, data, and SRE/DevOps — plus a small set of
-// universal behavioral tags. Slugs are stable (topic page URL + the
-// question_topics FK), so don't rename them; widen `aliases` instead.
-// Aliases feed the same fuzzy match as companies/roles (so "DP" → Dynamic
-// Programming, "K8s" → Kubernetes). Unlike roles, topics ALSO allow inline
-// "suggest new → pending" via suggestTopic — this is just the curated floor.
-// Topics, grouped by the curated category that drives the /topics index's
-// sections (Sprint 5). Declaration order here = the section order on the index
-// page (the flatten below preserves it). Category is persisted on
-// topics.category; the index reads it back to render one section per group.
-// Slugs are stable URLs — don't rename; widen `aliases` instead.
+// Curated topic tags, grouped by category. Declaration order = the /topics index
+// section order (the flatten below preserves it). Slugs are stable; don't rename.
 type SeedTopic = Omit<CuratedTopic, "category">;
 
 const TOPICS_BY_CATEGORY: Record<TopicCategory, SeedTopic[]> = {
@@ -270,8 +233,7 @@ const TOPICS_BY_CATEGORY: Record<TopicCategory, SeedTopic[]> = {
   ],
 };
 
-// Flattened to the order categories are declared above — the canonical list the
-// seed inserts and tests count. Each row carries its category for persistence.
+// Flattened in category-declaration order — the canonical list the seed inserts.
 export const CURATED_TOPICS: CuratedTopic[] = (
   Object.entries(TOPICS_BY_CATEGORY) as [TopicCategory, SeedTopic[]][]
 ).flatMap(([category, list]) => list.map((t) => ({ ...t, category })));
@@ -283,8 +245,7 @@ export interface SeedCuratedResult {
   topics: number;
 }
 
-// Upsert the curated set. Returns counts (inserted-or-updated rows) so the
-// seed entrypoint can log them and tests can assert on them.
+// Upserts the curated set; returns inserted-or-updated counts.
 export async function seedCurated(db: Db): Promise<SeedCuratedResult> {
   const companyRows = await db
     .insert(companies)

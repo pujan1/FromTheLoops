@@ -1,10 +1,5 @@
-// Report → editable-draft rehydration. The edit flow reads a submitted report
-// deeply (getReportForEdit), then maps it back into the exact SubmissionDraft
-// shape the submission form consumes, so "edit" reuses the whole form unchanged.
-//
-// Everything resolves to "existing" selections (the report only references real
-// rows). editingReportId is stamped on so the eventual finalize updates this
-// report in place rather than creating a new one.
+// Maps a deep report back into the SubmissionDraft shape so "edit" reuses the
+// form. Everything resolves to "existing"; editingReportId drives update-in-place.
 
 import type { ReportDetail } from "@fromtheloop/db";
 import type { SubmissionDraft, TopicTagSelection } from "@fromtheloop/shared";

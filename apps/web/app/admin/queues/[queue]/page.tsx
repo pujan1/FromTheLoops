@@ -8,6 +8,7 @@
 import { notFound } from "next/navigation";
 import {
   getDb,
+  listContentFlags,
   listHeldReports,
   listPendingCompanies,
   listPendingRoles,
@@ -27,6 +28,19 @@ const karmaField = (karma: number | null) => ({
   value: karma == null ? "seed / unknown" : `${karma.toLocaleString()} karma`,
 });
 
+// A "possible duplicate" badge from the dedup hint, tinted by how close the
+// match is — a strong near-match (the auto-approve block threshold) is a
+// merge-or-reject warning; a weaker one is just informational.
+const dedupBadge = (nearest: { name: string; score: number } | null) =>
+  nearest
+    ? [
+        {
+          label: `possible dup: ${nearest.name} (${Math.round(nearest.score * 100)}%)`,
+          tone: nearest.score >= 0.55 ? ("warn" as const) : ("neutral" as const),
+        },
+      ]
+    : undefined;
+
 async function loadItems(queue: QueueId): Promise<ModQueueItem[]> {
   const db = getDb();
   switch (queue) {
@@ -37,6 +51,7 @@ async function loadItems(queue: QueueId): Promise<ModQueueItem[]> {
         primary: r.name,
         secondary: r.slug,
         fields: [{ label: "Domain", value: r.domain ?? "—" }, karmaField(r.suggestedByKarma)],
+        badges: dedupBadge(r.nearest),
         createdAt: r.createdAt.toISOString(),
       }));
     }
@@ -47,6 +62,7 @@ async function loadItems(queue: QueueId): Promise<ModQueueItem[]> {
         primary: r.name,
         secondary: r.slug,
         fields: [{ label: "Category", value: r.category ?? "uncategorized" }, karmaField(r.suggestedByKarma)],
+        badges: dedupBadge(r.nearest),
         createdAt: r.createdAt.toISOString(),
       }));
     }
@@ -88,6 +104,29 @@ async function loadItems(queue: QueueId): Promise<ModQueueItem[]> {
         href: `/reports/${r.id}`,
         createdAt: r.createdAt.toISOString(),
       }));
+    }
+    case "flags": {
+      const rows = await listContentFlags(db);
+      return rows.map((r) => {
+        const reasons = r.reasons.map((x) => x.replace(/_/g, " ")).join(", ");
+        const severe = r.reasons.some((x) => x === "pii" || x === "harassment");
+        return {
+          id: r.id,
+          primary: r.primary,
+          secondary: r.secondary ?? undefined,
+          fields: [
+            { label: "Type", value: r.kind === "report" ? "Report" : "Comment" },
+            { label: "Author", value: r.author ?? "unknown" },
+            { label: "Reasons", value: reasons },
+          ],
+          badges: [
+            { label: `${r.flagCount} flag${r.flagCount === 1 ? "" : "s"}`, tone: "warn" as const },
+            ...(severe ? [{ label: "sensitive", tone: "danger" as const }] : []),
+          ],
+          href: r.href,
+          createdAt: r.lastFlaggedAt.toISOString(),
+        };
+      });
     }
     // Not yet wired (later sprint days): render the empty config.
     default:

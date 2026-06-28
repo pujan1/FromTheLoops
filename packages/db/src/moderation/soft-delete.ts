@@ -1,10 +1,5 @@
-// The soft-delete queue (Sprint 6 Day 7). Lists content a user soft-deleted
-// (status 'deleted', deleted_at set) still inside the 90-day window before the
-// PII purge wipes its prose — so a mod can reverse an accidental or contested
-// deletion. Spans both reports and comments in one list; the composite id
-// `report:<uuid>` / `comment:<uuid>` tells the restore command which table to
-// touch. Purged rows (pii_purged_at set) are excluded — their body is already
-// gone, so "restore" would resurrect a gutted shell.
+// Soft-deleted reports + comments still inside the PII-purge window, so a mod can
+// reverse a deletion. Purged rows (pii_purged_at set) are excluded.
 
 import { and, eq, gte, isNull } from "drizzle-orm";
 import { comments, companies, interviewReports, roles, users } from "../schema/index.js";
@@ -13,7 +8,6 @@ import { daysUntil } from "../lib/time.js";
 import { type Command, type Db, logModAction } from "./shared.js";
 import type { SoftDeletedItem } from "./types.js";
 
-// Whole days left in the restore window before the PII purge wipes the prose.
 const daysLeftUntilPurge = (deletedAt: Date): number =>
   daysUntil(new Date(deletedAt.getTime() + PII_RETENTION_MS));
 
@@ -65,7 +59,7 @@ export async function listSoftDeleted(db: Db): Promise<SoftDeletedItem[]> {
   const items: SoftDeletedItem[] = [];
 
   for (const r of reportRows) {
-    if (!r.deletedAt) continue; // status='deleted' guarantees this, narrow for TS
+    if (!r.deletedAt) continue; // narrow for TS
     items.push({
       id: `report:${r.id}`,
       kind: "report",
@@ -91,14 +85,12 @@ export async function listSoftDeleted(db: Db): Promise<SoftDeletedItem[]> {
     });
   }
 
-  // Most-recently-deleted first.
   items.sort((a, b) => b.deletedAt.getTime() - a.deletedAt.getTime());
   return items;
 }
 
-// Reverse a soft-delete: status 'deleted' → 'active', clear deleted_at. Guarded
-// by status='deleted' AND pii_purged_at IS NULL so it's idempotent and refuses
-// to "restore" already-purged (gutted) content. Logged as 'restore'.
+// 'deleted' → 'active'. Guarded by status + pii_purged_at IS NULL: idempotent
+// and refuses to restore already-purged content.
 export async function restoreSoftDeleted(db: Db, { id, modUserId }: Command): Promise<boolean> {
   const sep = id.indexOf(":");
   const kind = sep === -1 ? "" : id.slice(0, sep);

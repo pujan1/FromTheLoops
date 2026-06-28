@@ -1,8 +1,4 @@
-// `pnpm db:seed` entrypoint. Applies the curated taxonomy fixtures (30
-// companies + per-company levels + ~20 canonical roles) from ./curated.ts.
-//
-// Idempotent: seedCurated() upserts on natural keys, so this is safe to run
-// repeatedly against the same database without duplicates or errors.
+// `pnpm db:seed` entrypoint. Applies the curated taxonomy fixtures. Idempotent.
 
 import { config } from "dotenv";
 import { closeDb, getDb } from "../index.js";

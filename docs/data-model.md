@@ -33,6 +33,7 @@ erDiagram
   users ||--o{ submission_drafts : owns
   users ||--o{ user_verifications : verifies
   users ||--o{ mod_action_logs : performs
+  users ||--o{ content_flags : flags
 
   companies ||--o{ interview_reports : receives_reports
   companies ||--o{ company_levels : has_levels
@@ -70,7 +71,10 @@ Source: [`packages/db/src/schema/enums.ts`](../packages/db/src/schema/enums.ts).
 | `round_type` | `recruiter-screen`, `technical-phone`, `onsite-coding`, `onsite-system-design`, `onsite-behavioral`, `take-home`, `hiring-manager`, `exec-final`, `other` | `rounds.round_type`, shared submission schemas |
 | `round_rating` | `positive`, `mixed`, `negative` | `rounds.rating`, shared submission schemas |
 | `verification_method` | `work_email`, `linkedin`, `manual` | `user_verifications.verified_via` |
-| `mod_action_type` | `approve`, `reject`, `merge`, `ban`, `delete`, `edit_taxonomy` | `mod_action_logs.action_type` |
+| `mod_action_type` | `approve`, `reject`, `merge`, `ban`, `delete`, `hide`, `edit_taxonomy`, `restore` | `mod_action_logs.action_type` |
+| `content_flag_target` | `report`, `comment` | `content_flags.target_type` |
+| `content_flag_reason` | `spam`, `harassment`, `pii`, `misinformation`, `off_topic`, `other` | `content_flags.reason` |
+| `content_flag_status` | `open`, `actioned`, `dismissed` | `content_flags.status` |
 
 ## Persistent Postgres Models
 
@@ -323,6 +327,34 @@ Append-only audit trail for moderation actions.
 
 There is no FK on `target_id` because the target can be a report, user, company,
 taxonomy row, or another moderated object.
+
+### `content_flags`
+
+Source: [`packages/db/src/schema/content-flags.ts`](../packages/db/src/schema/content-flags.ts).
+
+Reader abuse-reports against a report or comment (Sprint 6 Day 7, the
+community-flags queue). Distinct from `helpful_flags` (a *positive* endorsement
+toggle); a content flag is raised once and resolved by a moderator.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | Primary key |
+| `target_type` | `content_flag_target` | Required; `report` or `comment` (polymorphic, no FK on `target_id`) |
+| `target_id` | `uuid` | Required polymorphic target id |
+| `flagger_user_id` | `uuid` | Required FK to `users`, `ON DELETE CASCADE` |
+| `reason` | `content_flag_reason` | Required reader-stated category |
+| `note` | `text` | Nullable free-text; cleared by the 90-day PII purge |
+| `status` | `content_flag_status` | `open` → `actioned` (content removed) \| `dismissed` (unfounded) |
+| `resolved_by_user_id` | `uuid` | Nullable FK to `users`, `ON DELETE RESTRICT`; set on resolve |
+| `resolved_at` | `timestamptz` | Nullable; set on resolve |
+| `created_at` | `timestamptz` | Defaults to `now()` |
+
+Unique on `(target_type, target_id, flagger_user_id)` — one flag per reader per
+piece of content. The queue groups open flags by `(target_type, target_id)`; one
+moderator decision resolves every open flag on that content. A **hide** removes
+the content (comment → `hidden`, report → soft-`deleted` + a `deleted` event) and
+writes a `hide` row to `mod_action_logs`; a **dismiss** keeps the content and
+writes no audit-log row — the resolution lives on the flag rows themselves.
 
 ### `events`
 

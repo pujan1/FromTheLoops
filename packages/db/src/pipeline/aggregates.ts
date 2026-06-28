@@ -1,13 +1,5 @@
-// Aggregation read/refresh data-access (Sprint 3).
-//
-// The heavy lifting lives in SQL: migration 0008 creates the
-// `aggregates_company_role_level` summary table plus the refresh_aggregate_cell
-// / refresh_all_aggregates functions (see views/aggregates_company_role_level.sql
-// for the annotated source + the why-a-table-not-a-matview rationale). This
-// module is the thin typed surface the worker (refresh-aggregate job, Day 4) and
-// the backfill script (Day 6) call, plus the read the Sprint 4 wedge page uses.
-//
-// Pure persistence, like reports.ts: no @fromtheloop/shared or /core dep.
+// Thin typed surface over the aggregate summary tables + refresh functions
+// (defined in SQL, migration 0008). Used by the worker, backfill, and wedge page.
 
 import { sql } from "drizzle-orm";
 import {
@@ -16,10 +8,8 @@ import {
 } from "./events.js";
 import type { Db } from "../lib/types.js";
 
-// The trust-tier → weight mapping, mirrored from the SQL report_trust_weight()
-// (migration 0008) so JS callers can reason about / re-derive a weight without a
-// round-trip. PLAN.md §Aggregation weighting; V1 only wires the verified-employee
-// (evidence_verified) tier, so the live mapping collapses to these two.
+// Mirrors the SQL report_trust_weight() so JS callers can re-derive without a
+// round-trip. V1 wires only the verified tier.
 export const REPORT_TRUST_WEIGHTS = {
   verified: 1.0,
   unverified: 0.3,
@@ -31,7 +21,6 @@ export function reportTrustWeight(evidenceVerified: boolean): number {
     : REPORT_TRUST_WEIGHTS.unverified;
 }
 
-// One entry in a cell's top_topics jsonb array.
 export interface AggregateTopTopic {
   topic_id: string;
   slug: string;
@@ -40,10 +29,8 @@ export interface AggregateTopTopic {
   weighted_count: number;
 }
 
-// The grain-agnostic Position-Y payload — the fields both the level-grain and
-// the role-grain aggregates carry, and the only fields the AggregatePanel reads.
-// Numeric columns come back as strings over the wire (postgres NUMERIC →
-// string), so we normalize them to numbers here.
+// Grain-agnostic payload shared by level- and role-grain aggregates. NUMERIC
+// columns arrive as strings and are normalized to numbers here.
 export interface AggregateInsights {
   reportCount: number;
   outcome: {
@@ -60,36 +47,30 @@ export interface AggregateInsights {
   refreshedAt: Date;
 }
 
-// A single (company, role, level) aggregate row, shaped for app reads.
 export interface CompanyRoleLevelAggregate extends AggregateInsights {
   companyId: string;
   canonicalRoleId: string;
   level: string;
 }
 
-// A single (company, role) aggregate row — the role page's primary Position-Y
-// source, spanning every level (incl. Unspecified). Same shape minus the level.
+// Role-grain aggregate, spanning every level. Same shape minus the level.
 export interface CompanyRoleAggregate extends AggregateInsights {
   companyId: string;
   canonicalRoleId: string;
 }
 
-// The key identifying one level cell / "partition".
 export interface AggregateCellKey {
   companyId: string;
   canonicalRoleId: string;
   level: string;
 }
 
-// The key identifying one role cell.
 export interface RoleCellKey {
   companyId: string;
   canonicalRoleId: string;
 }
 
-// Recompute and UPSERT a single cell. This is what the worker calls per
-// LISTEN/NOTIFY event so only the affected partition is touched. Idempotent;
-// removes the row if the cell has no live reports left.
+// Recompute + UPSERT one cell. Idempotent; drops the row if it has no live reports.
 export async function refreshAggregateCell(
   db: Db,
   cell: AggregateCellKey,
@@ -99,11 +80,8 @@ export async function refreshAggregateCell(
   );
 }
 
-// The aggregate consumer's per-event handler — the testable core of the
-// refresh-aggregate worker job (Day 4). Loads the event, recomputes its cell,
-// and marks the event drained by the aggregate consumer. Idempotent: a missing
-// or already-processed event is a clean no-op, so BullMQ retries and the
-// fallback poller can both deliver the same event safely.
+// Per-event handler for the refresh-aggregate worker job. Idempotent (missing
+// or already-processed → clean no-op).
 export type RefreshEventResult = "missing" | "refreshed";
 
 export async function refreshAggregateForEvent(
@@ -112,9 +90,7 @@ export async function refreshAggregateForEvent(
 ): Promise<RefreshEventResult> {
   const event = await getEventById(db, eventId);
   if (!event) return "missing";
-  // A write affects BOTH grains: the level cell it landed in AND the role cell
-  // above it. (A sentinel-level write is a no-op on the level grain — the SQL
-  // function drops it — but still moves the role cell.)
+  // A write moves both grains: the level cell and the role cell above it.
   await refreshAggregateCell(db, {
     companyId: event.companyId,
     canonicalRoleId: event.canonicalRoleId,
@@ -128,9 +104,7 @@ export async function refreshAggregateForEvent(
   return "refreshed";
 }
 
-// Recompute and UPSERT a single (company, role) role cell — the role-grain
-// analogue of refreshAggregateCell. Idempotent; drops the row when the role has
-// no live reports left.
+// Role-grain analogue of refreshAggregateCell. Idempotent.
 export async function refreshRoleAggregate(
   db: Db,
   cell: RoleCellKey,
@@ -148,8 +122,7 @@ export async function refreshAllAggregates(db: Db): Promise<number> {
   return Number(rows[0]?.refresh_all_aggregates ?? 0);
 }
 
-// Read one cell's aggregate, or null if it has never been refreshed / has no
-// live reports. The Sprint 4 wedge page's primary read.
+// The wedge page's primary read. null if never refreshed / no live reports.
 export async function getAggregate(
   db: Db,
   cell: AggregateCellKey,
@@ -167,8 +140,7 @@ export async function getAggregate(
   return row ? mapAggregateRow(row) : null;
 }
 
-// Read one role cell's aggregate, or null if it has no live reports. The role
-// page's primary Position-Y read (spans every level incl. Unspecified).
+// Role page's primary read (spans every level). null if no live reports.
 export async function getRoleAggregate(
   db: Db,
   cell: RoleCellKey,
@@ -187,10 +159,7 @@ export async function getRoleAggregate(
     : null;
 }
 
-// Raw row shape as it comes back from postgres-js (NUMERIC → string, jsonb →
-// already-parsed object/array, text[] → string[]).
-// Type alias (not interface) so it satisfies db.execute's
-// Record<string, unknown> constraint.
+// Raw postgres-js row shape. Type alias so it satisfies db.execute's index sig.
 type AggregateRow = {
   company_id: string;
   canonical_role_id: string;
@@ -208,7 +177,6 @@ type AggregateRow = {
   refreshed_at: string | Date;
 };
 
-// The grain-agnostic insight fields, shared by both aggregate mappers.
 function mapInsights(row: Omit<AggregateRow, "level">): AggregateInsights {
   return {
     reportCount: Number(row.report_count),
@@ -243,13 +211,9 @@ function mapAggregateRow(row: AggregateRow): CompanyRoleLevelAggregate {
   };
 }
 
-// The table name, for callers doing ad-hoc reads (e.g. /admin/health's
-// last-refresh-per-cell query, Day 8). The table is hand-DDL'd in migration
-// 0008, not declared in schema/*.ts.
+// Hand-DDL'd in migration 0008, not declared in schema/*.ts.
 export const aggregatesTableName = "aggregates_company_role_level";
 
-// One cell's freshness, for /admin/health (Day 8). Joined to company/role names
-// so the page reads "Google · Software Engineer · L5 — 12 reports, 3m ago".
 export interface AggregateCellHealth {
   companyName: string;
   roleName: string;
@@ -258,8 +222,7 @@ export interface AggregateCellHealth {
   refreshedAt: Date;
 }
 
-// Most-recently-refreshed cells first. Capped — the health page only needs a
-// glanceable sample, not the whole table.
+// Most-recently-refreshed cells first, capped.
 export async function listRecentAggregateRefreshes(
   db: Db,
   limit = 20,
@@ -288,8 +251,6 @@ export async function listRecentAggregateRefreshes(
   }));
 }
 
-// Total live cells in the aggregate table — a one-number "how much has been
-// aggregated" for the health page header.
 export async function countAggregateCells(db: Db): Promise<number> {
   const rows = await db.execute<{ n: number }>(
     sql`SELECT count(*)::int AS n FROM aggregates_company_role_level`,

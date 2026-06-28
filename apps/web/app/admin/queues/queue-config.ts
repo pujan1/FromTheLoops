@@ -158,18 +158,11 @@ export const QUEUE_CONFIGS: Record<QueueId, QueueConfig> = {
     id: "flags",
     title: "Community flags",
     description:
-      "Reader-reported reports and comments. Hide removes the content from public view; dismiss clears the flag as unfounded.",
+      "Reader-reported reports and comments, grouped by content. Hide removes the content from public view (logged); dismiss clears the flags as unfounded and keeps the content.",
     emptyText: "No open flags.",
     actions: [
       { id: "hide", label: "Hide", variant: "reject", requiresReason: true },
-      { id: "dismiss", label: "Dismiss flag", variant: "neutral" },
-      {
-        id: "delete",
-        label: "Delete",
-        variant: "danger",
-        requiresReason: true,
-        confirm: "Permanently remove this content? This is logged and cannot be undone here.",
-      },
+      { id: "dismiss", label: "Dismiss", variant: "neutral" },
     ],
     bulk: false,
   },

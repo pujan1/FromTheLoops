@@ -1,12 +1,5 @@
-// Collection provisioning — create any missing Typesense collections from the
-// committed schemas. Idempotent: a collection that already exists is left
-// untouched (we never auto-drop/recreate — that would wipe the index; a schema
-// change is a deliberate migration, out of V1 scope).
-//
-// Two call sites, both "provision in dev + Hetzner" (Sprint 3 Day 5):
-//   - `pnpm --filter @fromtheloop/search provision` — one-shot, dev + manual.
-//   - the worker calls ensureCollections() on boot (apps/worker) so the Hetzner
-//     box self-provisions on deploy, same way it upserts its job schedulers.
+// Creates any missing Typesense collections from the committed schemas.
+// Idempotent (never auto-drops). Called by the provision script + the worker on boot.
 
 import { getSearchClient } from "./client.js";
 import { ALL_COLLECTIONS } from "./schemas/index.js";
@@ -19,7 +12,7 @@ export interface ProvisionResult {
   action: ProvisionAction;
 }
 
-// Typesense throws a 409 with httpStatus 409 when the collection already exists.
+// Typesense throws httpStatus 409 when the collection already exists.
 function isAlreadyExists(err: unknown): boolean {
   return (
     typeof err === "object" &&
@@ -48,8 +41,7 @@ export async function ensureCollections(
   return results;
 }
 
-// Per-collection live document counts — feeds /admin/health (Day 8) and the
-// "is the index populated?" check after a backfill.
+// Per-collection live doc counts — feeds /admin/health.
 export async function collectionDocCounts(
   client: Client = getSearchClient(),
 ): Promise<Record<string, number>> {
@@ -59,9 +51,7 @@ export async function collectionDocCounts(
       const c = await client.collections(schema.name).retrieve();
       counts[schema.name] = c.num_documents ?? 0;
     } catch {
-      // Collection not provisioned yet → report 0 rather than throwing, so the
-      // health page degrades gracefully before first provision.
-      counts[schema.name] = 0;
+      counts[schema.name] = 0; // not provisioned yet
     }
   }
   return counts;

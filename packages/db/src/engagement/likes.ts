@@ -1,16 +1,6 @@
-// Likes data-access (ADR-0011).
-//
-// A like is a casual TOGGLE (insert to like, delete to un-like), one per
-// (target, user), on either a report (post_likes) or a comment (comment_likes).
-// Deliberately lighter than helpful-flags: ANY signed-in user can like, there is
-// no verification gate, and the vanity COUNT earns nobody karma. The ONE place a
-// like touches karma is a like on a *comment*, which recomputes the comment
-// author's karma (the capped earn term lives in karma.ts) — mirroring how a
-// helpful-flag recomputes the report author's.
-//
-// One guard: no self-like (you can't like your own report/comment), re-checked
-// here server-side even though the UI hides the control. Like helpful-flags,
-// the unique index makes a double-like a no-op (onConflictDoNothing).
+// Like toggles on posts + comments, one per (target, user). Any signed-in user;
+// no verification gate. Only comment-likes touch karma (recompute the comment
+// author). Self-like blocked server-side; double-like is a no-op.
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { recomputeUserKarma } from "../users/karma.js";
@@ -27,8 +17,6 @@ export type LikeRefusal = "self_like" | "not_found";
 export type LikeResult =
   | { ok: true; liked: boolean; count: number }
   | { ok: false; reason: LikeRefusal };
-
-// ── Post likes ─────────────────────────────────────────────────────────────
 
 export async function countPostLikes(db: Db, reportId: string): Promise<number> {
   const rows = await db.execute<{ n: number }>(
@@ -50,8 +38,7 @@ export async function hasUserLikedPost(
   return rows.length > 0;
 }
 
-// Like a report. Idempotent (already-liked → benign success). Blocks self-like
-// and a like on a missing/deleted report. No karma (post likes are vanity-only).
+// Idempotent. Blocks self-like and likes on a missing/deleted report. No karma.
 export async function likePost(
   db: Db,
   input: { reportId: string; userId: string },
@@ -81,7 +68,7 @@ export async function likePost(
   return { ok: true, liked: true, count: await countPostLikes(db, reportId) };
 }
 
-// Remove the viewer's like. Always allowed; no-op if absent.
+// No-op if absent.
 export async function unlikePost(
   db: Db,
   input: { reportId: string; userId: string },
@@ -92,8 +79,6 @@ export async function unlikePost(
     .where(and(eq(postLikes.reportId, reportId), eq(postLikes.userId, userId)));
   return { ok: true, liked: false, count: await countPostLikes(db, reportId) };
 }
-
-// ── Comment likes ────────────────────────────────────────────────────────────
 
 export async function countCommentLikes(
   db: Db,
@@ -120,8 +105,8 @@ export async function hasUserLikedComment(
   return rows.length > 0;
 }
 
-// Like a comment. Idempotent; blocks self-like and likes on a non-active
-// comment. Recomputes the COMMENT AUTHOR's karma so the (capped) earn lands.
+// Idempotent; blocks self-like and likes on a non-active comment. Recomputes
+// the comment author's karma.
 export async function likeComment(
   db: Db,
   input: { commentId: string; userId: string },
@@ -150,8 +135,7 @@ export async function likeComment(
   return { ok: true, liked: true, count: await countCommentLikes(db, commentId) };
 }
 
-// Remove the viewer's like on a comment. Always allowed; no-op if absent.
-// Recomputes the author's karma so the withdrawal lands immediately.
+// No-op if absent. Recomputes the author's karma.
 export async function unlikeComment(
   db: Db,
   input: { commentId: string; userId: string },
@@ -175,12 +159,7 @@ export async function unlikeComment(
   return { ok: true, liked: false, count: await countCommentLikes(db, commentId) };
 }
 
-// ── Batched counts for list/card surfaces (ADR-0011) ─────────────────────────
-//
-// The "counts on cards via one batched GROUP BY" read. Returns a Map keyed by
-// id; ids with zero likes are absent (callers default to 0). Empty input →
-// empty map (avoids an `IN ()` query).
-
+// Batched counts; ids with zero likes are absent from the map.
 export async function countPostLikesForReports(
   db: Db,
   reportIds: string[],
@@ -213,8 +192,7 @@ export async function countCommentLikesForComments(
   return new Map(rows.map((r) => [r.commentId, Number(r.count)]));
 }
 
-// Which of these comments has the viewer liked? Drives the per-comment toggle
-// state across a whole rendered page in one query. Empty input → empty set.
+// Which of these comments the viewer liked, in one query.
 export async function commentsLikedByUser(
   db: Db,
   commentIds: string[],

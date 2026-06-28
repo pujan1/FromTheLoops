@@ -10,22 +10,9 @@ import { verificationMethod } from "./enums.js";
 import { companies } from "./taxonomy.js";
 import { users } from "./users.js";
 
-// `user_verifications` — "this user once worked at this company,
-// verified by method X." Drives the `evidence_verified=true` badge on
-// reports they later submit. See PLAN.md §Trust & verification — the
-// 3-layer trust model.
-//
-// Privacy: we store *only* a hash of whatever evidence we received
-// (work email, OAuth subject, manual reviewer note). Never the raw
-// value. If we get subpoenaed we can prove a user verified against a
-// given company; we can't reveal *what* email they used.
-//
-// Cascade: ON DELETE CASCADE on user_id — if a user is hard-deleted
-// (GDPR right-to-erasure), their verifications go too. Tested in
-// tests/constraints.test.ts.
-//
-// ON DELETE RESTRICT on company_id — same logic as reports: taxonomy
-// merges must rewrite the FK, not silently drop verifications.
+// "This user verified they worked at this company." Drives the
+// evidence_verified badge. Stores only a hash of the evidence, never the raw
+// value. CASCADE on user_id, RESTRICT on company_id (merges rewrite the FK).
 export const userVerifications = pgTable(
   "user_verifications",
   {
@@ -37,8 +24,6 @@ export const userVerifications = pgTable(
       .notNull()
       .references(() => companies.id, { onDelete: "restrict" }),
     verifiedVia: verificationMethod("verified_via").notNull(),
-    // hash of the evidence (work email, OAuth subject, etc) — never store
-    // the raw value.
     evidenceTokenHash: text("evidence_token_hash").notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true })
       .notNull()

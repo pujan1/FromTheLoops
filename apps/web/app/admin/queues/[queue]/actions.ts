@@ -17,8 +17,10 @@ import {
   approvePendingCompany,
   approvePendingRole,
   approvePendingTopic,
+  dismissFlags,
   getDb,
   getOrCreateUserByClerkId,
+  hideFlagged,
   rejectHeldReport,
   rejectPendingCompany,
   rejectPendingRole,
@@ -26,7 +28,7 @@ import {
   restoreSoftDeleted,
 } from "@fromtheloop/db";
 import { requireModerator } from "@/lib/admin";
-import { isQueueId, type QueueActionFn, type QueueId } from "../queue-config";
+import { isQueueId, QUEUE_CONFIGS, type QueueActionFn, type QueueId } from "../queue-config";
 
 type CommandFn = (
   db: ReturnType<typeof getDb>,
@@ -41,6 +43,7 @@ const DISPATCH: Partial<Record<QueueId, Record<string, CommandFn>>> = {
   roles: { approve: approvePendingRole, reject: rejectPendingRole },
   "soft-delete": { restore: restoreSoftDeleted },
   "new-user-hold": { approve: approveHeldReport, reject: rejectHeldReport },
+  flags: { hide: hideFlagged, dismiss: dismissFlags },
 };
 
 export const runQueueAction: QueueActionFn = async ({ queueId, actionId, itemIds, reason }) => {
@@ -55,10 +58,12 @@ export const runQueueAction: QueueActionFn = async ({ queueId, actionId, itemIds
   const user = await currentUser();
   if (!user) return { ok: false, error: "Not signed in." };
 
-  // A reject must carry a reason (audit trail). The client enforces it; this is
-  // the server-side backstop.
-  if (actionId === "reject" && !reason?.trim()) {
-    return { ok: false, error: "A reason is required to reject." };
+  // Reason-requiring actions (reject, hide, …) must carry a reason for the audit
+  // trail. The config is the single source of truth — the client enforces it,
+  // this is the server-side backstop.
+  const actionDef = QUEUE_CONFIGS[queueId].actions.find((a) => a.id === actionId);
+  if (actionDef?.requiresReason && !reason?.trim()) {
+    return { ok: false, error: `A reason is required to ${actionDef.label.toLowerCase()}.` };
   }
 
   const db = getDb();

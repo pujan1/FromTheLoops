@@ -1,8 +1,5 @@
-// Indexer orchestration (Sprint 3 Day 6) — the search consumer of the events
-// outbox, plus the wholesale backfill. The exact mirror of the aggregate
-// consumer (refreshAggregateForEvent in @fromtheloop/db), but the write target
-// is Typesense, so the event-driven core lives here in @fromtheloop/search
-// (which deps on both db and the Typesense client).
+// The search consumer of the events outbox + the wholesale backfill (the
+// Typesense mirror of refreshAggregateForEvent).
 
 import {
   getEventById,
@@ -32,16 +29,9 @@ import {
 export * from "./reports.js";
 export * from "./taxonomy.js";
 
-// "missing" — event id not found (already-gone / racing claim → no-op).
-// "indexed" — the report's doc was upserted.
-// "deleted" — the doc was removed (delete event, or the report is no longer
-//             publicly visible: pending_moderation / soft-deleted).
 export type IndexEventResult = "missing" | "indexed" | "deleted";
 
-// Per-event search handler — the testable core of the worker's index-typesense
-// job. Idempotent: a missing/already-drained event is a clean no-op, an upsert
-// is a create-or-replace, and a delete tolerates "already gone", so BullMQ
-// retries and the fallback poller can both deliver the same event safely.
+// Per-event search handler — the core of the worker's index-typesense job. Idempotent.
 export async function indexReportForEvent(
   db: Database,
   client: Client,
@@ -55,9 +45,7 @@ export async function indexReportForEvent(
     await deleteReportDoc(client, event.reportId);
     result = "deleted";
   } else {
-    // created / updated — re-read under the visibility filter. A report that's
-    // pending_moderation (or got soft-deleted between event + processing)
-    // returns null, so we drop any stale doc rather than index a hidden report.
+    // created / updated — re-read under the visibility filter; null → drop stale doc.
     const input = await getReportForIndex(db, event.reportId);
     if (!input) {
       await deleteReportDoc(client, event.reportId);
@@ -72,10 +60,7 @@ export async function indexReportForEvent(
   return result;
 }
 
-// ── backfill ────────────────────────────────────────────────────────────────
-// Repopulate Typesense from the DB (Sprint 3 deliverable: `backfill:typesense`).
-// Collections must already exist (ensureCollections) — the backfill script does
-// that first. Returns per-collection counts.
+// Backfill — repopulate Typesense from the DB. Collections must already exist.
 
 export interface BackfillCounts {
   reports: number;

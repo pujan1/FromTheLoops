@@ -9,21 +9,9 @@ import {
 import { interviewReports } from "./reports.js";
 import { users } from "./users.js";
 
-// `helpful_flags` — "this reader found this report helpful" (Sprint 5 Day 8).
-//
-// One row = one reader's standing endorsement of one report. It's a TOGGLE, not
-// an append-only log: flagging inserts, un-flagging deletes, and the unique
-// index (report_id, flagger_user_id) makes a double-flag impossible. The report
-// author earns +1 karma per flag from another VERIFIED user (the earn term in
-// karma.ts re-checks the flagger's verification live, so the figure self-heals);
-// flagging is gated to verified-pro flaggers and rate-limited (50/day) in the
-// data-access layer to blunt the sock-puppet vector (sprint risk table).
-//
-// Cascade: ON DELETE CASCADE on BOTH FKs. If a flagger is hard-deleted (GDPR
-// erasure) their flags go with them — same stance as user_verifications. The
-// report FK is CASCADE too: a report is normally soft-deleted (the row
-// survives, and the karma earn already excludes deleted reports), but if one is
-// ever hard-deleted its flags shouldn't dangle.
+// Reader endorsements of a report. Toggle (insert/delete), one per (report,
+// reader). Earns the author +1 karma per verified flagger; gated + rate-limited
+// in the data-access layer. Both FKs CASCADE.
 export const helpfulFlags = pgTable(
   "helpful_flags",
   {
@@ -39,13 +27,9 @@ export const helpfulFlags = pgTable(
       .defaultNow(),
   },
   (t) => [
-    // One flag per (report, reader): the toggle's idempotency + anti-double-flag.
     uniqueIndex("helpful_flags_report_flagger_uq").on(t.reportId, t.flaggerUserId),
-    // Count flags on a report (detail page badge + the author's karma earn).
     index("helpful_flags_report_idx").on(t.reportId),
-    // The rate-limit read: "how many flags has this user cast since T?" — rides
-    // (flagger, created_at) so the windowed COUNT is an index range scan.
-    index("helpful_flags_flagger_created_idx").on(t.flaggerUserId, t.createdAt),
+    index("helpful_flags_flagger_created_idx").on(t.flaggerUserId, t.createdAt), // rate-limit read
   ],
 );
 

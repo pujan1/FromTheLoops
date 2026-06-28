@@ -331,3 +331,163 @@ mod releases it.
 - ⏭ Last Day-7 queue, **community-flags**, still needs its own reader-abuse-report
   table before it can be wired. Days 8–10 (auto-approve, reconciliation/blocklist,
   runbook+ADR-0008) unchanged. Evidence (Days 5–6) still paused on R2.
+
+### Day 7 (partial) — community-flags queue ✅ 🟢
+
+The last Day-7 queue and the only one needing a brand-new table. Done **mod-side
+only** (deliberate scope): the queue + commands + audit land now; the reader-side
+"Report" button (the writer) is a tracked follow-up.
+
+- **New table `content_flags`** (migration `0021_awesome_darkstar.sql`, dev-applied)
+  + 3 enums (`content_flag_target`/`reason`/`status`). A reader abuse-report —
+  the inverse of `helpful_flags` (which is a *positive* toggle; `helpful_flags`
+  is NOT abuse, hence the new table). Polymorphic `(target_type, target_id)` over
+  reports **and** comments (no FK on target_id, mirrors `mod_action_logs`). Unique
+  `(target_type, target_id, flagger)` → one flag per reader per item, so the
+  queue's flag COUNT is distinct readers. `flagger` FK CASCADE (GDPR erasure),
+  `resolved_by` FK RESTRICT (the flag row is the audit record for a dismissal).
+- **DB (`moderation/flags.ts`).** `listContentFlags` **groups open flags by
+  content** (the unit of decision is the item, not each flag) and fetches context
+  for still-ACTIVE content only — flags on already-removed content drop out.
+  Two commands: `hideFlagged` (comment → `hidden`; report → soft-`deleted` **+ a
+  `deleted` event** so aggregates/search drop it and it becomes restorable in the
+  soft-delete queue; logs `hide` with the required reason) and `dismissFlags`
+  (flags → `dismissed`, content untouched, **no `mod_action_logs` row** — the
+  resolution is self-auditing on the flag rows via `resolved_by/at`). Both
+  resolve every open flag on the content in one tx; idempotent via status guards.
+- **No hard-delete.** Dropped the planned "Delete" action from the `flags` config
+  (was hide/dismiss/delete → now **hide/dismiss**): V1 removes everything softly
+  (the 90-day purge worker owns true erasure), so a hard DELETE button would be
+  inconsistent with the whole codebase. "Hide" + the soft-delete restore queue
+  cover removal-and-recovery.
+- **Web.** `loadItems` "flags" case (Type/Author/Reasons fields, a flag-count
+  badge + a "sensitive" badge when reasons include pii/harassment, deep-link to
+  the content); `DISPATCH.flags = {hide, dismiss}`; a **Flags** nav tab. Also
+  **generalized the reason gate** in `runQueueAction` — it now reads
+  `requiresReason` from the queue config (covers `hide`) instead of hard-coding
+  `actionId === "reject"`.
+- **Verified.** db + web typecheck clean, web lint clean (one pre-existing
+  unrelated `theme-toggle` warning). Type assertions for the 3 new enums added to
+  `types.test.ts` (validated by tsc; the vitest run needs Docker testcontainers).
+  Throwaway probe (deleted) on its OWN throwaway report/comment/users:
+  group-by-content (count 2 / distinct reasons / comment deep-link), dismiss
+  (report stays active, flags dismissed, **zero** new logs, drops from queue,
+  re-dismiss=false), comment-hide (→hidden, flag actioned, one `hide` log w/
+  reason, re-hide=false), report-hide (→deleted, **one `deleted` event**, one
+  `hide` log), malformed id=false. **20/20 green**, all probe rows hard-deleted
+  (verified zero residue). Seeded 3 grouped demo flags (2 reports + 1 comment) in
+  dev for operator click-through.
+
+**Decisions / deferrals**
+- ⏭ **Reader-side "Report" button is the open follow-up** — `content_flags` has
+  no product writer yet, so in the running app the queue is seed-only until that
+  lands (gate it like `helpful_flags`: signed-in, self-flag block, rolling-window
+  rate limit — the `content_flags_flagger_created_idx` is already in place for it).
+- A mod-hidden **report** becomes `deleted`, so it surfaces in the **soft-delete
+  restore queue** (which filters `status='deleted'`). Accepted/desirable: that's
+  the admin's un-hide path. The audit log distinguishes it (a `hide` row by a mod
+  vs no row for an author delete).
+- Open flags on content removed by another path linger as `open` but invisible
+  (the list filters to active content). A cleanup sweep is out of scope; a later
+  dismiss/hide on that content would clear them if it ever reappeared.
+- **All 7 queues are now wired** except **evidence** (Days 5–6, still paused on
+  R2). Remaining: Day 8 auto-approve, Day 9 reconciliation/blocklist/view-as-user,
+  Day 10 runbook + ADR-0008.
+
+### Day 8 — heuristic auto-approve + audit view ✅ 🟢
+
+Low-risk pending taxonomy now promotes itself, so the human queue only sees the
+judgement calls. Also closed the **Day-3 deferral**: the dedup near-match hint now
+shows in the pending rows (same signal the heuristic gates on).
+
+- **Dedup signal (`taxonomy/dedup.ts`).** `nearestActiveMatch(db, {kind, name,
+  excludeId})` — the closest ACTIVE same-kind row by pg_trgm similarity over
+  name+aliases (reuses the autocomplete indexes). Two thresholds over one score:
+  `DEDUP_BLOCK_THRESHOLD = 0.55` (blocks auto-approve — a near-match is a human
+  new-vs-merge call) and `DEDUP_HINT_THRESHOLD = 0.35` (just shows the queue hint).
+- **Heuristic (`moderation/auto-approve.ts`).** Pure `evaluateAutoApprove(signals)`
+  → `{approve, reasons, blockedBy}`; all three signals must pass: **verified
+  submitter** (`userIsVerified`), **clean name** (`nameLooksClean` — bounded
+  length / has alnum / no control chars; **the Day-9 editable blocklist plugs in
+  here**), **no near-duplicate** (score < block threshold). `runAutoApprove(db,
+  {only?})` evaluates a single just-suggested entity (the inline path) or sweeps
+  all pending companies+topics (worker/manual); each promotion is one guarded tx
+  (status='pending' → idempotent) that flips the row active AND logs it. Roles are
+  excluded (no inline suggest path). No event on promote — company/topic status
+  doesn't gate any aggregate (mirrors the human `approvePending*`).
+- **"domain valid" deviation.** The sprint named that as a signal, but
+  user-suggested companies carry **no domain** in V1 — nothing to validate. The
+  trust signal is verified-submitter; a captured domain becomes a 4th signal later
+  (documented in the module header).
+- **System actor (`users/system-user.ts`).** `mod_action_logs.mod_user_id` is NOT
+  NULL, so auto-approvals are attributed to one idempotent **"Auto-moderator"**
+  user (reserved `clerk_id` `system:auto-moderator` no real principal can produce;
+  authors no content; 0 karma). The audit timeline renders it like any actor;
+  `metadata = {auto:true, reasons}` distinguishes it.
+- **Audit view.** `listAutoApprovals(db, {sinceMs})` = the 24h auto=true approvals,
+  newest-first, entity names resolved. Page at `app/admin/auto-approve/page.tsx`
+  (reuses the audit timeline styles; each row deep-links to the entity's full
+  history to reverse it) + an **Auto-approve** nav tab.
+- **Queue hint + inline hook.** `listPendingCompanies/Topics` now attach `nearest`
+  (one similarity query per row, fine at queue sizes); the company/tag queue rows
+  render a "possible dup: X (NN%)" badge (warn ≥55%, neutral otherwise). The
+  `suggestPendingCompany/Topic` server actions call `runAutoApprove({only})`
+  **best-effort** (swallowed — the row already exists, so a failure never fails the
+  suggestion) for instant promotion. A `pnpm --filter @fromtheloop/db autoapprove`
+  sweep script is the retroactive/scheduled entry point (**Day 9 wires it into the
+  reconciliation worker**).
+- **Verified.** db + web typecheck clean, web lint clean (pre-existing
+  `theme-toggle` warning only). Throwaway probe (deleted) on fully controlled
+  fixtures via the isolated `only` path — pure evaluator matrix, system-user
+  idempotency, safe company/topic → active + one system approve log w/
+  `auto:true`+reasons, unverified/near-dup/bad-name → held + no log, re-run idempotent,
+  audit read-model surfaces both with names+reasons. **22/22 green**, zero residue
+  (system-user singleton intentionally kept). Ran the sweep on dev: held all 4
+  seeded pending rows (unverified seed submitters → correct, non-destructive).
+  Seeded one near-dup pending company ("Adobe Labs" ~ active "Adobe", 55%) so the
+  queue shows a live dedup hint.
+
+**Decisions / deferrals**
+- The **auto-approve view starts empty** in dev (nothing's been auto-approved —
+  all seed submitters are unverified). It populates the moment a *verified* account
+  suggests a clean, unique company/tag (the inline hook fires). Not faking demo
+  rows there (would mean a fake active company in autocomplete).
+- ⏭ **Trust = verified only.** A karma-threshold path for established-but-unverified
+  submitters is a possible later signal; kept to verified-submitter for now (faithful
+  to the sprint wording + fails safe).
+- ⏭ **Reverse-an-auto-approval is manual** (open the entity's audit history). A
+  one-click "this was wrong → reject" from the auto-approve view is deferred; the
+  24h spot-check list + deep-link is the V1 surface (matches the risk-table ask).
+- The **system user** has a profile at `/u/auto-moderator` (0 reports) but is linked
+  from nowhere and excluded from no leaderboard (there isn't one). Accepted.
+- Remaining: Day 9 (reconciliation worker — wires the sweep + matview/Typesense
+  drift; regex blocklist editor — plugs into `nameLooksClean`; view-as-user), Day 10
+  (runbook + ADR-0008). Evidence (Days 5–6) still paused on R2.
+
+### Day 9 (partial) — reconciliation worker ✅ 🟢
+
+The daily drift safety-net. New cron job `apps/worker/src/jobs/reconcile.ts`
+(`reconcile` queue, scheduler `reconcile-daily`, cron `23 4 * * *` — clear of the
+03:17 PII purge), wired into `apps/worker/src/index.ts` like the purge worker
+(concurrency 1, own Queue handle owns the scheduler, closed on shutdown). One job
+runs three idempotent wholesale reconciles in independent try/catch blocks:
+1. `runAutoApprove(db)` — sweeps ALL pending taxonomy (the retroactive/scheduled
+   entry the Day-8 inline hook + `pnpm … autoapprove` script foreshadowed).
+2. `refreshAllAggregates(db)` — rebuilds every live aggregate matview cell.
+3. `ensureCollections() → backfillAll(db, client)` — re-imports every
+   report/company/topic doc into Typesense.
+
+**Decisions / deferrals**
+- These all have a primary lower-latency path (inline auto-approve on submit; the
+  refresh-aggregate / index-typesense outbox consumers fed by NOTIFY + 30-min
+  sweeps). Day 9's job is the BACKSTOP for what those miss (an inline hook that
+  threw, a drifted cell, a doc a dropped event never wrote) — hence **daily**, not
+  the outbox sweep cadence: a safety net shouldn't keep Neon awake (mirrors the
+  scale-to-zero tuning).
+- Passes run independently; a Typesense outage must not block the taxonomy +
+  aggregate reconcile. Failures are collected and re-thrown as one `AggregateError`
+  so BullMQ retries the whole job — safe because every pass is idempotent.
+- Also fixed a duplicate `import { Queue, Worker } from "bullmq"` in index.ts.
+- Verified: `@fromtheloop/worker` typecheck + lint clean.
+- **Remaining in Day 9:** regex blocklist editor (plugs into `nameLooksClean`),
+  view-as-user. Then Day 10 (runbook + ADR-0008). Evidence (Days 5–6) still on R2.

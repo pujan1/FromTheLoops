@@ -1,14 +1,6 @@
-// Standard return shape for server actions.
-//
-// Actions don't throw for *expected* failure modes — auth, rate limits, bad
-// input. They return a discriminated result the caller branches on without a
-// try/catch, so every flow (submit, moderation, helpful flags, deletes) renders
-// feedback the same way. Throwing is reserved for genuinely exceptional faults
-// (a DB outage), which still surface as a generic failure at the call site.
-//
-// `code` is a stable, machine-readable discriminator (see ACTION_ERROR);
-// `message` is human-readable and safe to show. `fieldErrors` maps a form field
-// to its error so inputs can highlight inline.
+// Server-action return shape. Expected failures (auth, rate limit, bad input)
+// return this discriminated result instead of throwing; only exceptional faults
+// throw. `code` is machine-readable, `message` is safe to show.
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -19,9 +11,7 @@ export type ActionResult<T> =
       fieldErrors?: Record<string, string>;
     };
 
-// Known error codes. Open by design (`code` stays a string) so new surfaces can
-// add their own, but the common ones live here so call sites branch on a
-// constant instead of a typo-prone literal.
+// Common codes; open by design (`code` stays a string).
 export const ACTION_ERROR = {
   unauthenticated: "unauthenticated",
   rateLimited: "rate_limited",

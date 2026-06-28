@@ -1,8 +1,5 @@
-// Load env (.env.local / .env) before anything reads process.env.
-import "./env.js";
-// Sentry must initialize before the rest so its global error/rejection
-// handlers are in place for the whole process lifetime.
-import { Sentry } from "./sentry.js";
+import "./env.js"; // must load before anything reads process.env
+import { Sentry } from "./sentry.js"; // must init before the rest
 import { Queue, Worker } from "bullmq";
 import { closeDb } from "@fromtheloop/db";
 import { NOTIFICATIONS_QUEUE } from "@fromtheloop/shared";
@@ -46,6 +43,13 @@ import {
   makeProcessRecomputeKarma,
   RECOMPUTE_KARMA_QUEUE,
 } from "./jobs/recompute-karma.js";
+import {
+  processReconcile,
+  RECONCILE_CRON,
+  RECONCILE_JOB,
+  RECONCILE_QUEUE,
+  RECONCILE_SCHEDULER,
+} from "./jobs/reconcile.js";
 import { ensureCollections } from "@fromtheloop/search";
 import { startEventListener } from "./listen.js";
 
@@ -134,6 +138,22 @@ await recomputeKarmaQueue.upsertJobScheduler(
   { name: KARMA_SWEEP_JOB },
 );
 
+// Reconciliation: the daily drift safety-net (Sprint 6 Day 9) — sweeps pending
+// taxonomy auto-approve, rebuilds aggregate cells, and re-backfills Typesense.
+// Cron-driven like the PII purge (concurrency 1 — infrequent, full-table, DB
+// heavy, no reason to overlap). The primary paths (inline auto-approve + the
+// outbox consumers above) keep these fresh; this only catches what they missed.
+const reconcileWorker = new Worker(RECONCILE_QUEUE, processReconcile, {
+  connection: redisConnection,
+  concurrency: 1,
+});
+const reconcileQueue = new Queue(RECONCILE_QUEUE, { connection: redisConnection });
+await reconcileQueue.upsertJobScheduler(
+  RECONCILE_SCHEDULER,
+  { pattern: RECONCILE_CRON },
+  { name: RECONCILE_JOB },
+);
+
 // Self-provision Typesense collections on boot (idempotent — create-if-missing),
 // the same way we upsert job schedulers above. So a fresh Hetzner deploy stands
 // the collections up without a manual provision step. Best-effort: a Typesense
@@ -197,6 +217,7 @@ const workers = [
   refreshAggregateWorker,
   indexTypesenseWorker,
   recomputeKarmaWorker,
+  reconcileWorker,
 ];
 
 helloWorker.on("ready", () =>
@@ -225,6 +246,9 @@ recomputeKarmaWorker.on("ready", () =>
     `[worker] ready — queue=${RECOMPUTE_KARMA_QUEUE} sweep=${KARMA_SWEEP_EVERY_MS}ms`,
   ),
 );
+reconcileWorker.on("ready", () =>
+  console.log(`[worker] ready — queue=${RECONCILE_QUEUE} cron="${RECONCILE_CRON}"`),
+);
 for (const w of workers) {
   w.on("completed", (job) => console.log(`[worker] completed ${job.id}`));
   w.on("failed", (job, err) => {
@@ -246,6 +270,7 @@ const shutdown = async (signal: string) => {
     refreshAggregateQueue.close(),
     indexTypesenseQueue.close(),
     recomputeKarmaQueue.close(),
+    reconcileQueue.close(),
   ]);
   // Release the shared Postgres pool the jobs opened via getDb().
   await closeDb();

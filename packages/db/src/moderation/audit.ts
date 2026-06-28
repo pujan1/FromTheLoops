@@ -1,10 +1,4 @@
-// The read side of the audit log (Sprint 6 Day 4). logModAction (./shared.js)
-// writes; this reads back. One query serves two surfaces: pass no target
-// for the global recent-activity feed (/admin/audit), or a (targetType,
-// targetId) pair for "everything that happened to this entity". Joins the acting
-// mod so the view shows a name, not a UUID. Newest-first; capped so the global
-// feed can't run away.
-
+// Pass no target for the global feed, or (targetType, targetId) for one entity.
 import { and, desc, eq } from "drizzle-orm";
 import { modActionLogs, users } from "../schema/index.js";
 import type { Db } from "./shared.js";

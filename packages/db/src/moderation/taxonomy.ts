@@ -1,27 +1,27 @@
-// The taxonomy queues (Sprint 6 Day 3): pending companies, topics, and role
-// aliases — their read-models plus the approve/reject commands behind
-// /admin/queues/{companies,tags,roles}.
-//
-// Commands run in a transaction so the taxonomy mutation and its audit row
-// commit together — an action is either logged-and-applied or neither. Reject
-// sets status='rejected' rather than deleting: reports FK to taxonomy with
-// ON DELETE RESTRICT, and every public surface already filters status='active',
-// so a rejected row drops out everywhere with no new predicate.
+// Pending companies / topics / role-aliases: read-models + approve/reject.
+// Reject sets status='rejected' rather than deleting (reports FK with ON DELETE
+// RESTRICT; public surfaces already filter status='active').
 
 import { and, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { companies, roles, topics, users } from "../schema/index.js";
+import { nearestActiveMatch } from "../taxonomy/dedup.js";
 import { type Command, type Db, logModAction } from "./shared.js";
 import type {
+  DedupHint,
   PendingCompanyItem,
   PendingRoleItem,
   PendingTopicItem,
 } from "./types.js";
 
-/* ----------------------------- read-models ----------------------------- */
+// "Possible duplicate" hint, reusing the auto-approve dedup signal.
+async function hintFor(db: Db, kind: "company" | "topic", id: string, name: string): Promise<DedupHint | null> {
+  const match = await nearestActiveMatch(db, { kind, name, excludeId: id });
+  return match ? { name: match.name, score: match.score } : null;
+}
 
 export async function listPendingCompanies(db: Db): Promise<PendingCompanyItem[]> {
-  return db
+  const rows = await db
     .select({
       id: companies.id,
       name: companies.name,
@@ -34,10 +34,14 @@ export async function listPendingCompanies(db: Db): Promise<PendingCompanyItem[]
     .leftJoin(users, eq(companies.suggestedByUserId, users.id))
     .where(eq(companies.status, "pending"))
     .orderBy(desc(companies.createdAt));
+
+  return Promise.all(
+    rows.map(async (r) => ({ ...r, nearest: await hintFor(db, "company", r.id, r.name) })),
+  );
 }
 
 export async function listPendingTopics(db: Db): Promise<PendingTopicItem[]> {
-  return db
+  const rows = await db
     .select({
       id: topics.id,
       name: topics.name,
@@ -50,6 +54,10 @@ export async function listPendingTopics(db: Db): Promise<PendingTopicItem[]> {
     .leftJoin(users, eq(topics.suggestedByUserId, users.id))
     .where(eq(topics.status, "pending"))
     .orderBy(desc(topics.createdAt));
+
+  return Promise.all(
+    rows.map(async (r) => ({ ...r, nearest: await hintFor(db, "topic", r.id, r.name) })),
+  );
 }
 
 export async function listPendingRoles(db: Db): Promise<PendingRoleItem[]> {
@@ -67,8 +75,6 @@ export async function listPendingRoles(db: Db): Promise<PendingRoleItem[]> {
     .where(eq(roles.status, "pending"))
     .orderBy(desc(roles.createdAt));
 }
-
-/* ------------------------------ commands ------------------------------- */
 
 export async function approvePendingCompany(db: Db, { id, modUserId }: Command): Promise<boolean> {
   return db.transaction(async (tx) => {
@@ -122,10 +128,8 @@ export async function rejectPendingTopic(db: Db, { id, modUserId, reason }: Comm
   });
 }
 
-// Approving a role alias folds it into its canonical row: the alias's name (and
-// any aliases it carried) join the canonical's aliases, and the alias row is
-// marked 'merged'. A pending role with no canonical target is just promoted to
-// 'active' (defensive — roles have no inline-create path today).
+// Folds the alias into its canonical row (name + aliases merge, alias →
+// 'merged'). No canonical target → just promote to 'active'.
 export async function approvePendingRole(db: Db, { id, modUserId }: Command): Promise<boolean> {
   return db.transaction(async (tx) => {
     const found = await tx.select().from(roles).where(eq(roles.id, id)).limit(1);

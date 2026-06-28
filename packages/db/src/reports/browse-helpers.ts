@@ -1,24 +1,16 @@
-// Shared SQL fragments + WHERE builders for the browse report-list reads. Pulled
-// out of browse.ts so the visibility/scope/filter composition that every list
-// read AND its ordered-ID provider share lives in one place — the two can never
-// disagree on what "visible + filtered" means.
+// Shared SQL fragments + WHERE builders so every list read and its ordered-ID
+// provider agree on what "visible + filtered" means.
 
 import { sql, type SQL } from "drizzle-orm";
 import type { RoleCellKey } from "../pipeline/aggregates.js";
 import type { CellReportFilters } from "./browse-types.js";
 
-// The visibility filter, IDENTICAL to the aggregate + search pipelines — a
-// pending/deleted report can never surface on a public page.
+// Visibility filter, identical to the aggregate + search pipelines.
 export const VISIBLE = [sql`r.status = 'active'`, sql`r.deleted_at IS NULL`];
 
-// Helpful-flag signal per report (PLAN.md §Karma "helpful-flag-weighted
-// aggregation ranking"), shared verbatim by the paginated list read and the
-// ordered-ID provider so the two can NEVER disagree on ordering. cnt = how many
-// readers flagged it (display); score = karma-weighted sum, weighting each VALID
-// flag by the FLAGGER's karma (GREATEST(.,1) so every flag counts ≥1 and a
-// heavier flagger lifts more). We weight by the flagger, never the submitter —
-// "no submitter-rank boost" (the rich-get-richer trap PLAN.md avoids). Self-flags
-// and unverified flaggers are excluded, matching the karma earn rule.
+// Per-report helpful signal. score = sum of each valid flagger's karma
+// (GREATEST(.,1)); weighted by the flagger, never the submitter. Self-flags and
+// unverified flaggers excluded, matching the karma earn rule.
 export const HELPFUL_FLAG_LATERAL = sql`
   LEFT JOIN LATERAL (
     SELECT COUNT(*)::int AS cnt,
@@ -32,16 +24,11 @@ export const HELPFUL_FLAG_LATERAL = sql`
       )
   ) hflag ON true`;
 
-// Karma-weighted helpful signal first, recency as the tiebreak. Unflagged
-// reports all score 0, so they keep newest-first order — the signal only lifts
-// reports readers have endorsed. Consumed by both reads below.
+// Helpful signal first, recency tiebreak. Unflagged reports score 0 → newest-first.
 export const REPORT_LIST_ORDER = sql`ORDER BY hflag.score DESC, r.created_at DESC`;
 
-// The optional, facet-driven WHERE clauses shared by every report-list read
-// (cell / role / company). The scope clauses (company/role/level) are the
-// caller's; these are the user-toggled filters. Topic / round-type filters are
-// EXISTS sub-selects so a report is counted once however many of its
-// rounds/questions match. Returns the extra conditions to AND onto the scope.
+// Facet filters. Topic/round-type are EXISTS so a report counts once however
+// many rounds/questions match.
 export function reportFilterConditions(filters?: CellReportFilters): SQL[] {
   const conditions: SQL[] = [];
   if (!filters) return conditions;
@@ -55,9 +42,7 @@ export function reportFilterConditions(filters?: CellReportFilters): SQL[] {
     )`);
   }
   if (filters.topics && filters.topics.length > 0) {
-    // IN-list (one bound param per slug) rather than `= ANY($arr)` — drizzle's
-    // sql template binds a JS array as a scalar, which postgres rejects as a
-    // malformed array literal.
+    // IN-list, not `= ANY($arr)`: drizzle binds a JS array as a scalar.
     const slugList = sql.join(
       filters.topics.map((slug) => sql`${slug}`),
       sql`, `,
@@ -73,8 +58,7 @@ export function reportFilterConditions(filters?: CellReportFilters): SQL[] {
   return conditions;
 }
 
-// The (company, role) scope + filter WHERE, shared by the paginated list read
-// and the ordered-ID provider so the pane walks the SAME set the list paginates.
+// (company, role) scope + filter WHERE.
 export function roleReportWhere(cell: RoleCellKey, filters?: CellReportFilters): SQL {
   return sql.join(
     [
@@ -87,10 +71,8 @@ export function roleReportWhere(cell: RoleCellKey, filters?: CellReportFilters):
   );
 }
 
-// The profile scope + filter WHERE, shared by the paginated list and the
-// ordered-ID provider (so the pane walks the SAME attributed set). The
-// display_attribution='display_name' predicate IS the privacy boundary — an
-// anonymously-posted report is absent from both reads identically.
+// Profile scope + filter WHERE. The display_attribution predicate IS the
+// privacy boundary — anonymous reports are absent.
 export function userReportWhere(userId: string, filters?: CellReportFilters): SQL {
   return sql.join(
     [
@@ -103,8 +85,7 @@ export function userReportWhere(userId: string, filters?: CellReportFilters): SQ
   );
 }
 
-// The company-feed scope + filter WHERE (all roles at one company), shared by the
-// paginated list and the ordered-ID provider so the pane walks the SAME set.
+// Company-feed scope + filter WHERE (all roles at one company).
 export function companyReportWhere(companyId: string, filters?: CellReportFilters): SQL {
   return sql.join(
     [
