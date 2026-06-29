@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import "./globals.css";
 
 // Friendly Rounded: a warm geometric sans (Plus Jakarta Sans) used
@@ -79,7 +80,12 @@ export default async function RootLayout({
       </head>
       <body>
         <ClerkProvider>
-          <NextIntlClientProvider>{children}</NextIntlClientProvider>
+          <NextIntlClientProvider>
+            {/* Read-only "view as user" banner; renders null unless an admin is
+                impersonating (Sprint 6 Day 9). */}
+            <ImpersonationBanner />
+            {children}
+          </NextIntlClientProvider>
         </ClerkProvider>
       </body>
     </html>

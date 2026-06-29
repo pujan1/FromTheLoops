@@ -1,25 +1,10 @@
-// reconcile — the daily drift safety-net (Sprint 6 Day 9).
-//
-// Everything here has a primary, lower-latency path already:
-//   - taxonomy auto-approve runs inline when a verified user suggests a clean,
-//     unique company/topic (submit action) — see moderation/auto-approve.ts;
-//   - the aggregate matview + Typesense docs are kept live by the events-outbox
-//     consumers (refresh-aggregate / index-typesense), fed by NOTIFY + sweeps.
-//
-// This job is the BACKSTOP for when those miss: a pending row whose inline hook
-// threw, a matview cell that drifted, a search doc a dropped event never wrote.
-// It re-runs the full, idempotent reconciles wholesale, once a day:
-//   1. runAutoApprove      — sweep ALL pending taxonomy, promote the low-risk.
-//   2. refreshAllAggregates — rebuild every live aggregate cell.
-//   3. backfillAll         — re-import every report/company/topic into Typesense.
-//
-// Cron-driven (no per-row trigger), carries no data, safe to run as often as the
-// schedule fires. The three passes are independent: a Typesense outage must not
-// block the taxonomy/aggregate reconcile, so each runs in its own try/catch and
-// any failure is collected and re-thrown at the end — BullMQ then retries the
-// whole job, which is safe because every pass is idempotent. Daily (not the
-// 30-min outbox sweep cadence) keeps Neon idle: this is a safety net, not the
-// delivery path. See docs/scaling.md + the Neon scale-to-zero tuning in index.ts.
+// reconcile — daily drift safety-net. Everything here has a primary lower-latency
+// path (inline taxonomy auto-approve, the events-outbox consumers); this is the
+// backstop for when those miss. Re-runs three idempotent passes wholesale —
+// auto-approve, refresh aggregates, Typesense backfill — each in its own
+// try/catch so one outage can't block the others; failures are collected and
+// re-thrown so BullMQ retries the (idempotent) whole job. Daily, not the 30-min
+// sweep cadence, to keep Neon idle. See docs/scaling.md.
 
 import { getDb, refreshAllAggregates, runAutoApprove } from "@fromtheloop/db";
 import { backfillAll, ensureCollections, getSearchClient } from "@fromtheloop/search";

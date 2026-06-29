@@ -42,3 +42,27 @@
   font-size: var(--fs-micro);
   color: var(--color-muted);
 }
+
+/* Admin-only "view as user" entry (Sprint 6 Day 9). */
+.viewAs {
+  margin-top: var(--space-4);
+}
+
+.viewAsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px dashed var(--color-rule);
+  border-radius: var(--radius-full);
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.viewAsBtn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+}

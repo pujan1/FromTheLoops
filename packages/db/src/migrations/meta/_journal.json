@@ -155,6 +155,20 @@
       "when": 1782354377659,
       "tag": "0021_awesome_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782691829117,
+      "tag": "0022_puzzling_doctor_faustus",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782692725109,
+      "tag": "0023_loud_echo",
+      "breakpoints": true
     }
   ]
 }

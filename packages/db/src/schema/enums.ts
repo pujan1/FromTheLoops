@@ -100,6 +100,7 @@ export const modActionType = pgEnum("mod_action_type", [
   "hide", // mod removal (distinct from author 'delete')
   "edit_taxonomy",
   "restore", // mod reverses a soft-delete
+  "view_as", // admin started a read-only "view as user" session (logged, no mutation)
 ]);
 
 // Polymorphic: no FK on content_flags.target_id (spans reports + comments).
@@ -130,4 +131,13 @@ export const commentStatus = pgEnum("comment_status", [
   "active",
   "hidden",
   "deleted",
+]);
+
+// What a regex_blocklist entry guards against. Display-only grouping; every
+// active entry is enforced identically (see moderation/blocklist.ts).
+export const blocklistCategory = pgEnum("blocklist_category", [
+  "slur",
+  "pii",
+  "spam",
+  "other",
 ]);

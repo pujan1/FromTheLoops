@@ -90,11 +90,9 @@ async function enqueueSubmissionConfirmation(
   }
 }
 
-// Best-effort heuristic auto-approve of a just-suggested taxonomy row (Sprint 6
-// Day 8). If a trusted submitter proposed a clean, non-duplicate name, the
-// pending row is promoted immediately (and audited as a system action) so it
-// never reaches the human mod queue. Fully swallowed: this runs after the row
-// already exists, so a failure here must never fail the suggestion.
+// Best-effort heuristic auto-approve of a just-suggested row: promote a trusted
+// submitter's clean, non-duplicate name past the human queue. Swallowed — the
+// row already exists, so a failure here must not fail the suggestion.
 async function tryAutoApprove(
   db: ReturnType<typeof getDb>,
   kind: "company" | "topic",
@@ -156,13 +154,9 @@ export async function saveDraft(input: {
   return actionOk({ id: created.id });
 }
 
-// Promote a "suggest new" company to a real taxonomy row. Called at the
-// Continue boundary when the chosen company is a suggestion with no row yet.
-// suggestCompany inserts it as status='pending' / source='user_suggested'
-// (idempotent on slug — never flips an active row to pending) and attributes
-// it to the suggester. Returns the row id+name so the client backfills the
-// selection (suggested → existing) before it advances/persists. Returns null
-// when the honeypot is tripped.
+// Insert a "suggest new" company as a pending taxonomy row (idempotent on slug,
+// never flips an active row back to pending) and attribute it to the suggester.
+// Returns the row id+name so the client backfills its selection; null on honeypot.
 export async function suggestPendingCompany(input: {
   name: string;
   honeypot?: string;
@@ -204,14 +198,9 @@ export async function suggestPendingCompany(input: {
   return actionOk({ id: company.id, name: company.name });
 }
 
-// Promote a "suggest new" topic tag to a real taxonomy row. The topic analogue
-// of suggestPendingCompany — same shape, same fail-closed-without-tipping-off
-// honeypot handling. suggestTopic inserts it as status='pending' /
-// source='user_suggested' (idempotent on slug) and attributes the suggester.
-// Returns the row id/slug/name so the client backfills the tag selection
-// (suggested → existing) — but note the row is *pending*, so it still won't
-// satisfy the ≥1-active-tag rule until a mod promotes it. Returns null when the
-// honeypot is tripped.
+// Topic analogue of suggestPendingCompany. Inserts a pending tag (idempotent on
+// slug) and returns id/slug/name for the client to backfill — but the row is
+// *pending*, so it won't satisfy the ≥1-active-tag rule until a mod promotes it.
 export async function suggestPendingTopic(input: {
   name: string;
   honeypot?: string;
@@ -253,14 +242,10 @@ export async function suggestPendingTopic(input: {
   return actionOk({ id: topic.id, slug: topic.slug, name: topic.name });
 }
 
-// Finalize a draft into a submitted report. The terminal action of the
-// submission flow (the "Submit" button on the rounds screen). Auth + ownership
-// + the submit budget are enforced here; the heavy lifting — re-validating the
-// payload server-side, resolving any suggested company/tags to pending rows,
-// and writing interview_report + rounds + questions + question_topics in one
-// transaction (or updating in place for an edit) — lives in core's
-// finalizeSubmission. Returns the new report id so the client can route to it;
-// null on a tripped honeypot (a benign success that writes nothing).
+// Finalize a draft into a submitted report — the terminal action of the flow.
+// Auth + ownership + submit budget enforced here; the transactional write (and
+// in-place edit) lives in core's finalizeSubmission. Returns the new report id;
+// null on a tripped honeypot.
 export async function finalizeSubmissionAction(input: {
   draftId: string;
   honeypot?: string;

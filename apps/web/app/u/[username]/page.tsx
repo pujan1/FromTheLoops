@@ -8,6 +8,9 @@ import {
 import { parseReportFilters } from "@fromtheloop/shared";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { enterViewAs } from "@/app/admin/view-as/actions";
+import { getRole } from "@/lib/admin";
+import { roleAtLeast } from "@/lib/roles";
 import { FilterBar } from "@/components/reports";
 import { ReportTriage } from "@/app/companies/_components/report-triage";
 import { TRIAGE_ID_CAP } from "@/lib/triage";
@@ -102,6 +105,8 @@ export default async function UserProfilePage({
   const isVerified = stats.verifiedAtCompanyCount > 0;
   // The 10/100/1000 vanity rung, if reached (Day 8).
   const tier = karmaTier(user.karma);
+  // Admins get a read-only "view as" entry point here (Sprint 6 Day 9).
+  const viewerIsAdmin = roleAtLeast(await getRole(), "admin");
 
   return (
     <>
@@ -136,6 +141,14 @@ export default async function UserProfilePage({
               Member since {MEMBER_SINCE.format(user.createdAt)}
             </FtlStatusBadge>
           </div>
+
+          {viewerIsAdmin && (
+            <form action={enterViewAs.bind(null, user.id)} className={styles.viewAs}>
+              <button type="submit" className={styles.viewAsBtn}>
+                👁 View as this user (read-only)
+              </button>
+            </form>
+          )}
 
           <FtlBody size="lead" tone="muted" style={{ marginTop: 16 }}>
             {stats.publicReportCount > 0

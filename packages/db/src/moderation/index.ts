@@ -6,3 +6,4 @@ export * from "./soft-delete.js";
 export * from "./held.js";
 export * from "./flags.js";
 export * from "./auto-approve.js";
+export * from "./blocklist.js";

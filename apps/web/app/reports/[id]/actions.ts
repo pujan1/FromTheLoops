@@ -27,8 +27,10 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { reportDetailTag } from "@/lib/report-detail-cache";
 import { routes } from "@/lib/routes";
+import { assertNotImpersonating } from "@/lib/view-as";
 
 export async function startReportEdit(formData: FormData): Promise<void> {
+  await assertNotImpersonating();
   const reportId = String(formData.get("reportId") ?? "");
   if (!reportId) notFound();
 
@@ -70,6 +72,7 @@ export async function startReportEdit(formData: FormData): Promise<void> {
 export async function softDeleteReportAction(
   formData: FormData,
 ): Promise<void> {
+  await assertNotImpersonating();
   const reportId = String(formData.get("reportId") ?? "");
   if (!reportId) notFound();
 
@@ -113,6 +116,7 @@ export async function toggleHelpfulFlagAction(
   _prev: HelpfulFlagState,
   formData: FormData,
 ): Promise<HelpfulFlagState> {
+  await assertNotImpersonating();
   const reportId = String(formData.get("reportId") ?? "");
   const count = Number(formData.get("count") ?? 0);
   const flagged = formData.get("flagged") === "1";

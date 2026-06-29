@@ -44,6 +44,17 @@ export async function fillBasics(
   await expect(page).toHaveURL(/\/submit\/rounds$/);
 }
 
+// Start a round (type + rating) but add no question — the submission stays
+// invalid (a round needs ≥1 question with ≥1 active topic tag), so this is the
+// building block for the "Submit stays disabled" error-path test.
+export async function startRound(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Add your first round" }).click();
+  // Round type — the only <select> on the Rounds screen.
+  await page.locator("select").selectOption("onsite-coding");
+  // Rating chips are visually-hidden radios; force-click past the a11y hiding.
+  await page.getByRole("radio", { name: "Positive" }).click({ force: true });
+}
+
 // Add one round (type + rating) with a single question (prose + one active
 // topic tag) on the Rounds screen. `topic` must be a seeded active topic so it
 // satisfies the ≥1-active-tag finalize rule.
@@ -51,11 +62,7 @@ export async function addRoundWithQuestion(
   page: Page,
   opts: { prose: string; topic: string; topicQuery: string },
 ): Promise<void> {
-  await page.getByRole("button", { name: "Add your first round" }).click();
-  // Round type — the only <select> on the Rounds screen.
-  await page.locator("select").selectOption("onsite-coding");
-  // Rating chips are visually-hidden radios; force-click past the a11y hiding.
-  await page.getByRole("radio", { name: "Positive" }).click({ force: true });
+  await startRound(page);
 
   await page.getByRole("button", { name: "Add question" }).click();
   await page

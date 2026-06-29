@@ -491,3 +491,113 @@ runs three idempotent wholesale reconciles in independent try/catch blocks:
 - Verified: `@fromtheloop/worker` typecheck + lint clean.
 - **Remaining in Day 9:** regex blocklist editor (plugs into `nameLooksClean`),
   view-as-user. Then Day 10 (runbook + ADR-0008). Evidence (Days 5–6) still on R2.
+
+### Day 9 (partial) — regex blocklist editor ✅ 🟢
+
+The editable slur/PII/spam blocklist, the second of the three "deviation" signals
+the auto-approve plan named — and the one the Day-8 `nameLooksClean` header
+explicitly reserved a plug-point for.
+
+- **Schema.** New `regex_blocklist` table (migration `0022_puzzling_doctor_faustus.sql`,
+  dev-applied) + `blocklist_category` enum (`slur|pii|spam|other`, display-only —
+  every enabled row enforces identically). Columns: `pattern`, `label` (human
+  description), `category`, `enabled`, `created_by_user_id` (FK users RESTRICT),
+  timestamps. The row **is its own audit record** (created_by + timestamps), so
+  blocklist edits write **no `mod_action_logs`** (mirrors `dismissFlags` being
+  self-auditing) — no new `mod_action_type` verb needed.
+- **DB (`moderation/blocklist.ts`).** CRUD (`list/add/setEnabled/remove`) +
+  `nameMatchesBlocklist(db, name)` → matched label | null. **Hot-reload** via an
+  in-process TTL cache (`BLOCKLIST_TTL_MS = 60s`): the inline suggest path doesn't
+  re-query per submit, yet edits propagate without a redeploy. The web mutation
+  actions call `invalidateBlocklistCache()` for instant in-process propagation;
+  the worker picks changes up within the TTL. A row that no longer compiles is
+  skipped, never fatal — one bad pattern can't take auto-approve down.
+  `validateBlocklistInput` (shared shape) rejects blank/oversized/non-compiling
+  patterns at write time. Patterns are admin-authored + trusted: compiled, **not**
+  ReDoS-sandboxed (documented in module header + UI).
+- **Auto-approve wiring.** Added a **4th signal** `nameAllowed` to
+  `AutoApproveSignals` (distinct from `nameClean`, the fixed structural check).
+  `evaluateAutoApprove` stays pure (adds `name-not-blocklisted` reason /
+  `name-blocklisted` block); `runAutoApprove` computes it per candidate via the
+  cached matcher. A blocklisted name is still *suggested* — it just lands in the
+  human queue instead of self-promoting.
+- **Web.** `app/admin/blocklist/` — `page.tsx` + `actions.ts` gated at
+  **`requireAdmin()`** (stricter than the moderator floor the rest of /admin
+  uses — editing what bypasses review is higher-trust). Client `BlocklistEditor`:
+  add form (regex/label/category), per-row enable-disable + delete, and a **live
+  tester** (type a sample name → see which enabled patterns it trips, compiled
+  client-side from the same rows). New **Blocklist** nav tab, admin-only —
+  generalized `admin-nav`'s `canSeeHealth` → `canSeeAdmin` (now gates Blocklist +
+  Health together).
+- **Verified.** db + web typecheck clean, web lint clean (pre-existing
+  `theme-toggle` warning only). Added a `RegexBlocklistEntry.category` assertion to
+  `types.test.ts`; documented the table + enum in `docs/data-model.md`. Throwaway
+  probe (deleted) on controlled fixtures: validation matrix, cached match +
+  hot-reload after disable, evaluator gate both ways, and **runAutoApprove
+  end-to-end** — a verified submitter's blocklisted name held `pending` while a
+  clean unique name promoted to `active`. **14/14 green**, zero residue (verified
+  the table + probe users/companies all back to 0). Seeded 2 demo entries
+  (`test/demo corp`, email-in-name PII) in dev for operator click-through.
+
+**Decisions / deferrals**
+- ⏭ **Reason not surfaced to the audit log** on a blocklist-blocked auto-approve —
+  the matched label is computed but only gates; the row simply stays pending (no
+  log written for a non-promotion, consistent with the unverified/near-dup blocks).
+- ⏭ **Last Day-9 item: "view-as-user" read-only impersonation toggle.** Then Day 10
+  (runbook + ADR-0008). Evidence (Days 5–6) still paused on R2.
+
+### Day 9 (partial) — view-as-user read-only impersonation ✅ 🟢
+
+The last Day-9 item: an admin can render a target user's private owner surface as
+that user sees it, for debugging — **read-only and logged**, per the plan.
+
+- **Two-layer read-only guarantee.** (1) It **never touches the Clerk session** —
+  every write still resolves its actor via `currentUser()`, never the view-as
+  cookie, so impersonation can never produce content *attributed to the target*.
+  (2) On top of that, writes are *refused* while impersonating: middleware
+  redirects the user-write routes (`/settings`, `/submit`, `/drafts`) to
+  `/dashboard`, and the public report/comment write actions bail. `/dashboard` (the
+  view-as surface) and `/admin` (so the admin can navigate out) stay reachable.
+- **Mechanism (`lib/view-as.ts`).** An httpOnly cookie `ftl_view_as` holds the
+  target's `users.id`. `getImpersonation(db)` is **admin-gated** — it re-checks the
+  caller's role on every read, so a non-admin who hand-sets the cookie sees nothing
+  impersonated (and the dashboard/banner fall back to normal). Short-circuits on
+  the no-cookie common case before any auth/db cost. The cookie *name* lives in a
+  dependency-free `lib/view-as-cookie.ts` so the **edge middleware** can import it
+  without pulling in `next/headers` or the db package.
+- **Audit (`view_as` mod_action_type, migration `0023_loud_echo.sql`, dev-applied).**
+  `enterViewAs(targetId)` (admin-gated) writes a `view_as` `mod_action_logs` row
+  (target = the user, metadata = their username) before setting the cookie — so the
+  audit timeline shows who was impersonated, when. Mirrors updated everywhere the
+  `Record<ModActionType,…>` exhaustiveness forces: `ModActionType`,
+  `types.test.ts`, and the audit page's `ACTION_TONE`/`ACTION_LABEL` ("viewed as",
+  neutral tone). Refuses self-impersonation. 1h cookie maxAge (a debugging session,
+  not a standing grant). `exitViewAs()` clears it (no gate — ending impersonation is
+  always safe and is the only way out for anyone holding the cookie).
+- **UI.** A global `<ImpersonationBanner>` in the root layout (server component,
+  renders null unless impersonating) — sticky accent bar, "Read-only — viewing as
+  X", Exit button, pinned on every page. Entry point: an **admin-only** "👁 View as
+  this user (read-only)" button on `/u/[username]`. The dashboard reads the target's
+  drafts+reports when impersonating (its heading + copy switch to "X's work";
+  draft Continue/Discard/Start affordances hidden — the reports list was already
+  read-only).
+- **Verified.** db + web typecheck clean, web lint clean (pre-existing
+  `theme-toggle` warning only). Throwaway probe (deleted): a `view_as` log row reads
+  back entity-scoped + in the global feed, action type + username metadata + mod
+  join all correct — **6/6 green**, zero residue.
+
+**Decisions / deferrals**
+- **Read-only enforcement boundary.** Public report/comment writes are
+  action-guarded; the user-write *routes* (settings/submit/drafts) are
+  middleware-blocked, so their actions are unreachable via the UI while
+  impersonating (a hand-crafted POST by the impersonating admin is the only gap —
+  it would fire as the admin, not the target, so it can't violate the
+  target-attribution guarantee; not separately guarded).
+- ⏭ Impersonation only overrides the **dashboard** (the one private owner surface);
+  `/u/[username]` is already public and `/settings` is intentionally blocked rather
+  than mirrored. A broader "see every surface as them" was out of scope.
+- ⏭ UI click-through left for the operator (MCP browser unauthenticated) — needs an
+  admin session + a second user to view as.
+- **Day 9 is now complete.** Remaining: **Day 10** (runbook `docs/runbooks/
+  moderation.md` + ADR-0008). Evidence (Days 5–6) still paused on R2; reader-side
+  content-flag "Report" button still an open follow-up.

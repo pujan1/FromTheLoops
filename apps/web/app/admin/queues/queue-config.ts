@@ -1,15 +1,7 @@
-// Moderation queue config (Sprint 6 Day 2).
-//
-// The lever that keeps all 7 mod queues from becoming 7 bespoke screens: a queue
-// is just a row in QUEUE_CONFIGS, and <ModQueue> renders any of them. A queue
-// page (Day 3+) only has to (a) fetch its items as ModQueueItem[] and (b) supply
-// the server action that carries out an action on a set of ids. Everything the
-// UI needs — title, the action buttons, which actions demand a reason, whether
-// bulk select is on — lives here as plain data so it crosses the server→client
-// boundary intact (no functions in config).
-//
-// The full design rationale (queue model + evidence storage + audit log) is
-// ADR-0008 (Day 10).
+// Moderation queue config. Each of the 7 queues is a row in QUEUE_CONFIGS that
+// <ModQueue> renders, so a queue page only fetches its ModQueueItem[] and
+// supplies an action. Plain data (no functions) so it crosses the server→client
+// boundary intact. Full rationale: ADR-0008.
 
 import type { ReactNode } from "react";
 
@@ -63,34 +55,28 @@ export type QueueBadge = {
 // One row in a queue, in render-ready shape. The fetching page is responsible
 // for turning a DB row into this; <ModQueue> never touches the database.
 export type ModQueueItem = {
-  // The id the server action receives back. Usually the target row's UUID.
+  // The id the server action receives back (usually the target row's UUID).
   id: string;
-  // Headline line (e.g. a pending company name, a flagged comment's author).
   primary: string;
-  // Optional supporting line under the headline.
   secondary?: string;
-  // Labelled context fields for a snap decision, rendered as a definition grid.
+  // Labelled context fields, rendered as a definition grid.
   fields?: { label: string; value: string }[];
   badges?: QueueBadge[];
-  // Optional deep-link to inspect the underlying entity in full.
   href?: string;
   // ISO timestamp; rendered as a relative "Xm ago" age.
   createdAt?: string;
-  // Optional escape hatch for rich context a queue needs that doesn't fit the
-  // structured fields (e.g. a flagged comment's body). Rendered verbatim.
+  // Escape hatch for rich context that doesn't fit `fields` (e.g. a flagged
+  // comment's body). Rendered verbatim.
   detail?: ReactNode;
 };
 
 export type QueueConfig = {
   id: QueueId;
   title: string;
-  // One line under the title explaining what the moderator is deciding.
   description: string;
-  // Shown when the queue is empty — the happy "nothing to do" state.
   emptyText: string;
   actions: QueueAction[];
-  // Whether the select-all / bulk-action affordances appear. Off for queues
-  // where each item needs individual judgement (evidence review).
+  // Off for queues where each item needs individual judgement (e.g. evidence).
   bulk?: boolean;
 };
 

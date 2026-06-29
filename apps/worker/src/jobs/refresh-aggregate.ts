@@ -1,16 +1,7 @@
-// refresh-aggregate — the aggregate consumer of the events outbox (Sprint 3
-// Day 4). Two ways an event reaches a refresh, both funnelling through the
-// idempotent refreshAggregateForEvent (db):
-//
-//   1. FAST PATH — a Postgres NOTIFY (trigger from migration 0010) wakes the
-//      listener (listen.ts), which enqueues a per-event "event" job here.
-//   2. FALLBACK — a repeatable "sweep" job claims any events the aggregate
-//      consumer hasn't drained (a NOTIFY can be dropped if the listener was
-//      down) and refreshes them inline.
-//
-// refreshAggregateForEvent is idempotent (no-ops on a missing/already-drained
-// event, and the cell recompute is itself idempotent), so the two paths racing
-// on the same event — or a BullMQ retry after a mid-job crash — is always safe.
+// refresh-aggregate — aggregate consumer of the events outbox. A NOTIFY fast
+// path enqueues per-event jobs; a repeatable sweep is the fallback for when the
+// listener is off or drops one. refreshAggregateForEvent is idempotent, so the
+// paths racing or a retry after a crash is always safe.
 
 import {
   claimUnprocessedAggregateEvents,

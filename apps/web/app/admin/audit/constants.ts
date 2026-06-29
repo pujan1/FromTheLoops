@@ -13,6 +13,7 @@ export const ACTION_TONE: Record<ModActionType, "good" | "warn" | "danger" | "ne
   ban: "danger",
   edit_taxonomy: "neutral",
   restore: "good",
+  view_as: "neutral",
 };
 
 export const ACTION_LABEL: Record<ModActionType, string> = {
@@ -24,4 +25,5 @@ export const ACTION_LABEL: Record<ModActionType, string> = {
   ban: "banned",
   edit_taxonomy: "edited",
   restore: "restored",
+  view_as: "viewed as",
 };

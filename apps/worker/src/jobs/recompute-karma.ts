@@ -1,23 +1,10 @@
-// recompute-karma — the KARMA consumer of the events outbox (Sprint 5 Day 7).
-// Third sibling of refresh-aggregate.ts / index-typesense.ts, but with one
-// twist: karma is per-USER while the event log is per-REPORT, and a single user
-// action can emit a burst of events (account delete soft-deletes N reports →
-// N 'deleted' events). So this consumer is two-stage and DEBOUNCED per user:
-//
-//   stage 1 "event"  — resolve event → report → author, enqueue a debounced
-//                      "recompute" for that user, then mark the event drained.
-//                      Fed by the NOTIFY fast path (listen.ts) + the fallback
-//                      "sweep". jobId dedupes NOTIFY re-deliveries.
-//   stage 2 "recompute" — the actual recomputeUserKarma(user). Enqueued with
-//                      BullMQ deduplication keyed on the userId, so a burst of
-//                      events for one user collapses to a single rebuild within
-//                      the debounce window.
-//   "sweep"          — repeatable fallback: claim any karma events a dropped
-//                      NOTIFY missed and run stage 1 inline for each.
-//
-// recomputeUserKarma is recompute-from-scratch (idempotent), so the two paths
-// racing, a debounce collapse, or a BullMQ retry after a crash all converge on
-// the same value — the same safety the other two consumers rely on.
+// recompute-karma — karma consumer of the events outbox. Two-stage + debounced
+// because karma is per-USER but events are per-REPORT: stage 1 ("event")
+// resolves event → report → author and enqueues a stage-2 "recompute"
+// deduplicated per user, so a burst for one user (e.g. an account delete
+// soft-deleting N reports) collapses to one rebuild. NOTIFY fast path + sweep
+// fallback. recomputeUserKarma is recompute-from-scratch (idempotent), so racing
+// paths, debounce collapse, and retries all converge.
 
 import {
   claimUnprocessedKarmaEvents,
@@ -41,9 +28,8 @@ export const KARMA_SWEEP_SCHEDULER = "recompute-karma-sweep";
 // env var across all three sweeps so they wake Neon in one window.
 export const KARMA_SWEEP_EVERY_MS = Number(process.env.WORKER_SWEEP_EVERY_MS) || 1_800_000;
 
-// The debounce window. A burst of events for one user inside this window
-// collapses to one recompute (BullMQ deduplication). Short enough that the
-// exit-criterion "tier upgrade reflects within 60s" holds with wide margin.
+// Debounce window: a burst for one user inside it collapses to one recompute.
+// Short enough that "tier upgrade reflects within 60s" holds with margin.
 export const KARMA_DEBOUNCE_MS = 2_000;
 
 // jobId dedupes NOTIFY re-deliveries of the same event (stage 1).
@@ -77,12 +63,10 @@ interface KarmaRecomputeData {
   userId: string;
 }
 
-// Stage 1 for one event: resolve its report's author, enqueue a debounced
-// recompute, and mark the event drained. Marking last means a crash before the
-// mark leaves the event for the sweep to retry (at-least-once); the recompute
-// being idempotent makes the redo harmless. An event whose report/author can't
-// be resolved (hard-deleted) is still marked drained — there's nothing to
-// recompute and leaving it unmarked would wedge the sweep forever.
+// Stage 1 for one event: resolve author → enqueue debounced recompute → mark
+// drained. Marking last gives at-least-once (a crash leaves it for the sweep;
+// the recompute is idempotent). An unresolvable event (hard-deleted author) is
+// still marked, else it wedges the sweep forever.
 async function handleEvent(queue: Queue, eventId: string): Promise<string> {
   const db = getDb();
   const event = await getEventById(db, eventId);

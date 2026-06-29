@@ -9,6 +9,19 @@ End-to-end tests for the web app.
 - `abuse.spec.ts` (Sprint 2 Day 10) — the regex block list rejects a
   submission carrying contact info.
 
+Error-path suites:
+
+- `auth-gates.spec.ts` — the auth boundary: signed-out access to every
+  protected route (`/submit`, `/dashboard`, `/settings`, `/drafts/:id`,
+  `/admin`) redirects to `/sign-in`; a signed-in non-admin gets a 404 on
+  `/admin` and `/admin/blocklist` (requireAdmin → notFound).
+- `not-found.spec.ts` — public read surfaces 404 on an unresolvable slug/id
+  (unknown company, role, report, username, topic). The bad-level case lives in
+  `browse.spec.ts`.
+- `submission-validation.spec.ts` — the client gate: an incomplete submission
+  keeps "Share experience" disabled with the blocked hint, and enables once the
+  round has a question + active topic tag.
+
 Shared form-driving helpers live in `helpers.ts`.
 
 ## Running

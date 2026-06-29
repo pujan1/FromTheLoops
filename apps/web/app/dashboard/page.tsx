@@ -23,6 +23,7 @@ import {
 } from "@/components/ui";
 import { levelLabel, outcomeLabel } from "@/lib/labels";
 import { routes } from "@/lib/routes";
+import { getImpersonation } from "@/lib/view-as";
 import { DiscardDraftButton } from "./discard-draft-button";
 import styles from "./dashboard.module.css";
 
@@ -86,16 +87,23 @@ export default async function DashboardPage() {
   }
 
   const db = getDb();
-  // Upsert-on-visit: guarantees a `users` row for the Clerk principal so the
-  // ownership-scoped reads below resolve. Webhook sync is still deferred.
-  const internal = await getOrCreateUserByClerkId(db, {
-    clerkId: user.id,
-    email: user.primaryEmailAddress?.emailAddress ?? null,
-  });
+  // "View as user" (Sprint 6 Day 9): an admin impersonating reads the TARGET's
+  // owner surface, not their own. getImpersonation is admin-gated, so a non-admin
+  // can never reach this branch. All of this is read-only — the dashboard renders
+  // no actions that mutate as the target (and middleware blocks the write routes).
+  const impersonation = await getImpersonation(db);
+  const owner = impersonation
+    ? { id: impersonation.targetUserId }
+    : // Upsert-on-visit: guarantees a `users` row for the Clerk principal so the
+      // ownership-scoped reads below resolve. Webhook sync is still deferred.
+      await getOrCreateUserByClerkId(db, {
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress ?? null,
+      });
 
   const [drafts, reports] = await Promise.all([
-    listDrafts(db, internal.id),
-    listOwnReports(db, internal.id),
+    listDrafts(db, owner.id),
+    listOwnReports(db, owner.id),
   ]);
 
   return (
@@ -105,11 +113,14 @@ export default async function DashboardPage() {
         <FtlContainer width="prose">
           <FtlEyebrow tone="accent">dashboard</FtlEyebrow>
           <FtlDisplay as="h1" size="lg" style={{ marginTop: 24 }}>
-            Your work
+            {impersonation
+              ? `${impersonation.displayName ?? (impersonation.username ? `@${impersonation.username}` : "User")}’s work`
+              : "Your work"}
           </FtlDisplay>
           <FtlBody size="lead" tone="muted" style={{ marginTop: 16 }}>
-            Pick up an in-progress draft, or review the experiences you’ve
-            submitted.
+            {impersonation
+              ? "Read-only view of this contributor’s drafts and submitted reports. Exit “view as” from the banner to return to your own dashboard."
+              : "Pick up an in-progress draft, or review the experiences you’ve submitted."}
           </FtlBody>
 
           <FtlRule />
@@ -117,9 +128,11 @@ export default async function DashboardPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <h2 className={styles.sectionTitle}>Drafts</h2>
-              <FtlLinkButton href={routes.submit} variant="ghost" size="sm">
-                Start a new report
-              </FtlLinkButton>
+              {!impersonation && (
+                <FtlLinkButton href={routes.submit} variant="ghost" size="sm">
+                  Start a new report
+                </FtlLinkButton>
+              )}
             </div>
 
             {drafts.length === 0 ? (
@@ -138,21 +151,25 @@ export default async function DashboardPage() {
                         Last edited {relativeFromNow(draft.updatedAt)}
                       </span>
                     </div>
-                    <div className={styles.row__actions}>
-                      <FtlLinkButton
-                        href={routes.draft(draft.id)}
-                        variant="primary"
-                        size="sm"
-                        trailingArrow
-                      >
-                        Continue
-                      </FtlLinkButton>
-                      <DiscardDraftButton
-                        draftId={draft.id}
-                        label="Discard"
-                        confirmText="Discard this draft? This can’t be undone."
-                      />
-                    </div>
+                    {/* Owner-only write affordances — hidden in read-only
+                        "view as" mode (the draft routes are also middleware-gated). */}
+                    {!impersonation && (
+                      <div className={styles.row__actions}>
+                        <FtlLinkButton
+                          href={routes.draft(draft.id)}
+                          variant="primary"
+                          size="sm"
+                          trailingArrow
+                        >
+                          Continue
+                        </FtlLinkButton>
+                        <DiscardDraftButton
+                          draftId={draft.id}
+                          label="Discard"
+                          confirmText="Discard this draft? This can’t be undone."
+                        />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

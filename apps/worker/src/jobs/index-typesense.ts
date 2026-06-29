@@ -1,15 +1,7 @@
-// index-typesense — the SEARCH consumer of the events outbox (Sprint 3 Day 6).
-// Twin of refresh-aggregate.ts: same two job kinds, same idempotent core, but
-// the write target is Typesense instead of the aggregate table.
-//
-//   1. FAST PATH — a Postgres NOTIFY (trigger from migration 0010) wakes the
-//      listener (listen.ts), which enqueues a per-event "event" job here.
-//   2. FALLBACK — a repeatable "sweep" claims any events the search consumer
-//      hasn't drained (NOTIFY can drop) and indexes them inline.
-//
-// indexReportForEvent (search pkg) is idempotent — missing/already-drained
-// event → no-op, upsert is create-or-replace, delete tolerates already-gone —
-// so the two paths racing, or a BullMQ retry after a mid-job crash, are safe.
+// index-typesense — search consumer of the events outbox; twin of
+// refresh-aggregate.ts but writing to Typesense. NOTIFY fast path + repeatable
+// sweep fallback. indexReportForEvent is idempotent, so racing paths and
+// retries are safe.
 
 import { getDb } from "@fromtheloop/db";
 import { getSearchClient, indexReportForEvent } from "@fromtheloop/search";

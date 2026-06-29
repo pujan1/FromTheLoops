@@ -1,8 +1,8 @@
 "use client";
 
 // Admin shell tab nav (Sprint 6 Day 3). Highlights the active surface via the
-// current pathname. The Health tab is admin-only; the layout passes whether the
-// viewer clears that bar so moderators don't see a tab that 404s on them.
+// current pathname. The Health + Blocklist tabs are admin-only; the layout passes
+// whether the viewer clears that bar so moderators don't see tabs that 404 on them.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,10 +21,14 @@ const QUEUE_TABS: Tab[] = [
   { href: "/admin/auto-approve", label: "Auto-approve" },
 ];
 
-export function AdminNav({ canSeeHealth }: { canSeeHealth: boolean }) {
+export function AdminNav({ canSeeAdmin }: { canSeeAdmin: boolean }) {
   const pathname = usePathname();
-  const tabs = canSeeHealth
-    ? [...QUEUE_TABS, { href: "/admin/health", label: "Health" }]
+  const tabs = canSeeAdmin
+    ? [
+        ...QUEUE_TABS,
+        { href: "/admin/blocklist", label: "Blocklist" },
+        { href: "/admin/health", label: "Health" },
+      ]
     : QUEUE_TABS;
 
   return (

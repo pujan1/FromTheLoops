@@ -24,6 +24,7 @@ import type {
   ModActionLog,
   NewInterviewReport,
   NewRound,
+  RegexBlocklistEntry,
   Role,
   Round,
   Topic,
@@ -85,6 +86,7 @@ describe("schema types", () => {
       | "hide"
       | "edit_taxonomy"
       | "restore"
+      | "view_as"
     >();
   });
 
@@ -105,6 +107,13 @@ describe("schema types", () => {
       "open" | "actioned" | "dismissed"
     >();
     expectTypeOf<ContentFlag["resolvedByUserId"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("RegexBlocklistEntry.category is the exact enum union", () => {
+    expectTypeOf<RegexBlocklistEntry["category"]>().toEqualTypeOf<
+      "slur" | "pii" | "spam" | "other"
+    >();
+    expectTypeOf<RegexBlocklistEntry["enabled"]>().toEqualTypeOf<boolean>();
   });
 
   it("NewInterviewReport allows optional fields with defaults", () => {

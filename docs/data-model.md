@@ -71,10 +71,11 @@ Source: [`packages/db/src/schema/enums.ts`](../packages/db/src/schema/enums.ts).
 | `round_type` | `recruiter-screen`, `technical-phone`, `onsite-coding`, `onsite-system-design`, `onsite-behavioral`, `take-home`, `hiring-manager`, `exec-final`, `other` | `rounds.round_type`, shared submission schemas |
 | `round_rating` | `positive`, `mixed`, `negative` | `rounds.rating`, shared submission schemas |
 | `verification_method` | `work_email`, `linkedin`, `manual` | `user_verifications.verified_via` |
-| `mod_action_type` | `approve`, `reject`, `merge`, `ban`, `delete`, `hide`, `edit_taxonomy`, `restore` | `mod_action_logs.action_type` |
+| `mod_action_type` | `approve`, `reject`, `merge`, `ban`, `delete`, `hide`, `edit_taxonomy`, `restore`, `view_as` | `mod_action_logs.action_type` |
 | `content_flag_target` | `report`, `comment` | `content_flags.target_type` |
 | `content_flag_reason` | `spam`, `harassment`, `pii`, `misinformation`, `off_topic`, `other` | `content_flags.reason` |
 | `content_flag_status` | `open`, `actioned`, `dismissed` | `content_flags.status` |
+| `blocklist_category` | `slur`, `pii`, `spam`, `other` | `regex_blocklist.category` |
 
 ## Persistent Postgres Models
 
@@ -355,6 +356,31 @@ moderator decision resolves every open flag on that content. A **hide** removes
 the content (comment → `hidden`, report → soft-`deleted` + a `deleted` event) and
 writes a `hide` row to `mod_action_logs`; a **dismiss** keeps the content and
 writes no audit-log row — the resolution lives on the flag rows themselves.
+
+### `regex_blocklist`
+
+Source: [`packages/db/src/schema/blocklist.ts`](../packages/db/src/schema/blocklist.ts).
+
+Editable slur/PII/spam blocklist (Sprint 6 Day 9). Each row is a case-insensitive
+regex tested against proposed company/tag names; a match blocks heuristic
+auto-approve (the name is held for a human instead). Admin-only editing surface at
+`/admin/blocklist`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | Primary key |
+| `pattern` | `text` | Required regex source; validated to compile (≤ 200 chars) |
+| `label` | `text` | Required human description of what it catches |
+| `category` | `blocklist_category` | Display grouping; every enabled row is enforced identically |
+| `enabled` | `boolean` | Defaults `true`; only enabled rows are matched |
+| `created_by_user_id` | `uuid` | Required FK to `users`, `ON DELETE RESTRICT` |
+| `created_at` | `timestamptz` | Defaults to `now()` |
+| `updated_at` | `timestamptz` | Defaults to `now()`; bumped on toggle |
+
+The row IS its own audit record (`created_by_user_id` + timestamps), so blocklist
+edits write no `mod_action_logs` row. The active set is cached in-process for 60s,
+so edits hot-reload without a redeploy. Patterns are admin-authored and trusted —
+compiled but not sandboxed against catastrophic backtracking.
 
 ### `events`
 

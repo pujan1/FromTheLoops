@@ -4,6 +4,7 @@ import { DAY_MS } from "../lib/time.js";
 import { getOrCreateSystemUser } from "../users/system-user.js";
 import { userIsVerified } from "../users/users.js";
 import { DEDUP_BLOCK_THRESHOLD, nearestActiveMatch } from "../taxonomy/dedup.js";
+import { nameMatchesBlocklist } from "./blocklist.js";
 import { type Db, logModAction } from "./shared.js";
 import type { AutoApprovalItem } from "./types.js";
 
@@ -25,6 +26,7 @@ export type AutoApproveSignals = {
   trustedSubmitter: boolean;
   nearestScore: number | null;
   nameClean: boolean;
+  nameAllowed: boolean;
 };
 
 export type AutoApproveDecision = {
@@ -42,6 +44,9 @@ export function evaluateAutoApprove(s: AutoApproveSignals): AutoApproveDecision 
 
   if (s.nameClean) reasons.push("name-ok");
   else blockedBy.push("name-failed-sanity");
+
+  if (s.nameAllowed) reasons.push("name-not-blocklisted");
+  else blockedBy.push("name-blocklisted");
 
   if (s.nearestScore == null || s.nearestScore < DEDUP_BLOCK_THRESHOLD) {
     reasons.push("no-near-duplicate");
@@ -117,10 +122,12 @@ export async function runAutoApprove(
       excludeId: c.id,
       minScore: 0,
     });
+    const blockedLabel = await nameMatchesBlocklist(db, c.name);
     const decision = evaluateAutoApprove({
       trustedSubmitter,
       nearestScore: nearest?.score ?? null,
       nameClean: nameLooksClean(c.name),
+      nameAllowed: blockedLabel == null,
     });
 
     let approved = false;

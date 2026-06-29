@@ -29,7 +29,16 @@ import {
 } from "@fromtheloop/db";
 import { revalidatePath } from "next/cache";
 import { routes } from "@/lib/routes";
+import { getViewAsTargetId } from "@/lib/view-as";
 import { COMMENTS_PAGE_SIZE } from "./comments-config";
+
+// True during a read-only "view as user" session (Sprint 6 Day 9). The report
+// page resolves the viewer as the real admin (not the impersonation target), so
+// these writes would otherwise fire as the admin while the banner says read-only;
+// refuse them. Reads (loadComments) and telemetry are unaffected.
+async function isReadOnlyViewAs(): Promise<boolean> {
+  return Boolean(await getViewAsTargetId());
+}
 
 // Resolve the signed-in viewer's internal id, or null when signed out.
 async function resolveViewerId(): Promise<string | null> {
@@ -77,6 +86,7 @@ export async function createCommentAction(input: {
   quotedQuestionId?: string | null;
   replyToCommentId?: string | null;
 }): Promise<CreateCommentResult> {
+  if (await isReadOnlyViewAs()) return { ok: false, error: "read_only_view_as" };
   const viewerId = await resolveViewerId();
   if (!viewerId) return { ok: false, error: "not_signed_in" };
 
@@ -100,6 +110,7 @@ export async function editCommentAction(input: {
   commentId: string;
   body: string;
 }): Promise<CreateCommentResult> {
+  if (await isReadOnlyViewAs()) return { ok: false, error: "read_only_view_as" };
   const viewerId = await resolveViewerId();
   if (!viewerId) return { ok: false, error: "not_signed_in" };
 
@@ -118,6 +129,7 @@ export async function deleteCommentAction(input: {
   reportId: string;
   commentId: string;
 }): Promise<{ ok: boolean }> {
+  if (await isReadOnlyViewAs()) return { ok: false };
   const viewerId = await resolveViewerId();
   if (!viewerId) return { ok: false };
 
@@ -142,6 +154,9 @@ export interface LikeActionResult {
 export async function togglePostLikeAction(
   reportId: string,
 ): Promise<LikeActionResult> {
+  if (await isReadOnlyViewAs()) {
+    return { liked: false, count: await countPostLikes(getDb(), reportId) };
+  }
   const viewerId = await resolveViewerId();
   if (!viewerId) {
     return { liked: false, count: await countPostLikes(getDb(), reportId), error: "not_signed_in" };
@@ -159,6 +174,7 @@ export async function togglePostLikeAction(
 export async function toggleCommentLikeAction(
   commentId: string,
 ): Promise<LikeActionResult> {
+  if (await isReadOnlyViewAs()) return { liked: false, count: 0 };
   const viewerId = await resolveViewerId();
   const db = getDb();
   if (!viewerId) {

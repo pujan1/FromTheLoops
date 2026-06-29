@@ -15,5 +15,6 @@ export * from "./comments.js";
 export * from "./likes.js";
 export * from "./content-flags.js";
 export * from "./moderation.js";
+export * from "./blocklist.js";
 export * from "./events.js";
 export * from "./analytics.js";

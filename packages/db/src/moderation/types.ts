@@ -7,7 +7,8 @@ export type ModActionType =
   | "delete"
   | "hide"
   | "edit_taxonomy"
-  | "restore";
+  | "restore"
+  | "view_as";
 
 export type LogModActionInput = {
   modUserId: string; // internal users.id, not the Clerk id
@@ -17,6 +18,9 @@ export type LogModActionInput = {
   reason?: string | null;
   metadata?: Record<string, unknown> | null;
 };
+
+// Mirror of the blocklist_category enum (schema/enums.ts).
+export type BlocklistCategory = "slur" | "pii" | "spam" | "other";
 
 // `score` is pg_trgm similarity (0..1).
 export type DedupHint = {

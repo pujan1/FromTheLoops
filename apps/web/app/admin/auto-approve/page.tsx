@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 const REASON_LABEL: Record<string, string> = {
   "verified-submitter": "verified submitter",
   "name-ok": "clean name",
+  "name-not-blocklisted": "not blocklisted",
   "no-near-duplicate": "no near-duplicate",
 };
 
