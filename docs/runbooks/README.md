@@ -15,7 +15,7 @@ Created in the sprint that needs them:
 | `dev-setup.md` — local dev environment (frontend + backend) | 0 | _live_ |
 | `hetzner-bootstrap.md` — provision a fresh Hetzner CX22 from zero | 0 | _planned_ |
 | `worker-deploy.md` — ship worker code + compose + migrate prod (3 manual moves) | 3 | _live_ |
-| `moderation.md` — daily 30-minute mod cycle | 6 | _planned_ |
+| `moderation.md` — daily 30-minute mod cycle | 6 | _live_ |
 | `alerts.md` — Sentry alert rules + what to do on each | 7 | _planned_ |
 | `day-1.md` — first 24h after opening to real users | 7 | _planned_ |
 | `backup-restore.md` — restore Neon from R2 nightly backup | 7 | _planned_ |

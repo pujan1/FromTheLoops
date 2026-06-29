@@ -61,7 +61,7 @@ V1 is single-mod (you). The platform can't open to real users without working mo
 - [ ] Every approve/reject/delete writes a `mod_action_log` row with `reason`
 - [ ] Daily reconciliation job runs, reports zero drift on a clean dataset, and surfaces fake drift planted in a test
 - [ ] Mod can NOT edit user content body (Section 230) — only approve/reject/hide/delete affordances exist
-- [ ] Runbook walks through a 30-minute daily mod cycle end-to-end
+- [x] Runbook walks through a 30-minute daily mod cycle end-to-end
 
 ## Risks & mitigations
 
@@ -601,3 +601,45 @@ that user sees it, for debugging — **read-only and logged**, per the plan.
 - **Day 9 is now complete.** Remaining: **Day 10** (runbook `docs/runbooks/
   moderation.md` + ADR-0008). Evidence (Days 5–6) still paused on R2; reader-side
   content-flag "Report" button still an open follow-up.
+
+### Day 10 — runbook + ADR-0008 ✅ 🟢
+
+The closing deliverable: the two docs that let Sprint 6 ship as "done" without the
+build being reverse-engineered later. No code — documentation only.
+
+- **`docs/runbooks/moderation.md`** — the operator-facing daily mod cycle, written
+  to the 30–45 min/day alpha budget (PLAN.md §Moderation operations). Walks the
+  admin tabs in nav order (Companies/Tags/Roles → Held → Flags → Soft-delete →
+  Audit → Auto-approve → admin-only Blocklist/Health), one section each: what's in
+  the queue, the decision, and the verb to press. Front-loads the mental model
+  (auto-approve already ran, so queues are *only* judgement calls; every action is
+  logged; mods can't edit bodies — Section 230), the access prereqs (the Clerk
+  session-token claim step + the 404-not-403 behaviour), a **Backstops** section
+  (the daily `reconcile` cron + the manual `pnpm --filter @fromtheloop/db
+  autoapprove` lever), and a per-action **Undo** table. Runbook README flipped
+  moderation `_planned_ → _live_`, `Last verified: 2026-06-29`.
+- **`docs/adr/0008-rbac-evidence-audit.md`** — the three load-bearing decisions:
+  (1) **RBAC** — Clerk-metadata role ladder, `users.role` deferred, break-glass env
+  allowlist, two-layer enforcement, 404-not-403; (2) **evidence storage** — separate
+  `report_evidence` table + private R2 + signed URLs + 14-day purge, recorded as
+  **designed-and-locked-but-not-built** (honest about the R2 pause + the Vercel Blob
+  fallback); (3) **audit log** — append-only `mod_action_logs` written *in the same
+  transaction* as the action, required reason on removals, the deliberate
+  self-auditing carve-outs (dismiss/blocklist) and the system-user auto-approve
+  attribution. Alternatives + consequences + open questions per the template. The
+  forward-references already in code (`lib/roles.ts`, `queues/queue-config.ts` →
+  "ADR-0008") now resolve. ADR index flipped `0008 _planned_ → accepted` (2026-06-29);
+  the §Deliverables "0006" misnumber is called out in the ADR header.
+
+**Sprint 6 is functionally complete.** Days 1–4, 7, 8, 9, 10 all done.
+
+**Carried out of the sprint (not Day-10 work, tracked separately):**
+- ⏸️ **Evidence Days 5–6** — still paused on the R2 billing redirect loop. The
+  evidence queue renders but is unwired; the ✓✓ path + the deferred 25-karma award
+  stay dark until R2 is unblocked (or we pivot to Vercel Blob behind the same
+  table/presign interface — both captured in ADR-0008). Resume per the Day-5 plan
+  above once R2 is live.
+- ⬜ **Reader-side "Report" button** — `content_flags` has the table + index but no
+  product writer, so the Flags queue is seed-only in-app until it lands (gate like
+  `helpful_flags`).
+- ⬜ **Test plan Phase 5** (E2E + CI hardening) — separate thread, see `docs/testing.md`.

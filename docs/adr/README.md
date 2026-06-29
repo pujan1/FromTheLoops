@@ -20,7 +20,7 @@ Short, dated, append-only records of technical decisions. Format: [Michael Nygar
 | [0005](0005-aggregation-strategy.md) | Aggregation strategy — summary table + Typesense facets | accepted | 2026-06-06 | 3 |
 | [0006](0006-browse-url-contract.md) | Canonical browse URL contract + slug→entity resolver | accepted (grain superseded by 0009) | 2026-06-05 | 4 |
 | [0007](0007-karma-design.md) | Karma design — recompute earn, flagger-weighted ranking, no submitter boost | accepted | 2026-06-08 | 5 |
-| 0008 | RBAC, evidence storage, audit log | _planned_ | — | 6 |
+| [0008](0008-rbac-evidence-audit.md) | RBAC, evidence storage, audit log | accepted | 2026-06-29 | 6 |
 | [0009](0009-role-primary-browse-grain.md) | Role-primary browse grain (level → filter) | accepted | 2026-06-06 | 4 |
 | [0010](0010-report-triage-master-detail.md) | Report triage — client master-detail pane over preserved per-report URLs | accepted | 2026-06-09 | — |
 | [0011](0011-comments-and-reactions.md) | Comments & reactions — flat thread, question-quote, lightweight likes, share | accepted | 2026-06-13 | — |
