@@ -13,6 +13,9 @@ import {
 export const routes = {
   home: "/",
   about: "/about",
+  privacy: "/privacy",
+  terms: "/terms",
+  takedown: "/legal/takedown",
   signIn: "/sign-in",
   signUp: "/sign-up",
   dashboard: "/dashboard",

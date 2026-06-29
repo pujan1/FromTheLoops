@@ -122,3 +122,39 @@ Sprints 0–6 build the product. Sprint 7 makes it shippable. Without this sprin
 ## Notes & decisions
 
 _Append-only._
+
+### Day 1 — Privacy + Terms scaffold (2026-06-29)
+
+Built the legal-doc surface and first-draft Privacy + Terms. Termly account
+setup / generation is the user's manual step (external SaaS) and is *not* done;
+these pages are drafts to paste Termly output over.
+
+- **Hosting decision: static in-repo, not Termly's embed script.** This sprint's
+  exit criteria weigh SEO + Core Web Vitals heavily; the embed is client-side
+  JS, not server-rendered for Google, and unstyleable. So legal copy lives as
+  TSX and is server-rendered. Cost: re-paste when regenerating in Termly —
+  acceptable for docs that change rarely.
+- **`apps/web/app/(legal)/`** route group. Shared `_components/legal-doc.tsx`
+  (`LegalDoc` + `LegalSection`) renders site header, prose column, title +
+  `<time>` last-updated, a TOC derived from the same section list (can't drift),
+  and a **draft banner** gated by `draft` prop — flip to `false` after Termly
+  paste + the calm-headed review. Stable section anchors so Day-2 `/legal/takedown`
+  can deep-link the Terms DMCA section (`#dmca`).
+- **`/privacy`** — 13 sections. Generic blocks marked `TODO(termly)`. §8
+  *Anonymity and de-anonymisation risk* is hand-written and product-specific
+  (content can identify you despite name removal; we retain de-identified
+  experiences post-account-deletion) — must survive any paste-over.
+- **`/terms`** — 16 sections. §4 *Content you submit* (UGC licence + user
+  warranties: truthful / no-NDA-breach / no-confidential-materials / no naming
+  individuals; no-verification + host-not-author posture) and §7 *Copyright and
+  takedowns (DMCA)* (notice → counter-notice → repeat-infringer, `legal@`
+  routing) are the load-bearing hand-written sections; Termly doesn't generate
+  these adequately for a real-interview UGC host. Marked clearly in-file not to
+  overwrite.
+- Added `privacy` / `terms` / `takedown` to `lib/routes.ts` for Day-2 footer
+  linking. Contact addresses use `@fromtheloop.com` placeholder — reconcile with
+  the verified Cloudflare routing on Day 2. `tsc --noEmit` clean.
+
+**Not done (carries):** Termly account + actual generated copy (user, manual);
+footer links + Clerk ToS checkbox + email routing verification are Day 2;
+removing the draft banner waits on final copy + review.

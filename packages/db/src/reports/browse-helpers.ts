@@ -85,6 +85,12 @@ export function userReportWhere(userId: string, filters?: CellReportFilters): SQ
   );
 }
 
+// Global feed scope + filter WHERE (every visible report, no company/role/user
+// scope). Backs the /reports index.
+export function globalReportWhere(filters?: CellReportFilters): SQL {
+  return sql.join([...VISIBLE, ...reportFilterConditions(filters)], sql` AND `);
+}
+
 // Company-feed scope + filter WHERE (all roles at one company).
 export function companyReportWhere(companyId: string, filters?: CellReportFilters): SQL {
   return sql.join(

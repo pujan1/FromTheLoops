@@ -10,6 +10,7 @@ import type { Db } from "../lib/types.js";
 import { companies, companyLevels, roles, topics } from "../schema/index.js";
 import {
   companyReportWhere,
+  globalReportWhere,
   HELPFUL_FLAG_LATERAL,
   REPORT_LIST_ORDER,
   reportFilterConditions,
@@ -317,6 +318,24 @@ export async function listReportIdsForCompany(
   opts: { filters?: CellReportFilters; cap: number },
 ): Promise<string[]> {
   return runReportIdList(db, companyReportWhere(companyId, opts.filters), opts.cap);
+}
+
+// Every visible report across the whole index — the /reports feed. Same
+// helpful-first, recency-tiebreak order as the scoped feeds.
+export async function listRecentReports(
+  db: Db,
+  opts: { limit: number; offset: number; filters?: CellReportFilters },
+): Promise<CellReportList> {
+  return runReportList(db, globalReportWhere(opts.filters), opts);
+}
+
+// Ordered-ID provider for the /reports feed — same scope + filter as
+// listRecentReports, feeding the triage pane's prev/next over the whole set.
+export async function listRecentReportIds(
+  db: Db,
+  opts: { filters?: CellReportFilters; cap: number },
+): Promise<string[]> {
+  return runReportIdList(db, globalReportWhere(opts.filters), opts.cap);
 }
 
 // Company page header counts: total visible reports + distinct roles.

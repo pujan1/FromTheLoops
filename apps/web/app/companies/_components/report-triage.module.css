@@ -156,25 +156,6 @@
   color: var(--color-muted);
 }
 
-.helpfulCount {
-  margin-top: var(--space-5);
-  font-size: var(--fs-meta);
-  color: var(--color-muted);
-}
-
-.openFull {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-5);
-  font-weight: 600;
-  color: var(--color-accent);
-  text-decoration: none;
-}
-.openFull:hover {
-  text-decoration: underline;
-}
-
 /* ── Desktop master-detail (≥1024px) ───────────────────────────────────────
    Placed after the mobile sheet styles so these overrides win: media queries
    add no specificity, so an equal-specificity `.backdrop { display: none }`

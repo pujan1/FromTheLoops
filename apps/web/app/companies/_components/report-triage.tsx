@@ -1,56 +1,33 @@
 "use client";
 
-// ADR-0010 — the desktop master-detail triage pane, layered ON TOP of the
-// existing list. The list (master) stays exactly as the SSR surface renders it;
-// this client layer intercepts a plain row click and renders the report in a
-// right-hand pane instead of doing a full round-trip to /reports/:id. The per-
-// report SSR page is untouched — it's still the canonical/shareable address, the
-// crawler/no-JS target, and the hard-nav fallback (every card keeps its real
-// <a href>; only a plain left-click is intercepted).
-//
-// The engine walks the WHOLE filtered result set via `orderedIds` (from the
-// ordered-ID provider), not just the visible page, so prev/next flips through
-// every match. Selection shallow-updates the URL to the real /reports/:id
-// (shareable, refresh-safe) without poisoning Back: one push on first open, then
-// replace on every step, so Back exits to the list rather than walking the peek
-// chain.
-//
-// Desktop (≥1024px) renders a right-hand sticky pane; below 1024px the SAME
-// selection drives a bottom sheet (slides up ~85%, drag-down dismisses, a
-// horizontal swipe steps prev/next as a secondary affordance). Both surfaces are
-// pure presentation over one engine — only the wrapper + gestures differ. The
-// active viewport is tagged onto the track() events (`surface`) so the
-// device-split the ADR calls unmeasured falls straight out of the data.
 
 import type { CellReportListItem, ReportDetailView } from "@fromtheloop/db";
 import type { ReportFilters } from "@fromtheloop/shared";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ReportDetailBody } from "@/app/reports/[id]/report-detail-body";
+import {
+  type ConversationEngagement,
+  ReportConversation,
+} from "@/app/reports/[id]/report-conversation";
 import { Pagination, ReportList } from "@/components/reports";
 import { FtlBody, FtlButton } from "@/components/ui";
 import { routes } from "@/lib/routes";
 import { track } from "@/lib/track";
 import styles from "./report-triage.module.css";
-
-// What the detail route handler returns for one report.
 interface Peek {
   detail: ReportDetailView;
   authorName: string | null;
-  helpfulCount: number;
+  signedIn: boolean;
+  engagement: ConversationEngagement;
 }
 
-// The id embedded in a /reports/:id path, or null for any other path (list URL,
-// pagination links, topic links). Used to tell an interceptable row click apart
-// from an ordinary navigation, and to sync the pane to back/forward.
+
 function reportIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/reports\/([^/]+)$/);
   return m && m[1] ? decodeURIComponent(m[1]) : null;
 }
 
-// True when focus sits in a text-entry context (the search box, a form field, a
-// contenteditable), so the j/k triage keys never steal a keystroke the user
-// meant to type. Esc is exempt from this guard — it always escapes.
+
 function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el) return false;
@@ -212,11 +189,7 @@ export function ReportTriage({
     window.history.back();
   }, []);
 
-  // Bottom-sheet gestures (mobile). A drag that starts on the sheet's grab
-  // region (handle + header chrome, never a button/link) either pulls the sheet
-  // down to dismiss or flicks horizontally to step. The sheet follows the finger
-  // live via a direct transform; on release we either commit (close / step) or
-  // let the CSS transition snap it back.
+
   const onSheetPointerDown = useCallback((e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button,a")) return;
     dragStart.current = { x: e.clientX, y: e.clientY };
@@ -273,12 +246,7 @@ export function ReportTriage({
     return () => window.removeEventListener("popstate", onPop);
   }, [select, flushDwell]);
 
-  // Keyboard triage, active only while a peek is open: Esc closes; j/k step to
-  // the next/previous report (vim convention — j down, k up) so the whole
-  // filtered set can be walked without the mouse. The deferred fast-follow from
-  // ADR-0010, now that the step engine exists. We deliberately bind only j/k
-  // (not the arrows) so reading-scroll inside the pane is never hijacked, and we
-  // bail on a typing target or a modifier chord so app/browser shortcuts win.
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (selectedRef.current === null) return;
@@ -389,31 +357,20 @@ export function ReportTriage({
     </div>
   );
 
-  // The report itself — one representation, rendered identically in pane + sheet.
   const peekBody = peek ? (
-    <>
-      <ReportDetailBody
-        detail={peek.detail}
-        eyebrow={t("detail.publicEyebrow")}
-        byline={
-          peek.authorName
-            ? t("detail.by", { name: peek.authorName })
-            : t("detail.anonymous")
-        }
-      />
-      <p className={styles.helpfulCount}>
-        {t("helpful.count", { count: peek.helpfulCount })}
-      </p>
-      {/* Real navigation (no preventDefault) → the canonical SSR page, where
-          flagging + owner controls live. The commit step. */}
-      <a
-        className={styles.openFull}
-        href={routes.report(peek.detail.id)}
-        onClick={() => track("open_full", { id: peek.detail.id })}
-      >
-        Open full report ↗
-      </a>
-    </>
+    <ReportConversation
+      detail={peek.detail}
+      eyebrow={t("detail.publicEyebrow")}
+      byline={
+        peek.authorName
+          ? t("detail.by", { name: peek.authorName })
+          : t("detail.anonymous")
+      }
+      reportId={peek.detail.id}
+      signedIn={peek.signedIn}
+      engagement={peek.engagement}
+      collapsedComments
+    />
   ) : loading ? (
     <FtlBody tone="muted">Loading…</FtlBody>
   ) : (

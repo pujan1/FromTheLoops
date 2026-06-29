@@ -224,6 +224,10 @@ export default function HomePage() {
                 <Link href={routes.about}>About</Link>
                 <Link href={routes.styleguide}>Design</Link>
               </div>
+              <div className={styles.footer__col}>
+                <Link href={routes.privacy}>Privacy</Link>
+                <Link href={routes.terms}>Terms</Link>
+              </div>
             </div>
           </footer>
         </FtlContainer>
