@@ -72,11 +72,11 @@ export default function StyleguidePage() {
                 library components are unmistakable from app code in JSX.
               </FtlBody>
               <dl>
-                <dt>Version</dt><dd>0.1 · pre-build</dd>
-                <dt>Surface</dt><dd>Light + dark · paper and pressroom</dd>
+                <dt>Version</dt><dd>0.2 · Modern Minimal</dd>
+                <dt>Surface</dt><dd>Light + dark · white and near-black</dd>
                 <dt>Stack</dt><dd>Next.js 15 · CSS Modules · next/font</dd>
                 <dt>Components</dt><dd><FtlMono>Ftl</FtlMono>-prefixed · <FtlMono>@/components/ui</FtlMono></dd>
-                <dt>Updated</dt><dd>2026-06-02</dd>
+                <dt>Updated</dt><dd>2026-06-30</dd>
               </dl>
             </div>
           </div>
@@ -86,10 +86,11 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>01 / Color</div>
               <div>
-                <FtlHeading level={2}>Off-white by day, pressroom black by night.</FtlHeading>
+                <FtlHeading level={2}>Clean white by day, near-black by night.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  The palette commits to a near-white field, a true-black night
-                  mode, and one confident signal-blue that survives both surfaces.
+                  Cool zinc neutrals carry the whole surface, with one pastel-blue
+                  signal that survives both light and dark. Structure comes from
+                  hairline borders — not elevation.
                 </FtlBody>
               </div>
             </header>
@@ -111,11 +112,11 @@ export default function StyleguidePage() {
             <header className={styles.section__head}>
               <div className={styles.section__head__no}>02 / Typography</div>
               <div>
-                <FtlHeading level={2}>Archivo × Geist Mono.</FtlHeading>
+                <FtlHeading level={2}>Geist × Geist Mono.</FtlHeading>
                 <FtlBody tone="muted" style={{ marginTop: 8, maxWidth: "56ch" }}>
-                  A single neo-grotesque (Archivo) carries both display and UI,
+                  A single neo-grotesque (Geist) carries both display and UI,
                   differentiated only by weight and size, with a precise mono for
-                  metadata. Emphasis is the signal-blue accent, set upright —
+                  metadata. Emphasis is the pastel-blue accent, set upright —
                   never italic.
                 </FtlBody>
               </div>
@@ -430,15 +431,15 @@ export default function StyleguidePage() {
                 </FtlBody>
               </div>
             </header>
-            <pre className={styles.specBlock}>{`--color-paper        light: #F5F6F8 · dark: #0C0E12
---color-ink          light: #10131A · dark: #F0F2F5
---color-accent       light: #4A6A96 · dark: #8FA9CF
---font-display       Archivo
---font-sans          Archivo
+            <pre className={styles.specBlock}>{`--color-paper        light: #FFFFFF · dark: #0A0A0A
+--color-ink          light: #18181B · dark: #FAFAFA
+--color-accent       light: #5B8DEF · dark: #7EA6E0
+--font-display       Geist
+--font-sans          Geist
 --font-mono          Geist Mono
 --space scale        4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 144
---radius             0 · 0 · 0 · 0 · 999
---container-max      1240
+--radius             2 · 4 · 6 · 8 · 999
+--container-max      1320
 --container-prose    680
 --theme-storage      fromtheloop-theme`}</pre>
           </section>

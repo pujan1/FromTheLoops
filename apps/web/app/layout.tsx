@@ -2,23 +2,23 @@ import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import "./globals.css";
 
-// Friendly Rounded: a warm geometric sans (Plus Jakarta Sans) used
-// systematically for both display and UI. Its rounded terminals match the
-// soft shapes; weight and size carry the hierarchy.
-const display = Plus_Jakarta_Sans({
+// Modern Minimal: one neo-grotesque (Geist) carries both display and UI,
+// differentiated only by weight and size. Clean, technical, exceptionally
+// legible — the type does the work, not ornament.
+const display = Geist({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   variable: "--next-font-display",
   display: "swap",
 });
 
-const sans = Plus_Jakarta_Sans({
+const sans = Geist({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--next-font-sans",
   display: "swap",
 });

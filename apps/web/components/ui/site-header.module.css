@@ -10,7 +10,7 @@
 
 .inner {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--space-5);
   padding-block: var(--space-4);
@@ -28,20 +28,18 @@
 }
 .wordmark__italic { font-style: normal; font-weight: 700; color: var(--color-accent); }
 
-.actions {
+/* Search takes the slack between wordmark and the nav cluster. */
+.search {
+  min-width: 0;
+  max-width: 22rem;
+}
+
+.cluster {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-4);
   min-width: 0;
-}
-
-/* Search sits left of the nav, taking the slack between wordmark and nav. */
-.search {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin-right: auto;
-  max-width: 22rem;
 }
 
 .nav {
@@ -54,6 +52,7 @@
   font-size: var(--fs-meta);
   color: var(--color-ink-2);
   letter-spacing: -0.005em;
+  white-space: nowrap;
   transition: color var(--dur-base) var(--ease-out);
 }
 .nav a:hover { color: var(--color-accent); }
@@ -86,48 +85,117 @@
   color: var(--color-paper);
   background: var(--color-ink);
   padding: 7px 16px;
+  border-radius: var(--radius-md);
+}
+.authPrimary:hover { background: var(--color-accent); }
+
+/* Hamburger — hidden until the nav collapses. Mirrors the theme toggle button. */
+.menuButton {
+  display: none;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 1px solid var(--color-rule-strong);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-paper-2) 72%, transparent);
+  cursor: pointer;
+  transition:
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
 }
-.authPrimary:hover { background: var(--color-accent); box-shadow: var(--shadow-accent); }
-
-@media (max-width: 720px) {
-  .inner { grid-template-columns: 1fr auto; }
-  .nav { gap: var(--space-4); }
+.menuButton:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+.menuButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
-@media (max-width: 560px) {
+/* Three-line glyph built from the element + its two pseudo-elements; the
+   center line fades and the outer lines rotate into an X when open. */
+.menuIcon,
+.menuIcon::before,
+.menuIcon::after {
+  width: 16px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+.menuIcon {
+  position: relative;
+  display: block;
+}
+.menuIcon::before,
+.menuIcon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+.menuIcon::before { top: -5px; }
+.menuIcon::after { top: 5px; }
+.menuIcon[data-open] { background: transparent; }
+.menuIcon[data-open]::before { transform: translateY(5px) rotate(45deg); }
+.menuIcon[data-open]::after { transform: translateY(-5px) rotate(-45deg); }
+
+/* Collapsed nav drops out of flow; revealed under the header when open. */
+.panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.panelNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.panelNav a {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--color-ink);
+  transition: color var(--dur-base) var(--ease-out);
+}
+.panelNav a:hover { color: var(--color-accent); }
+
+.panelAuth {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-rule);
+}
+
+@media (max-width: 768px) {
   .inner {
-    grid-template-columns: 1fr;
-    align-items: start;
+    grid-template-columns: 1fr auto;
+    column-gap: var(--space-4);
+    row-gap: var(--space-3);
   }
 
-  .actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    justify-content: stretch;
-    gap: var(--space-3);
-  }
-
-  /* Search gets its own full-width row above nav/auth/toggle. */
+  /* Wordmark + cluster share the top row; search drops to a full-width row. */
+  .wordmark { grid-area: 1 / 1; }
+  .cluster { grid-area: 1 / 2; }
   .search {
-    grid-column: 1 / -1;
+    grid-area: 2 / 1 / 2 / -1;
     max-width: none;
-    margin-right: 0;
   }
 
-  .nav {
-    gap: var(--space-3);
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
+  .nav,
+  .auth { display: none; }
 
-  .auth {
-    gap: var(--space-2);
-  }
-
-  .authPrimary {
-    padding-inline: 10px;
-  }
+  .menuButton { display: inline-grid; }
+  .panel[data-open] { display: flex; }
 }

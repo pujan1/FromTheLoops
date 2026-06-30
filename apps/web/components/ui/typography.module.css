@@ -1,4 +1,4 @@
-/* ===== Display (Plus Jakarta Sans — geometric, warm, set bold) ===== */
+/* ===== Display (Geist — neo-grotesque, set semibold) ===== */
 .display {
   font-family: var(--font-display);
   font-weight: 700;
@@ -7,7 +7,7 @@
   color: var(--color-ink);
   text-wrap: balance;
 }
-/* Emphasis: the coral-orange accent, upright — never italic */
+/* Emphasis: the pastel-blue accent, upright — never italic */
 .display em, .display i {
   font-style: normal;
   font-weight: 700;
