@@ -13,6 +13,7 @@ import {
 export const routes = {
   home: "/",
   about: "/about",
+  faq: "/faq",
   privacy: "/privacy",
   terms: "/terms",
   takedown: "/legal/takedown",

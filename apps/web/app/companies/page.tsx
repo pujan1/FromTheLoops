@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "Companies — FromTheLoop",
   description:
     "Browse structured interview reports by company, role, and level.",
+  alternates: { canonical: routes.companies },
 };
 
 // /companies — the browse index. Lists every company with ≥1 public report,

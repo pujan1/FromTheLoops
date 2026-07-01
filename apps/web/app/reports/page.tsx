@@ -29,12 +29,6 @@ export const metadata: Metadata = {
   alternates: { canonical: routes.reports },
 };
 
-// /reports — the global experience feed. Every visible report across all
-// companies and roles, ordered helpful-first with a recency tiebreak (same
-// order as the scoped feeds), filterable in place and previewable via the
-// ADR-0010 triage pane. Facets + page live in the URL (?outcome=&page=…), so
-// the page is fully SSR and every state is a shareable address. The header
-// search box and the search CTA hand off the free-text path to /search.
 export default async function ReportsPage({
   searchParams,
 }: {
@@ -56,8 +50,6 @@ export default async function ReportsPage({
       offset: (filters.page - 1) * filters.perPage,
       filters: feedFilters,
     }),
-    // Full ordered ID list (same scope + filter) feeding the triage pane, which
-    // walks the WHOLE feed rather than just the visible page.
     listRecentReportIds(getDb(), { filters: feedFilters, cap: TRIAGE_ID_CAP }),
   ]);
 
@@ -89,10 +81,7 @@ export default async function ReportsPage({
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Recent</h2>
             <FilterBar basePath={basePath} filters={filters} />
-            {/* Master-detail triage (ADR-0010): a row click previews in-pane on
-                desktop / a bottom sheet on mobile; the per-report SSR page stays
-                the canonical address + no-JS fallback. companyName omitted — this
-                is a cross-company feed, so each row carries its own company. */}
+            {/* companyName omitted: cross-company feed, so each row carries its own. */}
             <ReportTriage
               items={feed.items}
               orderedIds={orderedIds}

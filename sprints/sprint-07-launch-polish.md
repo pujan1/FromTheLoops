@@ -68,6 +68,7 @@ Sprints 0–6 build the product. Sprint 7 makes it shippable. Without this sprin
 - [ ] `.env` on Vercel + Hetzner audited; no dev secrets in prod
 - [ ] DNS for production domain pointed; HTTPS valid
 - [ ] Clerk production keys swapped in
+- [ ] Clerk legal-consent toggle enabled (Configure → Legal → *Require express consent*), Terms URL `/terms` + Privacy URL `/privacy` set; verify signup fails without the box ticked
 - [ ] Resend production sender verified (SPF, DKIM, DMARC)
 - [ ] Cloudflare email routing for `legal@`, `support@` verified by sending a test
 - [ ] `seed_dummy` deletion script tested (won't be run pre-alpha; will run once real submissions reach a quota)
@@ -158,3 +159,90 @@ these pages are drafts to paste Termly output over.
 **Not done (carries):** Termly account + actual generated copy (user, manual);
 footer links + Clerk ToS checkbox + email routing verification are Day 2;
 removing the draft banner waits on final copy + review.
+
+### Day 2 — Takedown page, footer, ToS consent (2026-06-30)
+
+Built the non-copyright removal surface, wired the footer site-wide, and pinned
+down what the Terms/Privacy signup consent actually requires.
+
+- **`/legal/takedown`** — hand-written, reuses the `LegalDoc`/`LegalSection`
+  chrome (draft banner on, same as privacy/terms). Six sections: overview →
+  grounds → how to send → what happens next → limits/good-faith → contact.
+  Covers the removals we actually expect on a real-interview host —
+  confidentiality/NDA, **de-anonymisation & personal safety** (triaged ahead of
+  queue), personal data / data-subject requests, and factual disputes — and
+  routes **copyright to Terms §7** via the stable `#dmca` anchor. `legal@`
+  routing kept intact. Load-bearing + product-specific: do not paste Termly over
+  it.
+- **Route-group gotcha.** `(legal)` is a *group* (invisible in the URL), so a
+  page directly under it serves at `/privacy`, not `/legal/privacy`. `routes.
+  takedown` and the Terms deep-link both point at `/legal/takedown`, so the file
+  lives at `app/(legal)/legal/takedown/page.tsx` — the real `legal/` segment
+  supplies the prefix while staying in the group.
+- **`FtlSiteFooter`** (`components/ui/site-footer.tsx`) — server-rendered
+  (Link + routes + CSS only, no client hooks) so the legal links are in the
+  crawlable HTML, satisfying the "linked from footer" exit criterion. Three
+  columns (Explore / FromTheLoop / Legal) + brand + a copyright/host-not-author
+  disclaimer bar. Mounted once in the **root layout** through a thin client
+  `SiteFooterGate` that hides it on `/admin/*` and the centered Clerk auth pages
+  (those are deliberately chrome-free — admin uses its own `AdminNav`, no
+  `FtlSiteHeader` either). `usePathname` runs during SSR, so public routes still
+  ship the footer server-side. One mount point → no public page can miss it.
+- **`/faq`** added (route + `PlaceholderPage`, mirrors `/about`) so all five
+  footer legal/info links resolve now; the real FAQ copy is Day 3.
+- **Clerk ToS checkbox is dashboard config, not code.** The required "I agree to
+  Terms and Privacy" checkbox on the prebuilt `<SignUp />` comes from Clerk
+  Dashboard → Configure → Legal → *Require express consent to legal documents*
+  (set Terms URL `/terms`, Privacy URL `/privacy`). Enabling it makes signup fail
+  until ticked — the exit criterion. Documented in the sign-up page and added to
+  the manual cold-start checklist below. `tsc --noEmit` + eslint clean.
+
+**Not done (carries):** enabling the Clerk legal-consent toggle (user, manual —
+dashboard); **email-routing verification** for `legal@` / `support@` is still a
+manual Cloudflare step and the `@fromtheloop.com` addresses stay as the assumed
+production domain until that routing is confirmed; empty-state copy + real
+`/about` + `/faq` content are Day 3.
+
+### Day 4 — Sitemap, robots, canonicals, OG/Twitter (2026-06-30)
+
+SEO infrastructure. Built and verified against the live dev DB — `/sitemap.xml`
+returns **135 URLs** (exit criterion: >100), `/robots.txt` renders, and the OG
+image is a real 1200×630 PNG.
+
+- **Sitemap is canonical-only by construction.** New DB module
+  `packages/db/src/reports/sitemap.ts` (`getSitemapEntries`) does five flat reads
+  — companies, roles, dense levels, topics, dense topic×companies — no N+1 walk.
+  The key correctness rule: a leaf page (level, topic×company) is only listed
+  when its cell clears the density threshold (`>= 10`, mirroring core's
+  `SPARSE_REPORT_THRESHOLD` / `decideLevelView` / `decideTopicCompanyView`).
+  Thin leaves canonicalize *up* (to the role, resp. topic page), so listing them
+  would advertise a duplicate; the `HAVING COUNT >= 10` drops them. Aggregate
+  pages (company/role/topic) are always self-canonical → listed with ≥1 report.
+  `<lastmod>` is `MAX(created_at)` of the reports feeding each page. Note: the db
+  package doesn't depend on core, so the threshold is a local literal with a
+  "keep in sync" comment.
+- **Route-shape counts (seed data):** 9 static + 12 companies + 16 roles + 7
+  dense levels + 43 topics + 50 dense topic×companies = 135. `app/sitemap.ts`
+  (ISR, `revalidate = 3600`) maps them through `lib/routes.ts` so URL shapes stay
+  single-sourced; absolute URLs via new `lib/site.ts` (`siteOrigin` /
+  `absoluteUrl`, reads `NEXT_PUBLIC_APP_URL`).
+- **Report detail pages deliberately NOT in the sitemap yet** — `/reports/[id]`
+  has no `generateMetadata` (no self-canonical / title), so it'd be a weak entry.
+  It gets metadata + JSON-LD on Day 5; fold it into the sitemap then.
+- **`app/robots.ts`** — allow `/`, disallow `/admin`, `/dashboard`, `/settings`,
+  `/drafts`, `/search`, `/api`; advertises the sitemap + host.
+- **OG / Twitter.** Site-wide `openGraph` + `twitter` (summary_large_image)
+  defaults in the root layout; a dynamic `app/opengraph-image.tsx` (next/og,
+  1200×630, system fonts / flat fills so no asset loading) with
+  `app/twitter-image.tsx` re-exporting it so the two never drift. Verified the
+  head carries canonical + the full `og:*` / `twitter:*` set incl. the image.
+- **Self-canonicals** added to `/` (home had none — inherited layout title, now
+  pins `canonical: /`) and `/companies`; `/topics`, `/reports`, and the legal
+  pages already had them, and the browse pages self/up-canonicalize via the
+  density decisions. `tsc` (web + db) + eslint clean.
+
+**Not done (carries):** `/reports/[id]` metadata + JSON-LD structured data
+(`QAPage`/`Question`, `Organization`, `BreadcrumbList`) + Google Rich Results
+test are Day 5; `noindex` on filter-mutated `/search` URLs — `/search` is
+robots-disallowed, but add the meta `noindex` on the page too on Day 5. Core Web
+Vitals re-check is its own line later in the sprint.

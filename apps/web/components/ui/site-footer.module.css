@@ -1,0 +1,101 @@
+.footer {
+  margin-top: var(--space-8);
+  border-top: 1px solid var(--color-rule);
+  background: var(--color-paper);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-7) var(--space-6);
+  padding-block: var(--space-7) var(--space-6);
+}
+
+.brand {
+  max-width: 22rem;
+  min-width: 14rem;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+.wordmark__italic { font-style: normal; font-weight: 700; color: var(--color-accent); }
+
+.tagline {
+  margin-top: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--color-ink-2);
+}
+
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6) var(--space-7);
+}
+
+.column ul {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+}
+
+.heading {
+  font-family: var(--font-sans);
+  font-size: var(--fs-caption, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-3, var(--color-ink-2));
+}
+
+.column a {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  color: var(--color-ink-2);
+  letter-spacing: -0.005em;
+  transition: color var(--dur-base) var(--ease-out);
+}
+.column a:hover { color: var(--color-accent); }
+
+.legalBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-5);
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--color-rule);
+}
+
+.copyright,
+.disclaimer {
+  font-family: var(--font-sans);
+  font-size: var(--fs-caption, 0.75rem);
+  color: var(--color-ink-2);
+}
+.disclaimer {
+  max-width: 34rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .inner {
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .columns {
+    gap: var(--space-6) var(--space-6);
+  }
+}

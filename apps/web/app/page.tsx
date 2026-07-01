@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   FtlBody,
@@ -13,6 +14,11 @@ import {
 } from "@/components/ui";
 import { routes } from "@/lib/routes";
 import styles from "./page.module.css";
+
+
+export const metadata: Metadata = {
+  alternates: { canonical: routes.home },
+};
 
 const topics = [
   { name: "System design", cue: "trade-offs", hint: "scope, data shape, failure modes" },
@@ -200,36 +206,6 @@ export default function HomePage() {
               </div>
             </div>
           </section>
-        </FtlContainer>
-
-        <FtlContainer>
-          <footer className={styles.footer}>
-            <div>
-              <div className={styles.footer__wordmark}>
-                From <em style={{ fontStyle: "normal" }}>the</em> Loop
-              </div>
-              <div style={{ marginTop: 8, maxWidth: "44ch" }}>
-                Interview experiences, written while the details are still
-                useful. v0 · pre-launch.
-              </div>
-            </div>
-            <div className={styles.footer__cols}>
-              <div className={styles.footer__col}>
-                <Link href={routes.companies}>Companies</Link>
-                <Link href={routes.topics}>Topics</Link>
-                <Link href={routes.reports}>Experiences</Link>
-              </div>
-              <div className={styles.footer__col}>
-                <Link href={routes.submit}>Submit</Link>
-                <Link href={routes.about}>About</Link>
-                <Link href={routes.styleguide}>Design</Link>
-              </div>
-              <div className={styles.footer__col}>
-                <Link href={routes.privacy}>Privacy</Link>
-                <Link href={routes.terms}>Terms</Link>
-              </div>
-            </div>
-          </footer>
         </FtlContainer>
       </main>
     </>

@@ -52,31 +52,26 @@ export function ReportTriage({
 }: {
   items: CellReportListItem[];
   orderedIds: string[];
-  // Constant company label for single-company surfaces (role, company feed).
   // Omit on the cross-company profile feed — each row carries its own company.
   companyName?: string;
   startIndex: number;
   basePath: string;
   filters: ReportFilters;
   total: number;
-  // Passthrough to the underlying list for surface-specific empty copy.
   emptyMessage?: string;
 }) {
   const t = useTranslations("report");
 
-  // Instant re-peek + back-nav: a per-session detail cache and an in-flight
-  // dedupe so a hover-prefetch and a click never double-fetch the same report.
+  // Detail cache + in-flight dedupe so hover-prefetch and click never double-fetch.
   const cache = useRef(new Map<string, Peek>());
   const inflight = useRef(new Map<string, Promise<Peek | null>>());
-  // selectedRef mirrors selectedId for use inside event handlers / async tails
-  // without re-binding listeners on every selection.
+  // Mirrors selectedId for use in event handlers without re-binding listeners.
   const selectedRef = useRef<string | null>(null);
   const dwell = useRef<{ id: string; at: number; surface: string } | null>(
     null,
   );
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Bottom-sheet gesture state: the sheet element (transformed directly during a
-  // drag, bypassing React for smoothness) and the pointer-down origin.
+  // Sheet is transformed directly during a drag, bypassing React for smoothness.
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -124,9 +119,8 @@ export function ReportTriage({
     }
   }, []);
 
-  // The select engine. `history` controls depth: the first open from a closed
-  // pane pushes (Back → list); every step replaces (Back never walks the chain);
-  // a popstate-driven open touches no history at all.
+  // `history`: first open pushes (Back → list); steps replace (Back never walks
+  // the chain); a popstate-driven open touches no history at all.
   const select = useCallback(
     async (
       id: string,
@@ -144,8 +138,6 @@ export function ReportTriage({
       else if (opts.history === "replace")
         window.history.replaceState(null, "", url);
 
-      // Which surface is live decides how to read the event later (the ADR's
-      // device split). matchMedia mirrors the 1024px CSS breakpoint exactly.
       const surface = window.matchMedia("(min-width: 1024px)").matches
         ? "pane"
         : "sheet";
@@ -183,8 +175,7 @@ export function ReportTriage({
     [orderedIds, select],
   );
 
-  // Close → Back to the list URL. We pushed exactly one entry on open, so one
-  // pop lands on the list and fires popstate (which clears the pane below).
+  // Back to the list URL: one entry was pushed on open, so one pop fires popstate.
   const close = useCallback(() => {
     window.history.back();
   }, []);
@@ -226,8 +217,7 @@ export function ReportTriage({
     [close, step],
   );
 
-  // Back/forward sync: a /reports/:id in the URL re-opens it (no extra history);
-  // the list URL closes the pane.
+  // Back/forward sync: a /reports/:id URL re-opens it; the list URL closes the pane.
   useEffect(() => {
     const onPop = () => {
       const id = reportIdFromPath(window.location.pathname);
@@ -267,12 +257,10 @@ export function ReportTriage({
     return () => window.removeEventListener("keydown", onKey);
   }, [close, step]);
 
-  // Flush any pending dwell when the user leaves the page entirely.
   useEffect(() => flushDwell, [flushDwell]);
 
-  // Lock the page behind the bottom sheet (mobile only) so a drag/scroll inside
-  // the sheet never bleeds into the list underneath. No-op on desktop, where the
-  // sheet isn't rendered and the sticky pane scrolls the page normally.
+  // Lock body scroll behind the bottom sheet (mobile) so a drag/scroll inside it
+  // doesn't bleed into the list underneath.
   useEffect(() => {
     if (selectedId == null) return;
     if (!window.matchMedia("(max-width: 1023.98px)").matches) return;
@@ -283,9 +271,8 @@ export function ReportTriage({
     };
   }, [selectedId]);
 
-  // Intercept a plain left-click on a report row → open in the pane. Modified
-  // clicks (new tab), middle-click (fires auxclick, not click), and the no-JS
-  // path all keep the real <a href> → the SSR page.
+  // Plain left-click opens in the pane; modified/middle clicks and no-JS keep the
+  // real <a href> to the SSR page.
   const onListClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (
@@ -307,8 +294,7 @@ export function ReportTriage({
     [open],
   );
 
-  // Hover-prefetch (desktop intent), debounced ~120ms so a mouse sweep down the
-  // list doesn't fire a fetch per row.
+  // Hover-prefetch debounced ~120ms so a sweep down the list doesn't fetch per row.
   const onListHover = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const anchor = (e.target as HTMLElement).closest("a");
@@ -328,7 +314,6 @@ export function ReportTriage({
   const hasPrev = idx > 0;
   const hasNext = idx >= 0 && idx < orderedIds.length - 1;
 
-  // Prev / next / counter — shared chrome for the desktop pane and the sheet.
   const stepControls = (
     <div className={styles.stepGroup}>
       <FtlButton
@@ -384,7 +369,6 @@ export function ReportTriage({
 
   return (
     <div className={styles.split}>
-      {/* Master — the unchanged list, plus its foot + real-link pager. */}
       <div
         className={styles.master}
         onClick={onListClick}
@@ -406,8 +390,7 @@ export function ReportTriage({
         <Pagination basePath={basePath} filters={filters} total={total} />
       </div>
 
-      {/* Desktop detail pane — hidden below 1024px (CSS). Empty until a row is
-          opened, keeping the bare list URL honest as the canonical list. */}
+      {/* Desktop detail pane — hidden below 1024px (CSS). */}
       <aside className={styles.detail}>
         {selectedId == null ? (
           <div className={styles.placeholder}>
@@ -433,9 +416,7 @@ export function ReportTriage({
         )}
       </aside>
 
-      {/* Mobile bottom sheet — hidden ≥1024px (CSS), and only mounted once a row
-          is opened. Same engine, same body; a drag on the header dismisses or
-          steps. Backdrop tap closes. */}
+      {/* Mobile bottom sheet — hidden ≥1024px (CSS). */}
       {selectedId != null && (
         <div
           className={styles.backdrop}

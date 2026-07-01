@@ -1,8 +1,3 @@
-// Read-side queries for the public browse surface (companies/roles/levels/topics
-// rollups + report lists + slug lookups). Visibility filter is identical to the
-// aggregate + search pipelines. Row/filter shapes live in ./browse-types.js, the
-// shared scope/filter SQL in ./browse-helpers.js.
-
 import { and, eq } from "drizzle-orm";
 import { sql, type SQL } from "drizzle-orm";
 import type { RoleCellKey } from "../pipeline/aggregates.js";
@@ -37,8 +32,6 @@ import type {
   TopicQuestionList,
   TopicQuestionSqlRow,
 } from "./browse-types.js";
-
-// Slug lookups — resolver primitives. Active rows only.
 
 export async function getCompanyBySlug(
   db: Db,
@@ -88,9 +81,6 @@ export async function getCompanyLevelBySlug(
   return rows[0] ?? null;
 }
 
-// Rollup reads — empty cells excluded (HAVING count > 0).
-
-// Companies with ≥1 visible report, busiest first. Drives /companies.
 export async function listCompaniesWithReports(
   db: Db,
 ): Promise<CompanyBrowseRow[]> {
@@ -114,7 +104,6 @@ export async function listCompaniesWithReports(
   }));
 }
 
-// Roles with ≥1 visible report at one company, busiest first.
 export async function listRolesForCompanyWithReports(
   db: Db,
   companyId: string,
@@ -140,8 +129,6 @@ export async function listRolesForCompanyWithReports(
   }));
 }
 
-// Distinct level values for a (company, role), with counts. Grouped on the text
-// `level`, left-joined to company_levels for the slug + ladder order.
 export async function listLevelsForCompanyRoleWithReports(
   db: Db,
   companyId: string,
@@ -170,8 +157,6 @@ export async function listLevelsForCompanyRoleWithReports(
   }));
 }
 
-// The one report-list query (every list surface funnels through here). Takes the
-// already-built WHERE, runs the paginated read with the window total, maps rows.
 async function runReportList(
   db: Db,
   where: SQL,
@@ -228,7 +213,6 @@ async function runReportList(
   };
 }
 
-// One page of visible reports for a (company, role, level) cell.
 export async function listReportsForCell(
   db: Db,
   cell: CellKey,
@@ -247,7 +231,6 @@ export async function listReportsForCell(
   return runReportList(db, where, opts);
 }
 
-// Visible reports for a (company, role) across all levels. filters.level narrows.
 export async function listReportsForRole(
   db: Db,
   cell: RoleCellKey,
@@ -256,8 +239,6 @@ export async function listReportsForRole(
   return runReportList(db, roleReportWhere(cell, opts.filters), opts);
 }
 
-// Ordered-ID provider for the triage pane's prev/next over the whole filtered
-// set (capped). Same order as listReportsForRole by construction.
 export async function listReportIdsForRole(
   db: Db,
   cell: RoleCellKey,
@@ -266,7 +247,6 @@ export async function listReportIdsForRole(
   return runReportIdList(db, roleReportWhere(cell, opts.filters), opts.cap);
 }
 
-// Same FROM/LATERAL/ORDER as runReportList, selecting only r.id.
 async function runReportIdList(
   db: Db,
   where: SQL,
@@ -283,8 +263,7 @@ async function runReportIdList(
   return rows.map((r) => r.id);
 }
 
-// A user's visible attributed reports (the /u/[username] feed). The
-// display_attribution predicate is the privacy boundary — anonymous reports are absent.
+// display_attribution is the privacy boundary — anonymous reports are absent.
 export async function listReportsForUser(
   db: Db,
   userId: string,
@@ -293,7 +272,6 @@ export async function listReportsForUser(
   return runReportList(db, userReportWhere(userId, opts.filters), opts);
 }
 
-// Ordered-ID provider for the profile feed. Same scope + filters as listReportsForUser.
 export async function listReportIdsForUser(
   db: Db,
   userId: string,
@@ -302,7 +280,6 @@ export async function listReportIdsForUser(
   return runReportIdList(db, userReportWhere(userId, opts.filters), opts.cap);
 }
 
-// Visible reports across all roles at a company (the company feed).
 export async function listReportsForCompany(
   db: Db,
   companyId: string,
@@ -311,7 +288,6 @@ export async function listReportsForCompany(
   return runReportList(db, companyReportWhere(companyId, opts.filters), opts);
 }
 
-// Ordered-ID provider for the company feed.
 export async function listReportIdsForCompany(
   db: Db,
   companyId: string,
@@ -320,8 +296,6 @@ export async function listReportIdsForCompany(
   return runReportIdList(db, companyReportWhere(companyId, opts.filters), opts.cap);
 }
 
-// Every visible report across the whole index — the /reports feed. Same
-// helpful-first, recency-tiebreak order as the scoped feeds.
 export async function listRecentReports(
   db: Db,
   opts: { limit: number; offset: number; filters?: CellReportFilters },
@@ -329,8 +303,6 @@ export async function listRecentReports(
   return runReportList(db, globalReportWhere(opts.filters), opts);
 }
 
-// Ordered-ID provider for the /reports feed — same scope + filter as
-// listRecentReports, feeding the triage pane's prev/next over the whole set.
 export async function listRecentReportIds(
   db: Db,
   opts: { filters?: CellReportFilters; cap: number },
@@ -338,7 +310,6 @@ export async function listRecentReportIds(
   return runReportIdList(db, globalReportWhere(opts.filters), opts.cap);
 }
 
-// Company page header counts: total visible reports + distinct roles.
 export async function getCompanyStats(
   db: Db,
   companyId: string,
@@ -357,8 +328,6 @@ export async function getCompanyStats(
   };
 }
 
-// Visible reports for a (company, role) across all levels — the "role" scope in
-// the sparse-data ladder.
 export async function countActiveReportsForCompanyRole(
   db: Db,
   companyId: string,
@@ -375,10 +344,6 @@ export async function countActiveReportsForCompanyRole(
   return rows[0] ? Number(rows[0].count) : 0;
 }
 
-// Topic browse reads — question-grain (a topic page lists questions), but the
-// "is this cell thin?" decision counts distinct reports.
-
-// Active-topic slug lookup — resolver primitive for the topic routes.
 export async function getTopicBySlug(
   db: Db,
   slug: string,
@@ -391,8 +356,7 @@ export async function getTopicBySlug(
   return rows[0] ?? null;
 }
 
-// Every active topic with its visible counts, name-sorted. Zero-report topics
-// included (the curated taxonomy is the index's content).
+// Includes zero-report topics — the curated taxonomy is itself the index's content.
 export async function listTopicsForIndex(db: Db): Promise<TopicBrowseRow[]> {
   const rows = await db.execute<TopicBrowseSqlRow>(sql`
     SELECT t.id, t.slug, t.name, t.category,
@@ -421,7 +385,6 @@ export async function listTopicsForIndex(db: Db): Promise<TopicBrowseRow[]> {
   }));
 }
 
-// Companies with ≥1 visible report touching a topic, busiest first.
 export async function listCompaniesForTopic(
   db: Db,
   topicId: string,
@@ -452,8 +415,6 @@ export async function listCompaniesForTopic(
   }));
 }
 
-// Visible questions tagged with a topic, newest report first. companyId narrows
-// to one company.
 export async function listQuestionsForTopic(
   db: Db,
   topicId: string,
@@ -503,8 +464,6 @@ export async function listQuestionsForTopic(
   };
 }
 
-// Visible reports touching a topic (distinct, not questions), optionally scoped
-// to one company. Feeds the sparse-data decision.
 export async function countReportsForTopic(
   db: Db,
   topicId: string,
@@ -527,7 +486,6 @@ export async function countReportsForTopic(
   return rows[0] ? Number(rows[0].count) : 0;
 }
 
-// Top topics across a company's visible reports, busiest first, capped by `limit`.
 export async function listTopTopicsForCompany(
   db: Db,
   companyId: string,

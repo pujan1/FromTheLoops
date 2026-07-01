@@ -2,12 +2,6 @@ import type { Metadata } from "next";
 import { FtlBody } from "@/components/ui";
 import { LegalDoc, LegalSection, type LegalSectionDef } from "../_components/legal-doc";
 
-// First-draft Privacy Policy. The bulk (collection / sharing / rights boilerplate)
-// is a placeholder to be replaced by the Termly-generated text on Day 1 of the
-// launch sprint — those blocks are marked `TODO(termly)`. The de-anonymisation
-// section is hand-written and product-specific; it is NOT something Termly
-// generates and must survive the paste-over. See sprint-07-launch-polish.md.
-
 export const metadata: Metadata = {
   title: "Privacy Policy — FromTheLoop",
   description:
@@ -46,8 +40,7 @@ export default function PrivacyPage() {
           using the service you agree to the handling of information described
           here.
         </FtlBody>
-        {/* TODO(termly): replace with the generated "Scope / data controller"
-            block; keep the product-specific second sentence above. */}
+        {/* TODO(termly): replace with generated scope block; keep the sentence above. */}
       </LegalSection>
 
       <LegalSection id="collect" title="2. Information we collect">
@@ -73,9 +66,7 @@ export default function PrivacyPage() {
             moderation notices) and anything you send to our support inbox.
           </li>
         </ul>
-        {/* TODO(termly): merge in the generated "Information we collect"
-            enumeration (device info, IP, etc.); reconcile with the list above
-            rather than duplicating it. */}
+        {/* TODO(termly): merge in generated "Information we collect"; don't duplicate the list above. */}
       </LegalSection>
 
       <LegalSection id="use" title="3. How we use information">
@@ -108,9 +99,7 @@ export default function PrivacyPage() {
           We may also disclose information where required by law, or to protect
           the rights and safety of our users and the public.
         </FtlBody>
-        {/* TODO(termly): align this list with the generated "third parties /
-            sub-processors" section. Keep the named providers above current as
-            the stack changes — this is the source of truth, not Termly. */}
+        {/* TODO(termly): reconcile with generated sub-processors list; the providers above are the source of truth. */}
       </LegalSection>
 
       <LegalSection id="cookies" title="5. Cookies and analytics">
@@ -119,8 +108,7 @@ export default function PrivacyPage() {
           remember preferences such as your theme. We use privacy-respecting,
           aggregate analytics and do not run third-party advertising trackers.
         </FtlBody>
-        {/* TODO(termly): replace with the generated cookie policy / table once
-            the analytics vendor is finalised. */}
+        {/* TODO(termly): replace with generated cookie policy once analytics vendor is set. */}
       </LegalSection>
 
       <LegalSection id="retention" title="6. How long we keep data">
@@ -154,8 +142,7 @@ export default function PrivacyPage() {
           To exercise any other right, contact us at the address below. We will
           respond within the time required by applicable law.
         </FtlBody>
-        {/* TODO(termly): append the jurisdiction-specific GDPR / CPRA rights
-            language from the generated policy. */}
+        {/* TODO(termly): append generated GDPR/CPRA rights language. */}
       </LegalSection>
 
       <LegalSection id="anonymity" title="8. Anonymity and de-anonymisation risk">
@@ -231,8 +218,7 @@ export default function PrivacyPage() {
           Questions about privacy? Email{" "}
           <a href="mailto:privacy@fromtheloop.com">privacy@fromtheloop.com</a>.
         </FtlBody>
-        {/* TODO(termly): confirm the contact address + add the registered
-            business name/address the generated policy requires. */}
+        {/* TODO(termly): confirm contact + add registered business name/address. */}
       </LegalSection>
     </LegalDoc>
   );

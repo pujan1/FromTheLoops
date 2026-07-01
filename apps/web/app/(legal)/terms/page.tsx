@@ -2,15 +2,6 @@ import type { Metadata } from "next";
 import { FtlBody } from "@/components/ui";
 import { LegalDoc, LegalSection, type LegalSectionDef } from "../_components/legal-doc";
 
-// First-draft Terms of Service. The generic contract boilerplate (disclaimers,
-// liability, governing law) is placeholder pending the Termly-generated text and
-// is marked `TODO(termly)`. The user-generated-content licence and the DMCA /
-// notice-and-takedown procedure are hand-written and product-specific: they are
-// the legally load-bearing sections for a platform that hosts accounts of real
-// interviews, and Termly does not generate them adequately. They must survive
-// any paste-over. The DMCA section is deep-linkable for the Day-2 /legal/takedown
-// page. See sprint-07-launch-polish.md.
-
 export const metadata: Metadata = {
   title: "Terms of Service — FromTheLoop",
   description:
@@ -168,8 +159,7 @@ export default function TermsPage() {
         </FtlBody>
       </LegalSection>
 
-      {/* ── Load-bearing, hand-written. The /legal/takedown page (Day 2) deep
-          links here; keep the #dmca anchor stable. ── */}
+      {/* Load-bearing; /legal/takedown deep-links here — keep the #dmca anchor stable. */}
       <LegalSection id="dmca" title="7. Copyright and takedowns (DMCA)">
         <FtlBody>
           We respect intellectual property rights and respond to clear notices
@@ -220,9 +210,7 @@ export default function TermsPage() {
           de-anonymisation concern — use the procedure on our{" "}
           <a href="/legal/takedown">takedown page</a>.
         </FtlBody>
-        {/* TODO(termly): if Termly emits a fuller DMCA block with a registered
-            agent address, fold it in here — but keep this notice/counter-notice/
-            repeat-infringer structure and the legal@ routing intact. */}
+        {/* TODO(termly): fold in a fuller DMCA block if generated, keeping this structure + legal@ routing. */}
       </LegalSection>
 
       <LegalSection id="karma" title="8. Karma and reputation">
@@ -260,8 +248,7 @@ export default function TermsPage() {
           damages, or for any loss arising from your reliance on Content or your
           use of the service.
         </FtlBody>
-        {/* TODO(termly): replace with the generated limitation-of-liability and
-            damages-cap clause, reviewed for our jurisdiction. */}
+        {/* TODO(termly): replace with generated liability/damages-cap clause. */}
       </LegalSection>
 
       <LegalSection id="indemnity" title="12. Indemnification">
@@ -288,8 +275,7 @@ export default function TermsPage() {
           These Terms are governed by the laws of the jurisdiction in which
           FromTheLoop operates, without regard to conflict-of-law rules.
         </FtlBody>
-        {/* TODO(termly): set the specific governing law + venue once the
-            operating entity/jurisdiction is finalised. */}
+        {/* TODO(termly): set governing law + venue once the operating entity is finalised. */}
       </LegalSection>
 
       <LegalSection id="changes" title="15. Changes to these terms">
@@ -306,8 +292,7 @@ export default function TermsPage() {
           Questions about these Terms? Email{" "}
           <a href="mailto:legal@fromtheloop.com">legal@fromtheloop.com</a>.
         </FtlBody>
-        {/* TODO(termly): add the registered business name/address the generated
-            terms require. */}
+        {/* TODO(termly): add registered business name/address. */}
       </LegalSection>
     </LegalDoc>
   );

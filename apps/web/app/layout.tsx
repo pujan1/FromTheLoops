@@ -4,11 +4,10 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
+import { siteOrigin } from "@/lib/site";
+import { SiteFooterGate } from "./_components/site-footer-gate";
 import "./globals.css";
 
-// Modern Minimal: one neo-grotesque (Geist) carries both display and UI,
-// differentiated only by weight and size. Clean, technical, exceptionally
-// legible — the type does the work, not ornament.
 const display = Geist({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -41,17 +40,29 @@ const themeInitScript = `
 })();
 `;
 
-// Base origin for resolving relative canonicals/OG URLs to absolute ones — the
-// `alternates.canonical` paths the browse pages set are relative, and a valid
-// rel=canonical must be absolute (Lighthouse SEO). Set NEXT_PUBLIC_APP_URL to
-// the deployed origin in prod; falls back to localhost for dev/build.
-const siteOrigin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const siteTitle = "FromTheLoop — Interview experiences, from the loop";
+const siteDescription =
+  "Structured, taxonomy-aware interview experiences written by the people who took them.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin),
-  title: "FromTheLoop — Interview experiences, from the loop",
-  description:
-    "Structured, taxonomy-aware interview experiences written by the people who took them.",
+  // No title.template: pages already suffix "— FromTheLoop" themselves.
+  title: siteTitle,
+  description: siteDescription,
+  applicationName: "FromTheLoop",
+  openGraph: {
+    type: "website",
+    siteName: "FromTheLoop",
+    title: siteTitle,
+    description: siteDescription,
+    url: siteOrigin,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+  },
 };
 
 export default async function RootLayout({
@@ -59,9 +70,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // next-intl: locale is resolved by i18n/request.ts (fixed "en" for V1).
-  // NextIntlClientProvider streams the message catalog to client components;
-  // server components read it via getTranslations.
   const locale = await getLocale();
 
   return (
@@ -72,8 +80,7 @@ export default async function RootLayout({
     >
       <head>
         {/* Inline so it runs before paint and sets data-theme before the
-            stylesheet applies, preventing FOUC on hard reloads. next/script
-            with beforeInteractive runs too late for this. */}
+            stylesheet applies, preventing FOUC. beforeInteractive runs too late. */}
         <script
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
@@ -81,10 +88,9 @@ export default async function RootLayout({
       <body>
         <ClerkProvider>
           <NextIntlClientProvider>
-            {/* Read-only "view as user" banner; renders null unless an admin is
-                impersonating (Sprint 6 Day 9). */}
             <ImpersonationBanner />
             {children}
+            <SiteFooterGate />
           </NextIntlClientProvider>
         </ClerkProvider>
       </body>
